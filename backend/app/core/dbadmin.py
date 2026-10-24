@@ -43,13 +43,15 @@ def ensure_role(conninfo: dict, role: str, password: str) -> None:
         )
 
 
-def create_database(conninfo: dict, name: str, owner: str) -> None:
+def create_database(conninfo: dict, name: str, owner: str, extensions: bool = True) -> None:
     with superuser_conn(conninfo) as conn:
         conn.execute(
             sql.SQL("CREATE DATABASE {} OWNER {} ENCODING 'UTF8' TEMPLATE template0").format(
                 sql.Identifier(name), sql.Identifier(owner)
             )
         )
+    if not extensions:
+        return
     with superuser_conn(conninfo, name) as conn:
         for ext in EXTENSIONS:
             conn.execute(sql.SQL("CREATE EXTENSION IF NOT EXISTS {}").format(sql.Identifier(ext)))

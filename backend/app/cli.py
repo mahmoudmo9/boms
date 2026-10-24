@@ -5,6 +5,9 @@
     python -m app.cli seed           # insert missing base data
     python -m app.cli create-user    # create the single app user
     python -m app.cli set-password   # reset the app user's password
+    python -m app.cli backup --kind pre_update
+    python -m app.cli restore-test
+    python -m app.cli restore --backup-dir E:\\BOMS-Backup   # superuser; clean PC only
 
 Passwords are read from environment variables (for scripts) or prompted for;
 they are never accepted as command-line arguments.
@@ -12,6 +15,7 @@ they are never accepted as command-line arguments.
 
 import argparse
 import getpass
+import json
 import os
 import sys
 from pathlib import Path
@@ -102,6 +106,32 @@ def cmd_set_password(_: argparse.Namespace) -> None:
     print("Password changed")
 
 
+def cmd_backup(args: argparse.Namespace) -> None:
+    from app.modules.system import backup
+
+    run_id = backup.run_backup(args.kind, source="script")
+    print(f"Backup succeeded: {run_id}")
+
+
+def cmd_restore_test(_: argparse.Namespace) -> None:
+    from app.modules.system import backup
+
+    result = backup.restore_test(source="script")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    if result["status"] != "passed":
+        sys.exit(2)
+
+
+def cmd_restore(args: argparse.Namespace) -> None:
+    from app.modules.system import backup
+
+    result = backup.full_restore(superuser_conninfo(), Path(args.backup_dir),
+                                 Path(args.dump) if args.dump else None)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    if not result["ok"]:
+        sys.exit(2)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -115,6 +145,14 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--language", choices=["fa", "en"], default="fa")
     p.set_defaults(func=cmd_create_user)
     sub.add_parser("set-password").set_defaults(func=cmd_set_password)
+    p = sub.add_parser("backup")
+    p.add_argument("--kind", choices=["manual", "nightly", "pre_update"], default="manual")
+    p.set_defaults(func=cmd_backup)
+    sub.add_parser("restore-test").set_defaults(func=cmd_restore_test)
+    p = sub.add_parser("restore", help="disaster recovery onto a clean PC")
+    p.add_argument("--backup-dir", required=True)
+    p.add_argument("--dump", help="specific .dump file (default: latest in <backup-dir>/db)")
+    p.set_defaults(func=cmd_restore)
     args = parser.parse_args(argv)
     args.func(args)
 

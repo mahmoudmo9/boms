@@ -112,3 +112,22 @@ def client(anon_client):
     response = anon_client.post("/api/auth/login", json={"username": "admin", "password": TEST_PASSWORD})
     assert response.status_code == 200, response.text
     return anon_client
+
+
+def make_pdf(text: str) -> bytes:
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page()
+    page.insert_text((72, 72), text)
+    data = doc.tobytes()
+    doc.close()
+    return data
+
+
+def unique_bytes(label: str = "") -> bytes:
+    return f"{label} {secrets.token_hex(16)}\n".encode()
+
+
+def upload(client, filename: str, content: bytes, **form):
+    return client.post("/api/documents", files={"file": (filename, content)}, data=form)

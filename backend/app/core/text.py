@@ -14,6 +14,9 @@ Rules:
 - Latin letters lowercased (ASCII and Latin-1 uppercase only, so SQL matches exactly)
 """
 
+# pg_trgm word_similarity threshold for fuzzy (typo-tolerant) search.
+WORD_SIMILARITY = 0.4
+
 # 1:1 replacements. Characters at the same index map to each other.
 MAP_FROM = (
     "يى"  # ي ى
