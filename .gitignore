@@ -1,0 +1,13 @@
+# local dev PostgreSQL 18 (binaries + cluster), never committed
+.devpg/
+.venv/
+backend/.venv/
+dev-data/
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+frontend/dist/
+dist/
+wheelhouse/
+boms.toml
