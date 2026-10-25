@@ -23,7 +23,9 @@
       "fa": "فا",
       "en": "EN"
     },
-    "add": "Add"
+    "add": "Add",
+    "yes": "Yes",
+    "no": "No"
   },
   "nav": {
     "label": "Main navigation",
@@ -375,7 +377,7 @@
     "user_exists": "The user already exists.",
     "next_action_required": "Set a next action, or say why none is needed.",
     "next_action_conflict": "Give either a next action or a reason, not both.",
-    "duplicate_contact_method": "This number or address is already registered.",
+    "duplicate_contact_method": "This contact already has this number or address.",
     "duplicate_role": "The party already has this role.",
     "invalid_stage": "This stage is not valid for the role.",
     "dnc_reason_required": "A reason is required for do-not-contact.",
@@ -390,7 +392,10 @@
     "unknown_country": "Unknown country.",
     "invalid_party": "The party could not be saved.",
     "invalid_contact": "The contact could not be saved.",
-    "naive_datetime": "The time has no time zone."
+    "naive_datetime": "The time has no time zone.",
+    "in_use": "Cannot delete: it is still in use.",
+    "invalid_phone": "This is not a possible phone number ({{reason}}).",
+    "confirm_name_mismatch": "The typed name does not match the party name."
   },
   "cc": {
     "subtitle": "Follow-ups and leads for {{date}}.",
@@ -520,7 +525,13 @@
       "interactions": "Interactions",
       "documents": "Documents",
       "history": "History"
-    }
+    },
+    "archiveTitle": "Archive party",
+    "archiveOpenFollowups": "This party has {{count}} open follow-up(s).",
+    "archiveCancel": "Cancel them",
+    "archiveKeep": "Keep them",
+    "archiveCancelHint": "They are closed with the note “party archived”.",
+    "archiveKeepHint": "They stay in the command center with an “Archived” badge."
   },
   "contacts": {
     "title": "Contacts",
@@ -538,7 +549,13 @@
       "telegram": "Telegram",
       "other": "Other"
     },
-    "duplicateMethod": "Already registered for"
+    "duplicateMethod": "Already registered for",
+    "phoneCountry": "Country code",
+    "phoneNumber": "Phone number",
+    "phonePlaceholder": "0912 345 6789 / +971…",
+    "sharedPrefix": "This number is also registered for",
+    "sharedParty": "party",
+    "addAnyway": "Add anyway?"
   },
   "interactions": {
     "title": "Interactions",
@@ -565,8 +582,11 @@
     },
     "noFollowup": "No follow-up",
     "correct": "Correct",
-    "correctHint": "Only subject and text can be corrected; the old version is kept in the event log.",
-    "searchPlaceholder": "Search text, then Enter"
+    "correctHint": "Changes are recorded in the event log with the old values.",
+    "searchPlaceholder": "Search text, then Enter",
+    "moveToParty": "Party (move to another party)",
+    "moveHint": "Its follow-ups move with it; attached documents stay attached.",
+    "moved": "Interaction moved."
   },
   "followups": {
     "action": "Next action",
@@ -604,5 +624,21 @@
     "saved": "Interaction saved",
     "shortcut": "Shortcut:",
     "timesLocal": "Times are in this PC's time zone."
+  },
+  "delete": {
+    "button": "Delete",
+    "confirm": "Delete permanently?",
+    "done": "Deleted.",
+    "inUse": "Cannot delete, still in use:",
+    "archiveInstead": "Archive instead",
+    "counts": {
+      "interactions": "interactions",
+      "followups": "follow-ups",
+      "documents": "documents"
+    },
+    "dangerZone": "Danger zone",
+    "cascadeHint": "For test data only: deletes this party with all its interactions, follow-ups and document links. The files themselves stay in Documents. The deletion is recorded in the event log.",
+    "typeName": "Type the party name to confirm",
+    "cascadeButton": "Delete party and all its history"
   }
 }

@@ -21,6 +21,7 @@ function FollowupList({ rows, tone }: { rows: FollowupRow[]; tone?: "danger" }) 
         <li key={row.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
           <span className={`w-24 shrink-0 tabular-nums ${tone === "danger" ? "font-medium text-danger" : "text-muted"}`}>{f.day(row.due_on)}</span>
           <PartyName fa={row.party_name_fa} en={row.party_name_en} dnc={row.do_not_contact} id={row.party_id} className="max-w-56" />
+          {row.party_status === "archived" && <Badge>{t("parties.archived")}</Badge>}
           <span className="min-w-0 flex-1 truncate" dir="auto">{row.action}</span>
           <FollowupActions
             followup={row}

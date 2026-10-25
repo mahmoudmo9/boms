@@ -212,9 +212,24 @@ export interface ContactMethod {
   type: MethodType;
   value: string;
   value_norm: string;
+  /** International format with spaces for phone/WhatsApp ("+98 912 345 6789"); the value otherwise. */
+  value_display: string;
   is_primary: boolean;
   status: "active" | "archived";
 }
+
+/** Another active contact that already holds a number being added (v0.2.1: a warning, not an error). */
+export interface SharedWith {
+  type: MethodType;
+  value: string;
+  contact_id: string;
+  contact_name: string | null;
+  party_id: string;
+  party_name: string | null;
+}
+
+/** POST /api/contacts/{id}/methods, PATCH /api/contacts/methods/{id}, POST /api/contacts. */
+export type SharedResult<T> = (T & { created: true; shared_with: SharedWith[] }) | { created: false; shared_with: SharedWith[] };
 
 export interface Contact {
   id: string;
@@ -289,6 +304,7 @@ export interface FollowupRow {
   party_name_fa: string | null;
   party_name_en: string | null;
   do_not_contact: boolean;
+  party_status: "active" | "archived";
   action: string;
   due_on: string;
   interaction_id: string | null;

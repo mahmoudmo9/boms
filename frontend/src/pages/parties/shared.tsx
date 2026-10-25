@@ -8,10 +8,10 @@ import { Bdi } from "../../components/Bdi";
 import { DateInput } from "../../components/DateInput";
 import { Badge, Button, ErrorNote, errorMessage, Field, Input, Modal, Select, Textarea } from "../../components/ui";
 import { useToast } from "../../components/toast";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { fromDateString, type QuickDue, quickDueDate, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
-import type { PartyRoleName } from "../../lib/types";
+import type { PartyRoleName, SharedWith } from "../../lib/types";
 
 export const ROLES: PartyRoleName[] = ["buyer", "supplier", "forwarder", "customs_broker", "agent", "other"];
 export const CHANNELS = ["whatsapp", "call", "email", "tender_portal", "in_person", "other"] as const;
@@ -220,6 +220,76 @@ export function CancelFollowupButton({ followup }: { followup: { id: string; act
     <>
       <Button variant="ghost" onClick={() => setOpen(true)}>{t("followups.cancel")}</Button>
       {open && <FollowupDialog mode="cancel" followup={followup} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+/** "This number is also registered for X (party Y). Add anyway?" with Yes/No. */
+export function SharedNumberPrompt({ shared, busy, onYes, onNo }: {
+  shared: SharedWith[];
+  busy?: boolean;
+  onYes: () => void;
+  onNo: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div role="alert" className="w-full rounded-md border border-transparent bg-warning-soft p-2.5 text-sm">
+      <ul className="mb-2 flex flex-col gap-1">
+        {shared.map((s) => (
+          <li key={`${s.contact_id}-${s.type}`}>
+            {t("contacts.sharedPrefix")} <Bdi className="font-medium">{s.contact_name ?? ""}</Bdi> ({t("contacts.sharedParty")}{" "}
+            <Link className="underline" to={`/parties/${s.party_id}?tab=contacts`}><Bdi>{s.party_name ?? ""}</Bdi></Link>)
+          </li>
+        ))}
+      </ul>
+      <p className="mb-2 font-medium">{t("contacts.addAnyway")}</p>
+      <div className="flex gap-2">
+        <Button variant="primary" busy={busy} onClick={onYes}>{t("common.yes")}</Button>
+        <Button onClick={onNo}>{t("common.no")}</Button>
+      </div>
+    </div>
+  );
+}
+
+/** "Cannot delete: still used by interactions 2 · follow-ups 1 · documents 0". */
+export function InUseNote({ counts, onArchive }: { counts: Record<string, number>; onArchive?: () => void }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const parts = Object.entries(counts).map(([key, n]) => `${t(`delete.counts.${key}`)} ${f.num(n)}`);
+  return (
+    <div role="alert" className="flex w-full flex-wrap items-center gap-2 rounded-md bg-danger-soft px-2.5 py-1.5 text-sm text-danger">
+      <span>{t("delete.inUse")} {parts.join(" · ")}</span>
+      {onArchive && <Button className="ms-auto" onClick={onArchive}>{t("delete.archiveInstead")}</Button>}
+    </div>
+  );
+}
+
+/** Delete with a one-line confirmation; a 409 in_use answer shows the counts and offers Archive. */
+export function DeleteButton({ onDelete, onArchive, compact }: {
+  onDelete: () => Promise<unknown>;
+  onArchive?: () => void;
+  compact?: boolean;
+}) {
+  const { t } = useTranslation();
+  const [confirming, setConfirming] = useState(false);
+  const del = useMutation({ mutationFn: onDelete, onSettled: () => setConfirming(false) });
+  const inUse = del.error instanceof ApiError && del.error.code === "in_use" ? (del.error.details as Record<string, number>) : null;
+  const trigger = compact ? (
+    <button type="button" className="text-xs text-danger hover:underline" onClick={() => { del.reset(); setConfirming(true); }}>{t("delete.button")}</button>
+  ) : (
+    <Button variant="danger" onClick={() => { del.reset(); setConfirming(true); }}>{t("delete.button")}</Button>
+  );
+  return (
+    <>
+      {confirming ? (
+        <span className="inline-flex items-center gap-1.5 text-sm">
+          <span className="text-danger">{t("delete.confirm")}</span>
+          <Button variant="danger" busy={del.isPending} onClick={() => del.mutate()}>{t("common.yes")}</Button>
+          <Button variant="ghost" onClick={() => setConfirming(false)}>{t("common.no")}</Button>
+        </span>
+      ) : trigger}
+      {inUse && <InUseNote counts={inUse} onArchive={onArchive ? () => { del.reset(); onArchive(); } : undefined} />}
+      {del.error && !inUse ? <span className="w-full text-sm text-danger">{errorMessage(t, del.error)}</span> : null}
     </>
   );
 }

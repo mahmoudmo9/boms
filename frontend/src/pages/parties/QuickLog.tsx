@@ -50,7 +50,7 @@ export function QuickLogProvider({ children }: { children: ReactNode }) {
 const hasPersian = (value: string) => /[؀-ۿ]/.test(value);
 
 /** Searchable party picker that can also create a party (with the duplicate check). */
-function PartyPicker({ value, onChange }: { value: Party | null; onChange: (p: Party | null) => void }) {
+export function PartyPicker({ value, onChange }: { value: Party | null; onChange: (p: Party | null) => void }) {
   const { t } = useTranslation();
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
