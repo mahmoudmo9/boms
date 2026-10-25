@@ -8,9 +8,17 @@ export interface Workspace {
 }
 
 export const WORKSPACES: Workspace[] = [
-  { key: "commandCenter", path: "/command-center", icon: "gauge", phase: "3" },
+  { key: "commandCenter", path: "/command-center", icon: "gauge" },
   { key: "market", path: "/market", icon: "globe", phase: "2" },
-  { key: "parties", path: "/parties", icon: "users", phase: "3" },
+  {
+    key: "parties",
+    path: "/parties",
+    icon: "users",
+    children: [
+      { key: "partiesList", path: "/parties" },
+      { key: "funnels", path: "/parties/funnels" },
+    ],
+  },
   { key: "outreach", path: "/outreach", icon: "megaphone", phase: "4" },
   { key: "sourcing", path: "/sourcing", icon: "search", phase: "5" },
   { key: "cases", path: "/cases", icon: "folder", phase: "5–6" },

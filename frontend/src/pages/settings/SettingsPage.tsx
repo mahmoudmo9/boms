@@ -169,6 +169,10 @@ function SystemSettings() {
           <Input dir="ltr" type="number" min={1} max={2048} className="w-24" value={values["upload.max_mb"]} onChange={(e) => set("upload.max_mb", Number(e.target.value))} />
           <span className="text-sm text-muted">MB</span>
         </Row>
+        <Row label={t("settings.staleLeadDays")} hint={t("settings.staleLeadDaysHint")}>
+          <Input dir="ltr" type="number" min={1} max={365} className="w-24" value={values["parties.stale_lead_days"]} onChange={(e) => set("parties.stale_lead_days", Number(e.target.value))} />
+          <span className="text-sm text-muted">{t("settings.days")}</span>
+        </Row>
         <ErrorNote error={save.error} />
         <div className="pt-3"><Button type="submit" variant="primary" busy={save.isPending}>{t("common.save")}</Button></div>
       </form>

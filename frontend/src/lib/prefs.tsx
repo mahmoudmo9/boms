@@ -3,6 +3,7 @@ import { useMemo } from "react";
 
 import i18n from "../i18n";
 import { useAuth } from "./auth";
+import { fromDateString } from "./followups";
 import { type Calendar, type Digits, formatBytes, formatDate, formatNumber } from "./format";
 import type { Language, Theme } from "./types";
 
@@ -55,6 +56,8 @@ export interface Formatters {
   date: (iso: string | null | undefined, time?: boolean) => string;
   num: (value: number | string | null | undefined, maxFraction?: number) => string;
   bytes: (value: number | null | undefined) => string;
+  /** Date-only value "YYYY-MM-DD" (no time zone), shown in the user's calendar. */
+  day: (value: string | null | undefined) => string;
 }
 
 export function useFormat(): Formatters {
@@ -70,6 +73,7 @@ export function useFormat(): Formatters {
       date: (iso, time = false) => formatDate(iso, { calendar, digits, time }),
       num: (value, maxFraction = 4) => formatNumber(value, digits, maxFraction),
       bytes: (value) => formatBytes(value, digits, lang),
+      day: (value) => (value ? formatDate(fromDateString(value).toISOString(), { calendar, digits }) : ""),
     }),
     [lang, calendar, digits],
   );

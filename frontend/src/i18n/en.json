@@ -22,7 +22,8 @@
     "languageShort": {
       "fa": "فا",
       "en": "EN"
-    }
+    },
+    "add": "Add"
   },
   "nav": {
     "label": "Main navigation",
@@ -44,7 +45,9 @@
       "general": "General",
       "basedata": "Base Data",
       "events": "Event Log",
-      "system": "System & Backup"
+      "system": "System & Backup",
+      "partiesList": "Parties",
+      "funnels": "Funnels"
     }
   },
   "placeholder": {
@@ -73,7 +76,10 @@
       "document": "Documents",
       "country": "Countries",
       "currency": "Currencies",
-      "unit": "Units"
+      "unit": "Units",
+      "party": "Parties",
+      "contact": "Contacts",
+      "interaction": "Interactions"
     }
   },
   "date": {
@@ -191,7 +197,11 @@
       "basedata": "Base data",
       "document": "Document",
       "job": "Job",
-      "backup_run": "Backup"
+      "backup_run": "Backup",
+      "party": "Party",
+      "contact": "Contact",
+      "interaction": "Interaction",
+      "followup": "Follow-up"
     },
     "actions": {
       "create": "Created",
@@ -219,7 +229,21 @@
       "start": "Started",
       "succeeded": "Succeeded",
       "restore_test_passed": "Restore test passed",
-      "restore_test_failed": "Restore test failed"
+      "restore_test_failed": "Restore test failed",
+      "archive": "Archived",
+      "unarchive": "Restored",
+      "role_add": "Role added",
+      "role_remove": "Role removed",
+      "stage_change": "Stage changed",
+      "contact_add": "Contact added",
+      "method_add": "Contact method added",
+      "method_update": "Contact method changed",
+      "method_archive": "Contact method archived",
+      "method_unarchive": "Contact method restored",
+      "interaction_add": "Interaction logged",
+      "correct": "Corrected",
+      "reschedule": "Rescheduled",
+      "cancel": "Cancelled"
     }
   },
   "system": {
@@ -319,7 +343,10 @@
     "archivePasswordEnv": "On this system set the BOMS_ARCHIVE_PASSWORD environment variable.",
     "storePassword": "Store password",
     "maxUpload": "Maximum upload size",
-    "version": "BOMS version"
+    "version": "BOMS version",
+    "staleLeadDays": "Stale lead after",
+    "staleLeadDaysHint": "Leads without any interaction for this long appear in the command center.",
+    "days": "days"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -345,6 +372,237 @@
     "not_supported": "Not available on this system.",
     "invalid_date": "Invalid date.",
     "internal_error": "Internal error. See the log file.",
-    "user_exists": "The user already exists."
+    "user_exists": "The user already exists.",
+    "next_action_required": "Set a next action, or say why none is needed.",
+    "next_action_conflict": "Give either a next action or a reason, not both.",
+    "duplicate_contact_method": "This number or address is already registered.",
+    "duplicate_role": "The party already has this role.",
+    "invalid_stage": "This stage is not valid for the role.",
+    "dnc_reason_required": "A reason is required for do-not-contact.",
+    "name_required": "A Persian or English name is required.",
+    "role_not_assigned": "The party does not have this role.",
+    "contact_not_of_party": "The contact belongs to another party.",
+    "interaction_not_of_party": "The interaction belongs to another party.",
+    "followup_not_open": "This follow-up is already closed.",
+    "note_required": "A note is required.",
+    "action_required": "The follow-up needs an action.",
+    "invalid_contact_value": "The number or address is empty.",
+    "unknown_country": "Unknown country.",
+    "invalid_party": "The party could not be saved.",
+    "invalid_contact": "The contact could not be saved.",
+    "naive_datetime": "The time has no time zone."
+  },
+  "cc": {
+    "subtitle": "Follow-ups and leads for {{date}}.",
+    "overdue": "Overdue",
+    "today": "Today",
+    "upcoming": "Next 7 days",
+    "stale": "No contact for {{days}}+ days",
+    "nothing": "Nothing here",
+    "openParty": "Open",
+    "lastContact": "last contact {{date}}",
+    "noContactYet": "never contacted"
+  },
+  "funnel": {
+    "title": {
+      "buyer": "Buyer funnel",
+      "supplier": "Supplier funnel",
+      "board": "Funnels"
+    },
+    "subtitle": "Every active party by stage. Moving a card is recorded in the event log.",
+    "openBoard": "Open board",
+    "role": "Funnel",
+    "moveTo": "Move to",
+    "empty": "No parties",
+    "lastInteraction": "Last contact",
+    "nextFollowup": "Next",
+    "stages": {
+      "buyer": {
+        "new_lead": "New lead",
+        "contacted": "Contacted",
+        "in_conversation": "In conversation",
+        "inquiry_received": "Inquiry received",
+        "quoted": "Quoted",
+        "won": "Won",
+        "lost": "Lost",
+        "dormant": "Dormant"
+      },
+      "supplier": {
+        "identified": "Identified",
+        "contacted": "Contacted",
+        "responded": "Responded",
+        "qualified": "Qualified",
+        "in_use": "In use",
+        "blacklisted": "Blacklisted",
+        "dormant": "Dormant"
+      },
+      "forwarder": {
+        "active": "Active",
+        "dormant": "Dormant"
+      },
+      "customs_broker": {
+        "active": "Active",
+        "dormant": "Dormant"
+      },
+      "agent": {
+        "active": "Active",
+        "dormant": "Dormant"
+      },
+      "other": {
+        "active": "Active",
+        "dormant": "Dormant"
+      }
+    }
+  },
+  "parties": {
+    "subtitle": "Buyers, suppliers, forwarders, brokers and agents, with every interaction.",
+    "new": "New party",
+    "name": "Name",
+    "nameFa": "Persian name",
+    "nameEn": "English name",
+    "kind": "Type",
+    "kinds": {
+      "company": "Company",
+      "person": "Person"
+    },
+    "country": "Country",
+    "website": "Website",
+    "notes": "Notes",
+    "roles": {
+      "label": "Roles",
+      "buyer": "Buyer",
+      "supplier": "Supplier",
+      "forwarder": "Forwarder",
+      "customs_broker": "Customs broker",
+      "agent": "Agent",
+      "other": "Other"
+    },
+    "allRoles": "All roles",
+    "allStages": "All stages",
+    "stage": "Stage",
+    "status": "Status",
+    "statuses": {
+      "active": "Active",
+      "archived": "Archived"
+    },
+    "searchPlaceholder": "Search name, phone, email, then Enter",
+    "empty": "No parties yet",
+    "lastInteraction": "Last contact",
+    "nextFollowup": "Next follow-up",
+    "updated": "Updated",
+    "possibleDuplicates": "Possible duplicates already registered:",
+    "confirmDuplicate": "This is a different party, create it anyway",
+    "createAnyway": "Create a new party anyway",
+    "dnc": "Do not contact",
+    "dncSwitch": "Do not contact this party",
+    "dncReason": "Reason (required)",
+    "dncWarning": "Do not contact:",
+    "archived": "Archived",
+    "archive": "Archive",
+    "unarchive": "Restore",
+    "rolesAndStages": "Roles and stages",
+    "noRoles": "No role yet.",
+    "addRole": "Add role…",
+    "removeRole": "Remove role",
+    "since": "since {{date}}",
+    "stageChanged": "Stage changed",
+    "details": "Details",
+    "openFollowups": "Open follow-ups",
+    "noOpenFollowups": "No open follow-ups",
+    "documents": "Documents",
+    "attach": "Attach files",
+    "noDocuments": "No documents",
+    "attachedToParty": "Party",
+    "attachedToInteraction": "Interaction",
+    "tabs": {
+      "overview": "Overview",
+      "contacts": "Contacts",
+      "interactions": "Interactions",
+      "documents": "Documents",
+      "history": "History"
+    }
+  },
+  "contacts": {
+    "title": "Contacts",
+    "add": "Add contact",
+    "empty": "No contacts yet",
+    "jobTitle": "Job title",
+    "primary": "Primary",
+    "makePrimary": "Make primary",
+    "methodType": "Type",
+    "value": "Number / address",
+    "methods": {
+      "whatsapp": "WhatsApp",
+      "phone": "Phone",
+      "email": "Email",
+      "telegram": "Telegram",
+      "other": "Other"
+    },
+    "duplicateMethod": "Already registered for"
+  },
+  "interactions": {
+    "title": "Interactions",
+    "empty": "No interactions yet",
+    "channel": "Channel",
+    "direction": "Direction",
+    "contact": "Contact",
+    "when": "Date and time",
+    "time": "Time",
+    "subject": "Subject",
+    "body": "Pasted text",
+    "bodyHint": "Paste the message as it is; it is stored unchanged.",
+    "channels": {
+      "whatsapp": "WhatsApp",
+      "call": "Call",
+      "email": "Email",
+      "tender_portal": "Tender portal",
+      "in_person": "In person",
+      "other": "Other"
+    },
+    "directions": {
+      "in": "Incoming",
+      "out": "Outgoing"
+    },
+    "noFollowup": "No follow-up",
+    "correct": "Correct",
+    "correctHint": "Only subject and text can be corrected; the old version is kept in the event log.",
+    "searchPlaceholder": "Search text, then Enter"
+  },
+  "followups": {
+    "action": "Next action",
+    "actionPlaceholder": "e.g. Send the price list",
+    "done": "Done",
+    "reschedule": "Reschedule",
+    "cancel": "Cancel follow-up",
+    "doneTitle": "Mark follow-up done",
+    "rescheduleTitle": "Reschedule follow-up",
+    "cancelTitle": "Cancel follow-up",
+    "doneNote": "Note (optional)",
+    "cancelNote": "Why is it cancelled? (required)",
+    "newDue": "New due date",
+    "nextOptional": "Next follow-up (optional)",
+    "quick": {
+      "tomorrow": "Tomorrow",
+      "3days": "In 3 days",
+      "week": "In 1 week"
+    }
+  },
+  "quicklog": {
+    "button": "Log interaction",
+    "title": "Log interaction",
+    "party": "Party",
+    "partyPlaceholder": "Type a name to search or create…",
+    "createParty": "Create new party:",
+    "changeParty": "Change",
+    "useThis": "Use this one",
+    "attach": "Attach files (or drop them here)",
+    "nextAction": "Next action",
+    "noFollowup": "No follow-up needed",
+    "noFollowupReason": "Why not? (one line)",
+    "moveStage": "Move stage (optional)",
+    "saveHint": "Choose a party and set a next action (or say why none is needed).",
+    "saved": "Interaction saved",
+    "shortcut": "Shortcut:",
+    "timesLocal": "Times are in this PC's time zone."
   }
 }

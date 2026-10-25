@@ -9,6 +9,10 @@ import { DocumentDetailPage } from "./pages/documents/DocumentDetailPage";
 import { DocumentsPage } from "./pages/documents/DocumentsPage";
 import { EventLogPage } from "./pages/events/EventLogPage";
 import { LockScreen, LoginPage, NoUserPage } from "./pages/LoginPage";
+import { CommandCenterPage } from "./pages/parties/CommandCenterPage";
+import { FunnelsPage } from "./pages/parties/FunnelsPage";
+import { PartiesPage } from "./pages/parties/PartiesPage";
+import { PartyDetailPage } from "./pages/parties/PartyDetailPage";
 import { NotFoundPage, PlaceholderPage } from "./pages/PlaceholderPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
 import { SystemPage } from "./pages/system/SystemPage";
@@ -29,6 +33,10 @@ export function App() {
         {WORKSPACES.filter((w) => w.phase).map((w) => (
           <Route key={w.key} path={w.path.slice(1)} element={<PlaceholderPage workspace={w} />} />
         ))}
+        <Route path="command-center" element={<CommandCenterPage />} />
+        <Route path="parties" element={<PartiesPage />} />
+        <Route path="parties/funnels" element={<FunnelsPage />} />
+        <Route path="parties/:id" element={<PartyDetailPage />} />
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="documents/:id" element={<DocumentDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />

@@ -53,4 +53,19 @@ describe("translations", () => {
       expect(enKeys).toContain(`nav.${key}`);
     }
   });
+
+  it("every funnel stage of migration 0004 has a label in both languages", () => {
+    const stages: Record<string, string[]> = {
+      buyer: ["new_lead", "contacted", "in_conversation", "inquiry_received", "quoted", "won", "lost", "dormant"],
+      supplier: ["identified", "contacted", "responded", "qualified", "in_use", "blacklisted", "dormant"],
+      forwarder: ["active", "dormant"],
+      customs_broker: ["active", "dormant"],
+      agent: ["active", "dormant"],
+      other: ["active", "dormant"],
+    };
+    for (const [role, codes] of Object.entries(stages)) {
+      expect(enKeys).toContain(`parties.roles.${role}`);
+      for (const code of codes) expect(enKeys).toContain(`funnel.stages.${role}.${code}`);
+    }
+  });
 });

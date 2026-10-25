@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useLocation } from "react-router";
 
 import { CommandPalette } from "../components/CommandPalette";
+import { QuickLogProvider, useQuickLog } from "../pages/parties/QuickLog";
 import { Icon } from "../components/Icon";
 import { IconButton } from "../components/ui";
 import { useAuth } from "../lib/auth";
@@ -54,10 +55,14 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
               {ws.children && inSection && (
                 <div className="my-1 ms-6 flex flex-col border-s border-line ps-2">
                   {ws.children.map((child) => {
+                    const prefix = (path: string) => path.replace(/\/countries$/, "");
+                    const others = ws.children!.filter((c) => c.path !== ws.path);
+                    const inOther = others.some((c) => location.pathname.startsWith(prefix(c.path)));
+                    // the section root (/settings, /parties) is active for its own pages that no other child claims
                     const active =
-                      child.path === "/settings"
-                        ? location.pathname === "/settings"
-                        : location.pathname.startsWith(child.path.replace(/\/countries$/, ""));
+                      child.path === ws.path
+                        ? !inOther && (location.pathname === ws.path || (ws.key === "parties" && location.pathname.startsWith(`${ws.path}/`)))
+                        : location.pathname.startsWith(prefix(child.path));
                     return (
                       <NavLink
                         key={child.key}
@@ -78,6 +83,22 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
         })}
       </nav>
     </aside>
+  );
+}
+
+function QuickLogButton() {
+  const { t } = useTranslation();
+  const quickLog = useQuickLog();
+  return (
+    <button
+      type="button"
+      onClick={() => quickLog.open()}
+      title={`${t("quicklog.button")} (Ctrl+Shift+L)`}
+      className="me-1 inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-2.5 text-sm font-medium text-accent-fg hover:bg-accent-hover"
+    >
+      <Icon name="plus" size={15} />
+      <span className="hidden md:inline">{t("quicklog.button")}</span>
+    </button>
   );
 }
 
@@ -104,6 +125,7 @@ export function AppShell() {
   const nextTheme = THEME_ORDER[(THEME_ORDER.indexOf(user.theme) + 1) % THEME_ORDER.length];
 
   return (
+    <QuickLogProvider>
     <div className="flex h-full">
       <Sidebar open={navOpen} onNavigate={() => setNavOpen(false)} />
       {navOpen && <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setNavOpen(false)} />}
@@ -120,6 +142,7 @@ export function AppShell() {
             <kbd className="rounded border border-line bg-surface px-1.5 text-xs" dir="ltr">Ctrl K</kbd>
           </button>
           <div className="ms-auto flex items-center gap-1">
+            <QuickLogButton />
             <button
               type="button"
               onClick={() => void updatePrefs({ language: user.language === "fa" ? "en" : "fa" })}
@@ -146,5 +169,6 @@ export function AppShell() {
       </div>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
+    </QuickLogProvider>
   );
 }

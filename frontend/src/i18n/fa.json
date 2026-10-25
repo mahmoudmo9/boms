@@ -22,7 +22,8 @@
     "languageShort": {
       "fa": "فا",
       "en": "EN"
-    }
+    },
+    "add": "افزودن"
   },
   "nav": {
     "label": "منوی اصلی",
@@ -44,7 +45,9 @@
       "general": "عمومی",
       "basedata": "اطلاعات پایه",
       "events": "رویدادها",
-      "system": "سیستم و پشتیبان‌گیری"
+      "system": "سیستم و پشتیبان‌گیری",
+      "partiesList": "طرف‌ها",
+      "funnels": "قیف‌ها"
     }
   },
   "placeholder": {
@@ -73,7 +76,10 @@
       "document": "اسناد",
       "country": "کشورها",
       "currency": "ارزها",
-      "unit": "واحدها"
+      "unit": "واحدها",
+      "party": "طرف‌ها",
+      "contact": "اشخاص رابط",
+      "interaction": "تعاملات"
     }
   },
   "date": {
@@ -191,7 +197,11 @@
       "basedata": "اطلاعات پایه",
       "document": "سند",
       "job": "کار پس‌زمینه",
-      "backup_run": "پشتیبان"
+      "backup_run": "پشتیبان",
+      "party": "طرف",
+      "contact": "شخص رابط",
+      "interaction": "تعامل",
+      "followup": "پیگیری"
     },
     "actions": {
       "create": "ایجاد",
@@ -219,7 +229,21 @@
       "start": "شروع",
       "succeeded": "موفق",
       "restore_test_passed": "آزمون بازیابی موفق",
-      "restore_test_failed": "آزمون بازیابی ناموفق"
+      "restore_test_failed": "آزمون بازیابی ناموفق",
+      "archive": "بایگانی",
+      "unarchive": "بازگردانی",
+      "role_add": "افزودن نقش",
+      "role_remove": "حذف نقش",
+      "stage_change": "تغییر مرحله",
+      "contact_add": "افزودن شخص رابط",
+      "method_add": "افزودن راه تماس",
+      "method_update": "تغییر راه تماس",
+      "method_archive": "بایگانی راه تماس",
+      "method_unarchive": "بازگردانی راه تماس",
+      "interaction_add": "ثبت تعامل",
+      "correct": "اصلاح",
+      "reschedule": "تغییر تاریخ",
+      "cancel": "لغو"
     }
   },
   "system": {
@@ -319,7 +343,10 @@
     "archivePasswordEnv": "در این سیستم متغیر محیطی BOMS_ARCHIVE_PASSWORD را تنظیم کنید.",
     "storePassword": "ذخیره رمز",
     "maxUpload": "حداکثر حجم بارگذاری",
-    "version": "نسخه BOMS"
+    "version": "نسخه BOMS",
+    "staleLeadDays": "سرنخ راکد پس از",
+    "staleLeadDaysHint": "سرنخ‌هایی که این مدت تعاملی نداشته‌اند در مرکز فرماندهی نمایش داده می‌شوند.",
+    "days": "روز"
   },
   "errors": {
     "generic": "خطایی رخ داد. دوباره تلاش کنید.",
@@ -345,6 +372,237 @@
     "not_supported": "در این سیستم در دسترس نیست.",
     "invalid_date": "تاریخ نامعتبر است.",
     "internal_error": "خطای داخلی. فایل گزارش را ببینید.",
-    "user_exists": "کاربر قبلاً ساخته شده است."
+    "user_exists": "کاربر قبلاً ساخته شده است.",
+    "next_action_required": "اقدام بعدی را تعیین کنید یا دلیل نبودنش را بنویسید.",
+    "next_action_conflict": "یا اقدام بعدی یا دلیل؛ نه هر دو.",
+    "duplicate_contact_method": "این شماره یا نشانی قبلاً ثبت شده است.",
+    "duplicate_role": "این طرف این نقش را دارد.",
+    "invalid_stage": "این مرحله برای این نقش معتبر نیست.",
+    "dnc_reason_required": "برای «تماس ممنوع» دلیل لازم است.",
+    "name_required": "نام فارسی یا انگلیسی لازم است.",
+    "role_not_assigned": "این طرف این نقش را ندارد.",
+    "contact_not_of_party": "این شخص رابط متعلق به طرف دیگری است.",
+    "interaction_not_of_party": "این تعامل متعلق به طرف دیگری است.",
+    "followup_not_open": "این پیگیری قبلاً بسته شده است.",
+    "note_required": "یادداشت لازم است.",
+    "action_required": "پیگیری باید اقدام داشته باشد.",
+    "invalid_contact_value": "شماره یا نشانی خالی است.",
+    "unknown_country": "کشور نامعتبر است.",
+    "invalid_party": "طرف ذخیره نشد.",
+    "invalid_contact": "شخص رابط ذخیره نشد.",
+    "naive_datetime": "زمان منطقه زمانی ندارد."
+  },
+  "cc": {
+    "subtitle": "پیگیری‌ها و سرنخ‌های {{date}}.",
+    "overdue": "عقب‌افتاده",
+    "today": "امروز",
+    "upcoming": "۷ روز آینده",
+    "stale": "بدون تماس در {{days}} روز اخیر",
+    "nothing": "موردی نیست",
+    "openParty": "باز کردن",
+    "lastContact": "آخرین تماس {{date}}",
+    "noContactYet": "هنوز تماسی نبوده"
+  },
+  "funnel": {
+    "title": {
+      "buyer": "قیف خریداران",
+      "supplier": "قیف تأمین‌کنندگان",
+      "board": "قیف‌ها"
+    },
+    "subtitle": "همه طرف‌های فعال بر اساس مرحله. جابه‌جایی هر کارت در گزارش رویدادها ثبت می‌شود.",
+    "openBoard": "نمایش قیف",
+    "role": "قیف",
+    "moveTo": "انتقال به",
+    "empty": "طرفی نیست",
+    "lastInteraction": "آخرین تماس",
+    "nextFollowup": "پیگیری بعدی",
+    "stages": {
+      "buyer": {
+        "new_lead": "سرنخ جدید",
+        "contacted": "تماس گرفته‌شده",
+        "in_conversation": "در حال گفتگو",
+        "inquiry_received": "استعلام دریافت‌شده",
+        "quoted": "قیمت داده‌شده",
+        "won": "موفق",
+        "lost": "از دست رفته",
+        "dormant": "راکد"
+      },
+      "supplier": {
+        "identified": "شناسایی‌شده",
+        "contacted": "تماس گرفته‌شده",
+        "responded": "پاسخ داده",
+        "qualified": "تأییدشده",
+        "in_use": "در حال همکاری",
+        "blacklisted": "فهرست سیاه",
+        "dormant": "راکد"
+      },
+      "forwarder": {
+        "active": "فعال",
+        "dormant": "راکد"
+      },
+      "customs_broker": {
+        "active": "فعال",
+        "dormant": "راکد"
+      },
+      "agent": {
+        "active": "فعال",
+        "dormant": "راکد"
+      },
+      "other": {
+        "active": "فعال",
+        "dormant": "راکد"
+      }
+    }
+  },
+  "parties": {
+    "subtitle": "خریداران، تأمین‌کنندگان، حمل‌کنندگان، ترخیص‌کاران و نمایندگان، با همه تعاملات.",
+    "new": "طرف جدید",
+    "name": "نام",
+    "nameFa": "نام فارسی",
+    "nameEn": "نام انگلیسی",
+    "kind": "نوع",
+    "kinds": {
+      "company": "شرکت",
+      "person": "شخص"
+    },
+    "country": "کشور",
+    "website": "وب‌سایت",
+    "notes": "یادداشت",
+    "roles": {
+      "label": "نقش‌ها",
+      "buyer": "خریدار",
+      "supplier": "تأمین‌کننده",
+      "forwarder": "حمل‌کننده",
+      "customs_broker": "ترخیص‌کار",
+      "agent": "نماینده",
+      "other": "سایر"
+    },
+    "allRoles": "همه نقش‌ها",
+    "allStages": "همه مراحل",
+    "stage": "مرحله",
+    "status": "وضعیت",
+    "statuses": {
+      "active": "فعال",
+      "archived": "بایگانی‌شده"
+    },
+    "searchPlaceholder": "جستجوی نام، تلفن، ایمیل و سپس Enter",
+    "empty": "هنوز طرفی ثبت نشده",
+    "lastInteraction": "آخرین تماس",
+    "nextFollowup": "پیگیری بعدی",
+    "updated": "به‌روزرسانی",
+    "possibleDuplicates": "طرف‌های مشابهی از قبل ثبت شده‌اند:",
+    "confirmDuplicate": "این طرف دیگری است؛ با این حال ثبت شود",
+    "createAnyway": "با این حال طرف جدید ثبت شود",
+    "dnc": "تماس ممنوع",
+    "dncSwitch": "با این طرف تماس گرفته نشود",
+    "dncReason": "دلیل (الزامی)",
+    "dncWarning": "تماس ممنوع:",
+    "archived": "بایگانی‌شده",
+    "archive": "بایگانی",
+    "unarchive": "بازگردانی",
+    "rolesAndStages": "نقش‌ها و مراحل",
+    "noRoles": "هنوز نقشی ندارد.",
+    "addRole": "افزودن نقش…",
+    "removeRole": "حذف نقش",
+    "since": "از {{date}}",
+    "stageChanged": "مرحله تغییر کرد",
+    "details": "مشخصات",
+    "openFollowups": "پیگیری‌های باز",
+    "noOpenFollowups": "پیگیری بازی نیست",
+    "documents": "اسناد",
+    "attach": "پیوست فایل",
+    "noDocuments": "سندی نیست",
+    "attachedToParty": "طرف",
+    "attachedToInteraction": "تعامل",
+    "tabs": {
+      "overview": "خلاصه",
+      "contacts": "اشخاص رابط",
+      "interactions": "تعاملات",
+      "documents": "اسناد",
+      "history": "تاریخچه"
+    }
+  },
+  "contacts": {
+    "title": "اشخاص رابط",
+    "add": "افزودن شخص رابط",
+    "empty": "هنوز شخص رابطی ثبت نشده",
+    "jobTitle": "سمت",
+    "primary": "اصلی",
+    "makePrimary": "اصلی شود",
+    "methodType": "نوع",
+    "value": "شماره / نشانی",
+    "methods": {
+      "whatsapp": "واتس‌اپ",
+      "phone": "تلفن",
+      "email": "ایمیل",
+      "telegram": "تلگرام",
+      "other": "سایر"
+    },
+    "duplicateMethod": "قبلاً ثبت شده برای"
+  },
+  "interactions": {
+    "title": "تعاملات",
+    "empty": "هنوز تعاملی ثبت نشده",
+    "channel": "کانال",
+    "direction": "جهت",
+    "contact": "شخص رابط",
+    "when": "تاریخ و ساعت",
+    "time": "ساعت",
+    "subject": "موضوع",
+    "body": "متن (کپی‌شده)",
+    "bodyHint": "پیام را همان‌طور که هست بچسبانید؛ بدون تغییر ذخیره می‌شود.",
+    "channels": {
+      "whatsapp": "واتس‌اپ",
+      "call": "تماس تلفنی",
+      "email": "ایمیل",
+      "tender_portal": "سامانه مناقصه",
+      "in_person": "حضوری",
+      "other": "سایر"
+    },
+    "directions": {
+      "in": "دریافتی",
+      "out": "ارسالی"
+    },
+    "noFollowup": "بدون پیگیری",
+    "correct": "اصلاح",
+    "correctHint": "فقط موضوع و متن قابل اصلاح است؛ نسخه قبلی در گزارش رویدادها می‌ماند.",
+    "searchPlaceholder": "جستجو در متن و سپس Enter"
+  },
+  "followups": {
+    "action": "اقدام بعدی",
+    "actionPlaceholder": "مثلاً ارسال لیست قیمت",
+    "done": "انجام شد",
+    "reschedule": "تغییر تاریخ",
+    "cancel": "لغو پیگیری",
+    "doneTitle": "ثبت انجام پیگیری",
+    "rescheduleTitle": "تغییر تاریخ پیگیری",
+    "cancelTitle": "لغو پیگیری",
+    "doneNote": "یادداشت (اختیاری)",
+    "cancelNote": "دلیل لغو (الزامی)",
+    "newDue": "تاریخ جدید",
+    "nextOptional": "پیگیری بعدی (اختیاری)",
+    "quick": {
+      "tomorrow": "فردا",
+      "3days": "۳ روز بعد",
+      "week": "یک هفته بعد"
+    }
+  },
+  "quicklog": {
+    "button": "ثبت تعامل",
+    "title": "ثبت تعامل",
+    "party": "طرف",
+    "partyPlaceholder": "برای جستجو یا ساخت، نام را بنویسید…",
+    "createParty": "ساخت طرف جدید:",
+    "changeParty": "تغییر",
+    "useThis": "همین را انتخاب کن",
+    "attach": "پیوست فایل (یا فایل را اینجا رها کنید)",
+    "nextAction": "اقدام بعدی",
+    "noFollowup": "پیگیری لازم نیست",
+    "noFollowupReason": "چرا؟ (یک خط)",
+    "moveStage": "تغییر مرحله (اختیاری)",
+    "saveHint": "طرف را انتخاب و اقدام بعدی را تعیین کنید (یا دلیل نبودنش را بنویسید).",
+    "saved": "تعامل ثبت شد",
+    "shortcut": "میان‌بر:",
+    "timesLocal": "زمان‌ها به وقت این رایانه است."
   }
 }
