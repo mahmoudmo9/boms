@@ -16,11 +16,15 @@ backend/app/
     documents/     file store, documents, document links, PDF text extraction job
     search/        global search + provider registry
     parties/       trading parties, contacts, interactions, follow-ups, funnels, command center (Phase 3)
+    sourcing/      inquiries, go/no-go decisions, cases, line items + import, RFQs, message templates,
+                   supplier offers, coverage/comparison, capability tags (Phase 5)
+    catalog/       products, aliases, categories, price and demand memory (Phase 5)
   worker/          job runner, handler registry, scheduler  (python -m app.worker)
   cli.py           commands used by the Windows scripts
   launch.py        Task Scheduler entry point (reads C:\BOMS\config.json, runs backend or worker)
   main.py          FastAPI app (API + built frontend from app/static)
-backend/migrations/  Alembic, hand-written SQL (0001 core, 0002 system, 0003 documents/search)
+backend/migrations/  Alembic, hand-written SQL (0001 core, 0002 system, 0003 documents/search, 0004 parties,
+                     0005 parties fixes, 0006 sourcing); data/ holds the HS 2022 and ISIC Rev.4 seed files
 frontend/          React + TypeScript + Vite + Tailwind (logical properties only), i18next
 scripts/           Windows install/update/backup/restore/start/stop (.ps1 + .bat), release builder
 wheelhouse/        Windows wheels (filled by scripts/build_release.py, not committed)
@@ -57,6 +61,8 @@ module's ORM models to write to them.
 | events   | `core.event`, `core.audit` (audit rows are written only by the trigger) |
 | documents| `core.document`, `core.document_link` |
 | parties  | `core.funnel_stage`, `core.party`, `core.party_role`, `core.contact`, `core.contact_method`, `core.interaction`, `core.followup` (Phase 3) |
+| sourcing | `ops.payment_term`, `ops.item_status`, `ops.inquiry`, `ops.decision`, `ops."case"`, `ops.line_item`, `ops.rfq`, `ops.rfq_item`, `ops.rfq_recipient`, `ops.message_template`, `ops.supplier_offer`, `ops.offer_item`, `core.party_capability`; reads `ref.hs_code`, `ref.isic_code` (seeded by migration 0006) (Phase 5) |
+| catalog  | `core.product`, `core.product_alias`, `core.product_category` (Phase 5) |
 
 ## Database conventions
 
@@ -160,7 +166,8 @@ code and both names. All expressions have GIN indexes. Results are grouped by pr
 - The scheduler (in the worker loop, local time) computes each schedule's latest due time and enqueues
   once if the last run is older, so runs missed while the PC was off happen once at the next start.
   Phase 1: nightly backup (`backup.time`, default 02:00) and monthly restore test (1st of the month,
-  backup time + 1 h).
+  backup time + 1 h). Phase 5: hourly `sourcing.expire` (RFQ recipients past `respond_by` ->
+  `no_response`, offers past `valid_until` -> `expired`; status + event only, nobody is contacted).
 - Heartbeat: `<data>/logs/worker.heartbeat`, written every loop (≈2 s); "alive" = younger than 60 s.
 
 ## Backup
@@ -294,3 +301,83 @@ Backups and the restore test include the new tables automatically.
   holds answers `200 {"created": false, "shared_with": [{contact_name, party_name, party_id, ...}]}` and stores
   nothing; the client repeats with `confirm_shared: true`. Archived methods are ignored by these checks and by
   the unique index; re-adding an archived value creates a new row.
+
+## Sourcing and RFQ (Phase 5, v0.3.0, migration `0006_sourcing`)
+
+Modules `app/modules/sourcing/` (inquiries, items, importing, extract, templates, rfq, offers, coverage,
+capabilities, dashboard, searchable, handlers, router) and `app/modules/catalog/` (service, router,
+searchable). All new mutable tables have UUIDv7 keys (codes for the vocabularies and `ref` tables),
+`created_at`/`updated_at`, the `updated_at` trigger and the audit trigger; every change records an event in the
+same transaction. Money is `NUMERIC(18,4)` with a currency column; there is no currency conversion.
+
+**Deal flow.**
+1. `ops.inquiry` (party optional, source channel, kind, `received_at`, reply-due date, subject, `raw_text`
+   stored unchanged, status, optional `source_interaction_id`). "Create inquiry" on a Phase 3 interaction
+   pre-fills party, channel, text and the link (`GET /api/inquiries/prefill`).
+2. `ops.decision` (one per inquiry; history in events): traffic light, one-line reason, three hard checks
+   (`feasible_sourcing`, `exposure_acceptable`, `requirements_ok`: yes/no/unknown + note), entered exposure
+   estimate + currency, payment term from `ops.payment_term`; "order before payment" requires
+   `ordering_before_payment_reason` (CHECK + 422). Red rejects the inquiry with the reason.
+3. Conversion gate (`POST /api/inquiries/{id}/convert`): 409 `decision_required`, `hard_check_failed`
+   (with the failing checks), `decision_red`, `confirmation_required` (yellow without `confirmed`), or
+   `already_converted`. The case copies payment term, approval line and exposure; the inquiry's
+   `ops.line_item` rows get `case_id` (never copied). Cases can also start without an inquiry.
+4. `ops.line_item`: free name/description, quantity + `unit_code` (`sys.unit`) or `unit_text`, target price +
+   currency, destination, Incoterm + place, required-by, packaging, HS code, route, notes, `specs` jsonb
+   (list of `{key, value, unit?}`; key suggestions from earlier use, case-insensitive after `normalize_fa`),
+   status from `ops.item_status`, `no_coverage_confirmed` + reason, `selected_offer_item_id`. Import without
+   AI: pasted table/list, `.csv`, `.xlsx` (openpyxl) -> column mapping -> preview with per-row errors ->
+   bulk create. `sourcing/extract.py` defines `ItemExtractor` with a disabled default (no external calls).
+5. RFQs: `ops.rfq`, `ops.rfq_item` (optional quantity/unit/note overrides), `ops.rfq_recipient` (party,
+   default contact = primary active contact, channel, language, template, exact `message_text`).
+   `ops.message_template` holds the texts (seeded en/fa for e-mail and WhatsApp; one default per language +
+   channel); placeholders are a fixed set (`{supplier_name}`, `{contact_name}`, `{case_title}`,
+   `{items_table}`, `{respond_by}`, `{signature}`), unknown ones are a 422 on save; Persian texts show the
+   reply-by date in the Jalali calendar. `company.name` and `company.signature` (per language) are settings.
+   Defaults: suppliers in Iran get WhatsApp in Persian, others e-mail in English. Nothing is sent by BOMS:
+   "mark as sent" creates an OUTGOING interaction (parties public service) with the exact text and a
+   follow-up (default "Chase RFQ response" on `respond_by`), moves the items to `rfq_sent`, and sets the RFQ
+   `sent`. RFQ status: draft -> sent -> answered (no recipient still waiting and at least one replied, or all
+   declined) / no_response; cancelled is manual. `.xlsx` export of the item list.
+6. Offers: `ops.supplier_offer` (header: channel incl. WeChat, received, valid until, currency, Incoterm,
+   payment terms, lead time, compliance notes, raw text) + `ops.offer_item` (available, unit price, price
+   basis per quantity, unit, MOQ, lead time, deviation, packaging). Recording creates an INCOMING interaction
+   (WeChat -> channel `other`, subject "WeChat") with the Phase 3 next-action rule, moves offered items to
+   `has_offer`, marks the matching recipient `replied` and refreshes the RFQ status. A newer offer can
+   supersede an older one of the same supplier (kept, status `superseded`).
+7. Coverage/comparison: valid offers = active and not past `valid_until`. Comparison rows are grouped by
+   currency, then by unit group (units of one convertible kind in `sys.unit`, otherwise the exact unit);
+   inside a group the lowest normalized price (`unit_price / price_per_quantity / base_factor`) is flagged
+   unless Incoterms differ ("not directly comparable"). Selecting an offer row sets
+   `selected_offer_item_id` + status `selected`; changing it needs a reason (event). Case gate: every
+   non-cancelled item is `selected` or `no_coverage_confirmed`.
+
+**Catalog.** `core.product` (names, `name_norm` trigram index, kind note, default unit, HS code, category,
+status) + `core.product_alias` (grades, trade names, CAS numbers) + `core.product_category` (self-reference).
+Creating a product warns about similar names/aliases (pg_trgm >= 0.6) and needs `confirm_duplicate`. The
+product page is computed, nothing extra is stored: every offer row for the product, min/median/max per
+(currency, unit group) all time and last 12 months, demand (inquiries, cases, quantity per month, buyers),
+suppliers by offers and by HS capability.
+
+**Capability tags.** `ref.hs_code` (HS 2022: 96 chapters, 1228 headings; source UN Comtrade via
+datasets/harmonized-system, ODC-PDDL) and `ref.isic_code` (ISIC Rev.4: 21 sections, 88 divisions), with an
+`edition` column. Persian titles exist for chapters and sections only; missing ones are NULL and the UI shows
+the English title with a marker. `core.party_capability` stores `kind` (hs/isic/tag), `code` as text (no FK,
+so a new edition can replace the reference rows) or a free tag (`tag_norm` = lower(`normalize_fa`)), unique
+per party. Uses: party list filter `capability=hs:3907|isic:C20|tag:x` (a heading also matches its chapter),
+RFQ supplier suggestions (4-digit heading first, then chapter; suggestions only), product page, and the party
+search result.
+
+**Hooks into earlier modules** (the only changes outside the new modules):
+- parties UI: "Create inquiry" on an interaction; "Capabilities" card on the party Overview.
+- parties API: `GET /api/parties?capability=…` (ids from `sourcing.capabilities.matching_party_ids`), party
+  search also matches capability codes/titles/tags, command-center response gains `sourcing`
+  (`sourcing.dashboard.summary`: items without RFQ, overdue RFQ replies, offers expiring in 7 days, cases not
+  covered, and the share of open items with a coverage status).
+- system: settings `company.name`, `company.signature`; worker schedule `sourcing_expiry_hourly`;
+  `backup.table_counts` quotes table names (`ops."case"` is a reserved word).
+
+Routes: `/api/inquiries`, `/api/cases` (+ `/{id}/coverage`, `/{id}/comparison`), `/api/line-items`,
+`/api/rfqs`, `/api/offers`, `/api/message-templates`, `/api/products`, `/api/capabilities`. Delete only when
+nothing depends on a row (409 `in_use` with counts), otherwise cancel/withdraw/archive.
+

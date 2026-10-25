@@ -82,7 +82,7 @@ To restore an older dump, run from `C:\BOMS\app\backend` after a normal install 
 
 ## Update
 
-1. Extract the new release zip anywhere (for example `Downloads\boms-0.2.1`).
+1. Extract the new release zip anywhere (for example `Downloads\boms-0.3.0`).
 2. Run **its** `scripts\update.bat`.
 3. The updater stops BOMS, runs a `pre_update` backup (**aborts without changing anything if the backup
    fails**), replaces `backend`, `scripts`, `wheelhouse` and `docs` in `C:\BOMS\app` (the old ones are
@@ -193,3 +193,31 @@ Run once on the Windows PC after `update.bat` from 0.2.0 (not yet run there):
 - [ ] The same number on a second contact asks "This number is also registered for … Add anyway?"; *Yes* adds it, *No* adds nothing.
 - [ ] Ctrl+K finds the contact by `0912`, `09123456789`, `912345`, `989123456789` and `+98 912 345 6789` (use your own number).
 - [ ] Persian and English: the phone field and the new buttons do not overflow at 1280 px.
+
+## Manual checks for v0.3.0 (sourcing and RFQ)
+
+Run once on the Windows PC after `update.bat` from 0.2.1 (not yet run there):
+
+**Update**
+- [ ] Run the 0.3.0 `scripts\update.bat`: it prints `0.2.1 -> 0.3.0`, a `pre_update` backup appears, and *Run restore test* passes afterwards (now 36 tables).
+- [ ] The sidebar shows *Sourcing & RFQ* (Inquiries, Catalog, Message templates) and *Cases* without a "Phase" label.
+- [ ] Settings → *Company*: enter the company name and a Persian and an English signature.
+
+**Inquiry to case**
+- [ ] On a party's interaction click *Create inquiry*: party, channel and text are filled in. Save.
+- [ ] *Import*: paste three lines from Excel (name, quantity, unit) → the columns are recognised; a row with "abc" as quantity is flagged and unchecked; *Add* creates the items. Also import an `.xlsx` file.
+- [ ] Open an item, add properties (e.g. Grade, CAS) — earlier property names are suggested.
+- [ ] Decision: a hard check "No" blocks *Convert to case* with the reason; yellow needs the confirmation box; "Order before payment" needs the approval line; red rejects the inquiry.
+- [ ] Green → *Convert to case*: the case shows the same items.
+
+**RFQ and offers**
+- [ ] Give a Chinese supplier the HS heading of an item (party → Capabilities). *New RFQ* suggests that supplier.
+- [ ] RFQ for two suppliers: the foreign one gets an English e-mail (Dear + contact name, item table, signature), the Iranian one a Persian WhatsApp text with a Jalali date. *Copy text* works; *Open in mail app* opens Outlook/the default mail app with subject and body.
+- [ ] *Mark as sent*: the supplier's Interactions tab shows the outgoing message and the Command Center the follow-up; the items show *RFQ sent*. *Excel* downloads the item list.
+- [ ] Record two offers in different currencies (Enter moves down the price column), attach a PDF; the comparison shows one group per currency, *Lowest* in each, and "Not directly comparable" when Incoterms differ.
+- [ ] *Select* an offer; selecting another one asks for a reason; the case gate turns green when every item is selected or marked "no coverage".
+- [ ] Item → *Create product*; the product page shows the offered prices (min/median/max) and the demand.
+- [ ] Command Center → *Sourcing* shows items without RFQ, overdue replies, expiring offers and the coverage percentage.
+- [ ] Ctrl+K finds the inquiry, case, item, RFQ, offer and product (also with Arabic ي/ك); a supplier is found by its capability tag.
+- [ ] Every new page in Persian and English, light and dark: no horizontal scrolling at 1280 px.
+

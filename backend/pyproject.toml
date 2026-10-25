@@ -1,6 +1,6 @@
 [project]
 name = "boms"
-version = "0.2.1"
+version = "0.3.0"
 description = "BOMS - trading and order management"
 requires-python = ">=3.12,<3.13"
 dependencies = [
