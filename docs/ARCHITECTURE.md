@@ -231,11 +231,11 @@ normalize, clock). Migration `0004_parties` adds seven tables in `core`, all wit
 | Table | Notes |
 |---|---|
 | `core.funnel_stage` | Stage vocabulary per role, seeded by the migration: buyer (new_lead … dormant), supplier (identified … dormant), other roles (active, dormant). |
-| `core.party` | `name_fa`/`name_en` (at least one, CHECK), generated `name_norm = normalize_fa(fa + ' ' + en)` with a trigram index, `kind`, `country_iso2` → `sys.country`, `do_not_contact` + required reason (CHECK), `status` active/archived (no delete), `ref_company_id` reserved for the later world-companies portal (no FK, no UI). |
+| `core.party` | `name_fa`/`name_en` (at least one, CHECK), generated `name_norm = normalize_fa(fa + ' ' + en)` with a trigram index, `kind`, `country_iso2` → `sys.country`, `do_not_contact` + required reason (CHECK), `status` active/archived (real delete only when nothing depends on it, since v0.2.1), `ref_company_id` reserved for the later world-companies portal (no FK, no UI). |
 | `core.party_role` | One row per (party, role), UNIQUE. `(role, stage)` is a foreign key to `core.funnel_stage(role, code)`, so the vocabulary is enforced by the database. |
 | `core.contact` | Names, job title, primary flag (one active primary per party, partial unique index), status. |
-| `core.contact_method` | `type`, raw `value`, `value_norm`, primary flag, status (archive instead of delete). UNIQUE `(type, value_norm)` across all contacts: an identical number/address is a hard 409. Phone/WhatsApp numbers are normalized to international digits (`+98 912…`, `0098 912…`, `0912…` and Persian digits all give `98912…`; a national leading 0 is assumed to be Iran); email lowercased; Telegram without `@`. |
-| `core.interaction` | Party (required), optional contact of the same party, channel, direction, `occurred_at`, subject, raw `body` (never altered), generated `body_norm`, `no_followup_reason`. Full-text index on subject + body, trigram index on subject. A trigger allows only subject/body to change and forbids DELETE; corrections are recorded as events with before/after. |
+| `core.contact_method` | `type`, raw `value` (as typed), `value_norm`, primary flag, status. Since v0.2.1 (migration 0005): partial UNIQUE `(contact_id, type, value_norm) WHERE status = 'active'` (the same contact cannot hold a value twice: 409) plus a plain index on `(type, value_norm)`; the same value on another contact is allowed after a warning. Phone/WhatsApp are parsed with `phonenumbers` and stored as E.164 (`+989123456789`); email lowercased; Telegram without `@`. |
+| `core.interaction` | Party (required), optional contact of the same party, channel, direction, `occurred_at`, subject, raw `body` (never altered), generated `body_norm`, `no_followup_reason`. Full-text index on subject + body, trigram index on subject. A trigger allows only subject/body to change and forbids DELETE, except under the transaction-local flags described in *v0.2.1* below; corrections are recorded as events with before/after. |
 | `core.followup` | Optional interaction, party, action, `due_on` (date), status open/done/cancelled, `done_at`, `done_note` (required when cancelled, CHECK). |
 
 **Next action is mandatory.** Creating an interaction requires exactly one of a follow-up or a
@@ -258,3 +258,39 @@ identified/contacted/responded whose last interaction — or stage change if non
 party, contact (names + contact values) and interaction (subject + text) search providers.
 Routes: `/api/parties`, `/api/contacts`, `/api/interactions`, `/api/followups`, `/api/command-center`.
 Backups and the restore test include the new tables automatically.
+
+### Parties fixes (v0.2.1, migration `0005_parties_fixes`)
+
+- **Real deletes.** `DELETE /api/contacts/methods/{id}` (always), `DELETE /api/contacts/{id}` (only when no
+  interaction references the contact; its methods go with it) and `DELETE /api/parties/{id}` (only without
+  interactions, follow-ups and document links; contacts, methods and roles go with it). Otherwise
+  `409 in_use` with counts, e.g. `{"interactions": 2, "followups": 1, "documents": 0}`. Each delete is one
+  transaction; the event's `data.deleted` is a full snapshot and the audit trigger writes the `D` rows.
+  `core.event` / `core.audit` stay append-only (`core.forbid_change` is unchanged).
+- **Test-data cleanup.** `DELETE /api/parties/{id}?cascade=true` with `{"confirm_name": "<exact name_fa or
+  name_en>"}` (else 422 `confirm_name_mismatch`) also deletes the party's interactions, follow-ups and
+  document links (stored files are not touched). The service sets `boms.allow_interaction_delete = 'on'`
+  with `set_config(..., true)` (transaction-local); the trigger function `core.interaction_delete_guard`
+  rejects every other DELETE on `core.interaction`. The snapshot holds every deleted interaction.
+- **Interaction corrections.** `PATCH /api/interactions/{id}` also takes `party_id`, `contact_id` (must belong
+  to the resulting party, or null), `channel`, `direction`, `occurred_at`. `core.interaction_guard` allows
+  these columns only under the transaction-local flag `boms.interaction_edit = 'on'`;
+  `no_followup_reason` and `created_at` never change. Moving to another party moves the follow-ups created
+  from that interaction (event `followup.move`); document links stay. Event `interaction.correct` has
+  `before`/`after` of every changed field.
+- **Archive.** `POST /api/parties/{id}/archive` takes `{"open_followups": "cancel" | "keep"}` (default cancel).
+  Cancel closes them with note "party archived" and an event each; kept ones stay in the command center,
+  whose rows carry `party_status`.
+- **Phones.** `phonenumbers` parses numbers typed locally, with `+` or with `00` (Persian digits too). Region =
+  the request's `region`, else the party's `country_iso2`, else `IR`. Numbers that fail
+  `is_possible_number` are rejected with 422 `invalid_phone` and a reason. Responses add `value_display`
+  (international format). `GET /api/parties/phone-regions` lists the `sys.country` rows phonenumbers knows,
+  with their calling code. The migration prefixes existing phone/WhatsApp `value_norm` with `+` (no re-parse);
+  the downgrade strips it and fails if a value is shared by two contacts by then.
+- **Phone search.** The contact search provider takes the query's digits (if at least 4 were typed), strips
+  leading zeros and matches `value_norm LIKE '%digits%'`: `0912`, `09123456789`, `912345`, `989123456789`
+  and `+98 912 345 6789` all find the contact.
+- **Shared numbers.** Adding (or creating a contact with, or changing to) a value that another active contact
+  holds answers `200 {"created": false, "shared_with": [{contact_name, party_name, party_id, ...}]}` and stores
+  nothing; the client repeats with `confirm_shared: true`. Archived methods are ignored by these checks and by
+  the unique index; re-adding an archived value creates a new row.

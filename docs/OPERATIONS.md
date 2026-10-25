@@ -82,7 +82,7 @@ To restore an older dump, run from `C:\BOMS\app\backend` after a normal install 
 
 ## Update
 
-1. Extract the new release zip anywhere (for example `Downloads\boms-0.2.0`).
+1. Extract the new release zip anywhere (for example `Downloads\boms-0.2.1`).
 2. Run **its** `scripts\update.bat`.
 3. The updater stops BOMS, runs a `pre_update` backup (**aborts without changing anything if the backup
    fails**), replaces `backend`, `scripts`, `wheelhouse` and `docs` in `C:\BOMS\app` (the old ones are
@@ -167,3 +167,29 @@ Run once on the Windows PC after `update.bat` from 0.1.1 (not yet run there):
 - [ ] Funnels: move a card with *Move to…*; the party's History tab shows the stage change with old and new stage.
 - [ ] Ctrl+K: type the party name with Arabic ي/ك, a contact's phone digits, or a word from the pasted message → the party, contact and interaction are found.
 - [ ] Check every page in Persian and English, light and dark: no horizontal scrolling at 1280 px.
+
+## Manual checks for v0.2.1 (parties fixes)
+
+Run once on the Windows PC after `update.bat` from 0.2.0 (not yet run there):
+
+**Update**
+- [ ] Run the 0.2.1 `scripts\update.bat`: it prints `0.2.0 -> 0.2.1`, a `pre_update` backup appears, and *Run restore test* passes afterwards.
+- [ ] Existing contacts: phone/WhatsApp numbers show in international form (`+98 912 …`); nothing else changed.
+
+**Delete and archive**
+- [ ] A new contact without interactions: *Delete* → one-line confirmation → gone; the party's History shows the deletion.
+- [ ] A phone/email row: *Delete* removes only that row.
+- [ ] A party with an interaction: *Delete* shows the counts (interactions, follow-ups, documents) and *Archive instead*.
+- [ ] A new party without history: *Delete* → back to the parties list.
+- [ ] Archive a party with an open follow-up: the dialog asks *Cancel them* / *Keep them*; with *Keep them* the follow-up stays in the Command Center with an *Archived* badge; with *Cancel them* it is closed with "party archived".
+- [ ] Danger zone: the cascade button stays disabled until the exact party name is typed; afterwards the party, its interactions and follow-ups are gone and the attached documents still open from *Documents*.
+
+**Interactions**
+- [ ] *Correct* an interaction: move it to another party (search in the picker), change channel, direction, date and time → it appears under the other party with its follow-up; the attached document stays attached.
+
+**Phone input**
+- [ ] For a party in the UAE the country select shows the UAE by default; for a party without country it shows Iran. Typing `+98…` or `0098…` switches to Iran.
+- [ ] `050 123 4567` on a UAE party is stored as `+971 50 123 4567`; `123` gives a clear "not a possible phone number" message.
+- [ ] The same number on a second contact asks "This number is also registered for … Add anyway?"; *Yes* adds it, *No* adds nothing.
+- [ ] Ctrl+K finds the contact by `0912`, `09123456789`, `912345`, `989123456789` and `+98 912 345 6789` (use your own number).
+- [ ] Persian and English: the phone field and the new buttons do not overflow at 1280 px.

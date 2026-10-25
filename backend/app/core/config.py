@@ -11,7 +11,7 @@ from pathlib import Path
 
 from app.core.secrets import get_secret
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 
 
 @dataclass(frozen=True)
