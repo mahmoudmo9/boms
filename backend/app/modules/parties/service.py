@@ -227,8 +227,11 @@ def change_stage(db: Session, party_id: uuid.UUID, role: str, stage: str, reason
 
 def list_parties(db: Session, *, q: str | None = None, role: str | None = None, stage: str | None = None,
                  country: str | None = None, status: str | None = "active", sort: str = "updated_at",
-                 order: str = "desc", page: int = 1, page_size: int = 50) -> tuple[list[Party], int]:
+                 order: str = "desc", page: int = 1, page_size: int = 50,
+                 ids: set[uuid.UUID] | None = None) -> tuple[list[Party], int]:
     query = select(Party)
+    if ids is not None:  # e.g. the capability filter (Phase 5)
+        query = query.where(Party.id.in_(ids or [uuid.uuid4()]))
     if status:
         query = query.where(Party.status == status)
     if country:

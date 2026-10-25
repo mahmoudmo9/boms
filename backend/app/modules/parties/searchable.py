@@ -24,10 +24,11 @@ def _parties(db, needle: str, raw: str, limit: int) -> list[SearchHit]:
         SELECT p.id, p.name_fa, p.name_en, p.status, p.do_not_contact,
                word_similarity(:needle, {PARTY_EXPR}) AS score
         FROM core.party p
-        WHERE {PARTY_EXPR} LIKE :like OR {PARTY_EXPR} %> :needle
+        WHERE {PARTY_EXPR} LIKE :like OR {PARTY_EXPR} %> :needle OR p.id = ANY(CAST(:capable AS uuid[]))
         ORDER BY (p.status = 'active') DESC, score DESC, p.id LIMIT :limit
         """
-    ), {"needle": needle, "like": _like(needle), "limit": limit}).all()
+    ), {"needle": needle, "like": _like(needle), "limit": limit,
+        "capable": [str(i) for i in _capable(db, needle)]}).all()
     hits = []
     for r in rows:
         title, i18n = _title(r.name_fa, r.name_en)
@@ -35,6 +36,13 @@ def _parties(db, needle: str, raw: str, limit: int) -> list[SearchHit]:
                               score=float(r.score), link=f"/parties/{r.id}",
                               extra={"status": r.status, "do_not_contact": r.do_not_contact}))
     return hits
+
+
+def _capable(db, needle: str) -> list:
+    """Parties whose capability tags (HS/ISIC code or title, free tag) match: found as the same party result."""
+    from app.modules.sourcing import capabilities
+
+    return capabilities.search_party_ids(db, needle)
 
 
 def _contacts(db, needle: str, raw: str, limit: int) -> list[SearchHit]:

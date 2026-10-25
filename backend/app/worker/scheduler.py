@@ -41,6 +41,11 @@ def monthly_due(db: Session, now: datetime) -> datetime:
     return due
 
 
+def hourly_due(_db: Session, now: datetime) -> datetime:
+    """Start of the current hour."""
+    return now.replace(minute=0, second=0, microsecond=0)
+
+
 @dataclass(frozen=True)
 class Schedule:
     name: str
@@ -53,6 +58,8 @@ class Schedule:
 SCHEDULES = [
     Schedule("backup_nightly", "backup.run", {"kind": "nightly"}, nightly_due),
     Schedule("restore_test_monthly", "backup.restore_test", {}, monthly_due),
+    # sourcing: RFQ recipients past respond_by -> no_response, offers past valid_until -> expired (status only)
+    Schedule("sourcing_expiry_hourly", "sourcing.expire", {}, hourly_due),
 ]
 
 

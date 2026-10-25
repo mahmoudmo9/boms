@@ -266,3 +266,179 @@ class CaseOut(ApiModel):
 
 class DocumentLinkIn(InputModel):
     document_id: uuid.UUID
+
+
+# ---- RFQ ----------------------------------------------------------------------------------------
+
+class FollowupSpec(InputModel):
+    action: Annotated[str, Field(min_length=1, max_length=1000)]
+    due_on: date
+
+
+class RfqItemIn(InputModel):
+    line_item_id: uuid.UUID
+    quantity: Quantity | None = None
+    unit_code: Code | None = None
+    unit_text: Text300 | None = None
+    note: Text500 | None = None
+
+
+class RecipientIn(InputModel):
+    party_id: uuid.UUID
+    contact_id: uuid.UUID | None = None
+    channel: RfqChannel | None = None
+    language: Lang | None = None
+    template_id: uuid.UUID | None = None
+
+
+class RfqCreate(InputModel):
+    case_id: uuid.UUID
+    title: Text500 | None = None
+    language: Lang = "en"
+    respond_by: date | None = None
+    notes: LongText | None = None
+    items: list[RfqItemIn] = Field(min_length=1, max_length=500)
+    recipients: list[RecipientIn] = Field(default_factory=list, max_length=200)
+
+
+class RfqPatch(InputModel):
+    title: Text500 | None = None
+    language: Lang | None = None
+    respond_by: date | None = None
+    notes: LongText | None = None
+    items: list[RfqItemIn] | None = Field(default=None, min_length=1, max_length=500)
+
+
+class RecipientPatch(InputModel):
+    channel: RfqChannel | None = None
+    language: Lang | None = None
+    contact_id: uuid.UUID | None = None
+    template_id: uuid.UUID | None = None
+    subject: Text500 | None = None
+    message_text: RawText | None = None
+    rerender: bool = False
+
+
+class MarkSentIn(InputModel):
+    sent_at: datetime | None = None
+    subject: Text500 | None = None
+    message_text: RawText | None = None
+    followup: FollowupSpec | None = None
+    no_followup_reason: Text500 | None = None
+
+
+class NoteIn(InputModel):
+    note: Text500 | None = None
+
+
+class TemplateIn(InputModel):
+    language: Lang
+    channel: TemplateChannel
+    name: Annotated[str, Field(min_length=1, max_length=200)]
+    subject_template: Text500 = ""
+    body_template: Annotated[str, Field(min_length=1, max_length=20000)]
+    is_default: bool = False
+
+
+class TemplatePatch(InputModel):
+    language: Lang | None = None
+    channel: TemplateChannel | None = None
+    name: Annotated[str, Field(min_length=1, max_length=200)] | None = None
+    subject_template: Text500 | None = None
+    body_template: Annotated[str, Field(min_length=1, max_length=20000)] | None = None
+    is_default: bool | None = None
+    status: Literal["active", "archived"] | None = None
+
+
+class TemplatePreviewIn(InputModel):
+    subject_template: Text500 = ""
+    body_template: Annotated[str, Field(min_length=1, max_length=20000)]
+    language: Lang = "en"
+
+
+# ---- offers -------------------------------------------------------------------------------------
+
+class OfferItemIn(InputModel):
+    line_item_id: uuid.UUID
+    available: bool = True
+    unit_price: Amount | None = None
+    price_per_quantity: Quantity = Decimal(1)
+    unit_code: Code | None = None
+    unit_text: Text300 | None = None
+    moq: Quantity | None = None
+    moq_unit: Text300 | None = None
+    lead_time_days: Annotated[int, Field(ge=0, le=3650)] | None = None
+    spec_deviation: LongText | None = None
+    packaging: Text500 | None = None
+    notes: LongText | None = None
+
+
+class OfferHeader(InputModel):
+    contact_id: uuid.UUID | None = None
+    received_at: datetime | None = None
+    channel: OfferChannel | None = None
+    valid_until: date | None = None
+    currency: Currency | None = None
+    incoterm: Incoterm | None = None
+    incoterm_place: Text300 | None = None
+    payment_terms: Text500 | None = None
+    lead_time_days: Annotated[int, Field(ge=0, le=3650)] | None = None
+    compliance_notes: LongText | None = None
+    notes: LongText | None = None
+
+
+class OfferCreate(OfferHeader):
+    case_id: uuid.UUID
+    party_id: uuid.UUID
+    rfq_recipient_id: uuid.UUID | None = None
+    channel: OfferChannel
+    currency: Currency
+    raw_text: RawText | None = None
+    items: list[OfferItemIn] = Field(min_length=1, max_length=500)
+    followup: FollowupSpec | None = None
+    no_followup_reason: Text500 | None = None
+    supersedes_offer_id: uuid.UUID | None = None
+    document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+
+
+class OfferItemPatch(InputModel):
+    available: bool | None = None
+    unit_price: Amount | None = None
+    price_per_quantity: Quantity | None = None
+    unit_code: Code | None = None
+    unit_text: Text300 | None = None
+    moq: Quantity | None = None
+    moq_unit: Text300 | None = None
+    lead_time_days: Annotated[int, Field(ge=0, le=3650)] | None = None
+    spec_deviation: LongText | None = None
+    packaging: Text500 | None = None
+    notes: LongText | None = None
+
+
+class OfferStatusIn(InputModel):
+    status: Literal["active", "withdrawn"]
+    note: Text500 | None = None
+
+
+class SelectOfferIn(InputModel):
+    offer_item_id: uuid.UUID | None
+    reason: Text500 | None = None
+
+
+# ---- capabilities -------------------------------------------------------------------------------
+
+class CapabilityIn(InputModel):
+    kind: Literal["hs", "isic", "tag"]
+    code: Annotated[str, Field(max_length=20)] | None = None
+    tag_text: Annotated[str, Field(max_length=200)] | None = None
+    notes: Text500 | None = None
+
+
+class CapabilitySet(InputModel):
+    items: list[CapabilityIn] = Field(max_length=500)
+
+
+class ProductFromItemIn(InputModel):
+    confirm_duplicate: bool = False
+    name_fa: Text500 | None = None
+    name_en: Text500 | None = None

@@ -82,7 +82,15 @@ def summary(db: Session) -> dict:
         "stale_leads": stale_leads(db, days),
         "stale_lead_days": days,
         "funnel_counts": funnel_counts(db),
+        "sourcing": _sourcing(db, today),
     }
+
+
+def _sourcing(db: Session, today) -> dict:
+    """Sourcing section (Phase 5), provided by the sourcing module's public dashboard."""
+    from app.modules.sourcing import dashboard
+
+    return dashboard.summary(db, today)
 
 
 def funnel_board(db: Session, role: str) -> dict:

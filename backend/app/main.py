@@ -16,6 +16,7 @@ from app.modules.documents.router import router as documents_router
 from app.modules.events.router import router as events_router
 from app.modules.parties.router import ROUTERS as parties_routers
 from app.modules.sourcing.router import ROUTERS as sourcing_routers
+from app.modules.catalog.router import ROUTERS as catalog_routers
 from app.modules.search.router import router as search_router
 from app.modules.system.router import router as system_router
 
@@ -29,7 +30,7 @@ def create_app() -> FastAPI:
     app.include_router(events_router)
     app.include_router(documents_router)
     app.include_router(search_router)
-    for router in parties_routers + sourcing_routers:
+    for router in parties_routers + sourcing_routers + catalog_routers:
         app.include_router(router)
 
     @app.get("/api/health")

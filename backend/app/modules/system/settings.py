@@ -52,6 +52,26 @@ def _int_range(low: int, high: int) -> Callable[[Any], int]:
     return check
 
 
+def _short_text(value: Any) -> str:
+    if not isinstance(value, str) or len(value) > 300:
+        raise ValueError("expected text (up to 300 characters)")
+    return value.strip()
+
+
+def _signature(value: Any) -> dict[str, str]:
+    """Multi-line signature per language code, e.g. {"fa": "...", "en": "..."}."""
+    if not isinstance(value, dict) or len(value) > 10:
+        raise ValueError("expected {language: text}")
+    clean = {}
+    for lang, text in value.items():
+        if not isinstance(lang, str) or not re.fullmatch(r"[a-z]{2,3}", lang):
+            raise ValueError("language codes are 2-3 lowercase letters")
+        if not isinstance(text, str) or len(text) > 2000:
+            raise ValueError("expected text (up to 2000 characters)")
+        clean[lang] = text.rstrip()
+    return clean
+
+
 # key -> (default, validator)
 DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "backup.time": ("02:00", _time),
@@ -60,6 +80,8 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "backup.archive_path": (None, _optional_path),
     "upload.max_mb": (100, _int_range(1, 2048)),
     "parties.stale_lead_days": (14, _int_range(1, 365)),
+    "company.name": ("", _short_text),
+    "company.signature": ({"fa": "", "en": ""}, _signature),
 }
 
 

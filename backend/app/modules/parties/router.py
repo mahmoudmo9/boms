@@ -90,11 +90,17 @@ def list_parties(_: CurrentUser, db: Db, q: str | None = None, role: Role | None
                  country: str | None = None, status: Literal["active", "archived", "all"] = "active",
                  sort: Literal["name", "updated_at", "created_at"] = "updated_at",
                  order: Literal["asc", "desc"] = "desc", page: int = 1,
-                 page_size: Annotated[int, Query(le=200)] = 50):
+                 page_size: Annotated[int, Query(le=200)] = 50,
+                 capability: Annotated[str | None, Query(max_length=200)] = None):
     page, page_size = page_params(page, page_size, 200)
+    ids = None
+    if capability:  # "hs:3907", "isic:C20", "tag:pe100" (capability tags are owned by the sourcing module)
+        from app.modules.sourcing import capabilities
+
+        ids = capabilities.matching_party_ids(db, capability)
     rows, total = service.list_parties(db, q=q, role=role, stage=stage, country=country,
                                        status=None if status == "all" else status, sort=sort, order=order,
-                                       page=page, page_size=page_size)
+                                       page=page, page_size=page_size, ids=ids)
     return {"items": _party_card(db, rows), "total": total, "page": page, "page_size": page_size}
 
 
