@@ -59,6 +59,7 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "backup.archive_enabled": (False, _bool),
     "backup.archive_path": (None, _optional_path),
     "upload.max_mb": (100, _int_range(1, 2048)),
+    "parties.stale_lead_days": (14, _int_range(1, 365)),
 }
 
 
