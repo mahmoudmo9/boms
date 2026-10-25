@@ -1,7 +1,7 @@
 [project]
 name = "boms"
-version = "0.1.1"
-description = "BOMS - trading and order management (Phase 1: system skeleton)"
+version = "0.2.0"
+description = "BOMS - trading and order management"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi>=0.115",

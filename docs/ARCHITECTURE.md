@@ -15,6 +15,7 @@ backend/app/
     events/        append-only event log (core.event) + audit trail reader (core.audit)
     documents/     file store, documents, document links, PDF text extraction job
     search/        global search + provider registry
+    parties/       trading parties, contacts, interactions, follow-ups, funnels, command center (Phase 3)
   worker/          job runner, handler registry, scheduler  (python -m app.worker)
   cli.py           commands used by the Windows scripts
   launch.py        Task Scheduler entry point (reads C:\BOMS\config.json, runs backend or worker)
@@ -55,6 +56,7 @@ module's ORM models to write to them.
 | system   | `sys.app_user`, `sys.setting`, `sys.country`, `sys.currency`, `sys.unit`, `sys.job`, `sys.backup_run` |
 | events   | `core.event`, `core.audit` (audit rows are written only by the trigger) |
 | documents| `core.document`, `core.document_link` |
+| parties  | `core.funnel_stage`, `core.party`, `core.party_role`, `core.contact`, `core.contact_method`, `core.interaction`, `core.followup` (Phase 3) |
 
 ## Database conventions
 
@@ -219,3 +221,40 @@ can run" to "deliberate use of the owner credentials".
 
 **Cost.** One more secret, one more connection setting for migrations, a one-time ownership conversion
 on existing installs, and test fixture changes. Roughly one day of work including Windows verification.
+
+## Trading parties (Phase 3, v0.2.0)
+
+Module `app/modules/parties/` (models, schemas, service, interactions, command_center, router, searchable,
+normalize, clock). Migration `0004_parties` adds seven tables in `core`, all with UUIDv7 keys,
+`created_at`/`updated_at`, the `updated_at` trigger and the generic audit trigger.
+
+| Table | Notes |
+|---|---|
+| `core.funnel_stage` | Stage vocabulary per role, seeded by the migration: buyer (new_lead … dormant), supplier (identified … dormant), other roles (active, dormant). |
+| `core.party` | `name_fa`/`name_en` (at least one, CHECK), generated `name_norm = normalize_fa(fa + ' ' + en)` with a trigram index, `kind`, `country_iso2` → `sys.country`, `do_not_contact` + required reason (CHECK), `status` active/archived (no delete), `ref_company_id` reserved for the later world-companies portal (no FK, no UI). |
+| `core.party_role` | One row per (party, role), UNIQUE. `(role, stage)` is a foreign key to `core.funnel_stage(role, code)`, so the vocabulary is enforced by the database. |
+| `core.contact` | Names, job title, primary flag (one active primary per party, partial unique index), status. |
+| `core.contact_method` | `type`, raw `value`, `value_norm`, primary flag, status (archive instead of delete). UNIQUE `(type, value_norm)` across all contacts: an identical number/address is a hard 409. Phone/WhatsApp numbers are normalized to international digits (`+98 912…`, `0098 912…`, `0912…` and Persian digits all give `98912…`; a national leading 0 is assumed to be Iran); email lowercased; Telegram without `@`. |
+| `core.interaction` | Party (required), optional contact of the same party, channel, direction, `occurred_at`, subject, raw `body` (never altered), generated `body_norm`, `no_followup_reason`. Full-text index on subject + body, trigram index on subject. A trigger allows only subject/body to change and forbids DELETE; corrections are recorded as events with before/after. |
+| `core.followup` | Optional interaction, party, action, `due_on` (date), status open/done/cancelled, `done_at`, `done_note` (required when cancelled, CHECK). |
+
+**Next action is mandatory.** Creating an interaction requires exactly one of a follow-up or a
+`no_followup_reason` (422 `next_action_required` / `next_action_conflict`). A deferred constraint trigger
+checks the same rule at commit as a backstop.
+
+**Duplicates.** `POST /api/parties` first looks for parties whose name has pg_trgm similarity ≥ 0.6 (per
+language or combined); if any exist it answers `200 {"created": false, "possible_duplicates": [...]}` and
+stores nothing; the client repeats the call with `confirm_duplicate: true`. Contact methods are a hard 409.
+
+**Command center.** `GET /api/command-center` returns overdue / today / next 7 days (open follow-ups by
+`due_on`), stale leads (active buyers in new_lead/contacted/in_conversation/quoted and suppliers in
+identified/contacted/responded whose last interaction — or stage change if none — is older than the
+`parties.stale_lead_days` setting, default 14), funnel counts per role and stage, and `overdue_count`.
+"Today" is the PC's local date (the same zone the backup scheduler uses), never the UTC date.
+
+**Integration with other modules** (public functions only): `events.record` for every write,
+`documents.service.link/unlink` for attachments (`entity_type` `interaction` or `party` in
+`core.document_link`), `settings.get` for `parties.stale_lead_days`, `searchable.py` registers the
+party, contact (names + contact values) and interaction (subject + text) search providers.
+Routes: `/api/parties`, `/api/contacts`, `/api/interactions`, `/api/followups`, `/api/command-center`.
+Backups and the restore test include the new tables automatically.

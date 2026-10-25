@@ -142,3 +142,28 @@ Windows 10/11 PC. Tick each item.
 - [ ] Stop PostgreSQL, run `update.bat` → pre-update backup fails → update aborts, nothing changed.
 - [ ] On a second clean PC (or VM): `restore.bat <backup folder>` → login with the old password, documents open, restore test passes.
 - [ ] `stop.bat` / `start.bat` work.
+
+## Manual checks for v0.2.0 (trading parties)
+
+Run once on the Windows PC after `update.bat` from 0.1.1 (not yet run there):
+
+**Update**
+- [ ] Run the 0.2.0 `scripts\update.bat`: it prints `0.1.1 -> 0.2.0`, a `pre_update` backup appears, and System & Backup → *Run restore test* passes afterwards (the backup now covers 18 tables).
+- [ ] Existing documents, base data and settings are unchanged.
+
+**Parties**
+- [ ] Sidebar: *Command Center* and *Trading Parties* no longer show "Phase 3"; Trading Parties has *Parties* and *Funnels*.
+- [ ] New party with a Persian name and the buyer role → it opens in stage *New lead*. Creating a second party with almost the same name shows the duplicate warning; Save works only after ticking "create anyway".
+- [ ] Add a contact with WhatsApp `0912 123 4567`; adding `+98 912 123 4567` to another contact is refused and names the first party.
+- [ ] Tick *Do not contact*: Save needs a reason; the red badge appears in the list, command center, funnel and search.
+
+**Quick-log and follow-ups**
+- [ ] Ctrl+Shift+L (and the header button) opens *Log interaction*. Save stays disabled until a next action with a due date, or *No follow-up needed* with a reason, is filled.
+- [ ] Paste a WhatsApp message, drop a PDF onto the dialog, choose *Tomorrow*, move the stage → the interaction shows the text unchanged and the attachment; the PDF is also under Documents.
+- [ ] Command center: the follow-up is under *Next 7 days*; *Done* with a next follow-up closes it and creates the next one; *Reschedule* moves it. Around midnight (Tehran time) items move from *Today* to *Overdue* at local midnight, not at 03:30.
+- [ ] Settings → *Stale lead after* = 1 day: a lead without contact for a day appears under stale leads.
+
+**Funnels and search**
+- [ ] Funnels: move a card with *Move to…*; the party's History tab shows the stage change with old and new stage.
+- [ ] Ctrl+K: type the party name with Arabic ي/ك, a contact's phone digits, or a word from the pasted message → the party, contact and interaction are found.
+- [ ] Check every page in Persian and English, light and dark: no horizontal scrolling at 1280 px.
