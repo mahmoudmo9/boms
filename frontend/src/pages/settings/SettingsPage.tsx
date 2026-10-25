@@ -3,7 +3,7 @@ import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Bdi } from "../../components/Bdi";
-import { Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Segmented } from "../../components/ui";
+import { Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Segmented, Textarea } from "../../components/ui";
 import { useToast } from "../../components/toast";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -202,6 +202,44 @@ function SystemSettings() {
   );
 }
 
+/** Company name and the RFQ signature per language (used by {signature} in message templates). */
+function CompanySettings() {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ["settings"], queryFn: () => api<SettingsResponse>("/api/settings") });
+  const [name, setName] = useState<string | null>(null);
+  const [signature, setSignature] = useState<Record<string, string> | null>(null);
+  useEffect(() => {
+    if (settings.data) {
+      setName(settings.data.values["company.name"] ?? "");
+      setSignature({ fa: "", en: "", ...(settings.data.values["company.signature"] ?? {}) });
+    }
+  }, [settings.data]);
+  const save = useMutation({
+    mutationFn: () => api<SettingsResponse>("/api/settings", { method: "PATCH", body: { "company.name": name, "company.signature": signature } }),
+    onSuccess: (data) => { queryClient.setQueryData(["settings"], data); toast(t("common.saved"), "success"); },
+  });
+  if (name === null || signature === null) return null;
+  return (
+    <Card title={t("settings.company")}>
+      <form onSubmit={(e: FormEvent) => { e.preventDefault(); save.mutate(); }}>
+        <Row label={t("settings.companyName")}>
+          <Input dir="auto" className="max-w-md" maxLength={300} value={name} onChange={(e) => setName(e.target.value)} />
+        </Row>
+        {(["fa", "en"] as const).map((lang) => (
+          <Row key={lang} label={t("settings.signature", { language: t(`common.languageNames.${lang}`) })} hint={t("settings.signatureHint")}>
+            <Textarea dir={lang === "fa" ? "rtl" : "ltr"} rows={4} className="max-w-md" value={signature[lang] ?? ""}
+              onChange={(e) => setSignature({ ...signature, [lang]: e.target.value })} />
+          </Row>
+        ))}
+        <ErrorNote error={save.error} />
+        <div className="pt-3"><Button type="submit" variant="primary" busy={save.isPending}>{t("common.save")}</Button></div>
+      </form>
+    </Card>
+  );
+}
+
 export function SettingsPage() {
   const { t } = useTranslation();
   return (
@@ -210,6 +248,7 @@ export function SettingsPage() {
       <DisplaySettings />
       <ProfileSettings />
       <PasswordSettings />
+      <CompanySettings />
       <SystemSettings />
     </div>
   );

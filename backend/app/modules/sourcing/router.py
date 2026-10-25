@@ -74,6 +74,14 @@ def _items_out(rows) -> list[dict]:
     return [LineItemOut.model_validate(r).model_dump(mode="json") for r in rows]
 
 
+def _party_names(db: Session, party_ids) -> dict:
+    out = {}
+    for pid in {p for p in party_ids if p}:
+        party = parties.get_party(db, pid)
+        out[pid] = {"party_name_fa": party.name_fa, "party_name_en": party.name_en}
+    return out
+
+
 def _documents(db: Session, entity_type: str, entity_id) -> list[dict]:
     return linked_documents(db, entity_type, [entity_id])
 
@@ -104,6 +112,7 @@ def inquiry_detail(db: Session, inquiry_id: uuid.UUID) -> dict:
         "gate": inquiries.gate(db, row),
         "case_id": str(case.id) if case else None,
         "documents": _documents(db, "inquiry", row.id),
+        **_party_names(db, [row.party_id]).get(row.party_id, {}),
     }
 
 
@@ -115,8 +124,9 @@ def list_inquiries(_: CurrentUser, db: Db, q: str | None = None,
                    page_size: Annotated[int, Query(le=200)] = 50):
     page, page_size = page_params(page, page_size, 200)
     rows, total = inquiries.list_inquiries(db, q=q, status=status, party_id=party_id, page=page, page_size=page_size)
-    return {"items": [InquiryOut.model_validate(r).model_dump(mode="json") for r in rows], "total": total,
-            "page": page, "page_size": page_size}
+    names = _party_names(db, [r.party_id for r in rows])
+    return {"items": [{**InquiryOut.model_validate(r).model_dump(mode="json"), **names.get(r.party_id, {})} for r in rows],
+            "total": total, "page": page, "page_size": page_size}
 
 
 @inquiries_router.get("/prefill")
@@ -198,6 +208,7 @@ def case_detail(db: Session, case_id: uuid.UUID) -> dict:
         "items": _items_out(item_rows),
         "warnings": items.duplicate_warnings(item_rows),
         "documents": _documents(db, "case", case.id),
+        **_party_names(db, [case.party_id]).get(case.party_id, {}),
     }
 
 
@@ -207,8 +218,9 @@ def list_cases(_: CurrentUser, db: Db, q: str | None = None,
                party_id: uuid.UUID | None = None, page: int = 1, page_size: Annotated[int, Query(le=200)] = 50):
     page, page_size = page_params(page, page_size, 200)
     rows, total = inquiries.list_cases(db, q=q, status=status, party_id=party_id, page=page, page_size=page_size)
-    return {"items": [CaseOut.model_validate(r).model_dump(mode="json") for r in rows], "total": total, "page": page,
-            "page_size": page_size}
+    names = _party_names(db, [r.party_id for r in rows])
+    return {"items": [{**CaseOut.model_validate(r).model_dump(mode="json"), **names.get(r.party_id, {})} for r in rows],
+            "total": total, "page": page, "page_size": page_size}
 
 
 @cases_router.post("", status_code=201)

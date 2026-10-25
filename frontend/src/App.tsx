@@ -13,8 +13,14 @@ import { CommandCenterPage } from "./pages/parties/CommandCenterPage";
 import { FunnelsPage } from "./pages/parties/FunnelsPage";
 import { PartiesPage } from "./pages/parties/PartiesPage";
 import { PartyDetailPage } from "./pages/parties/PartyDetailPage";
+import { CaseDetailPage } from "./pages/cases/CaseDetailPage";
+import { CasesPage } from "./pages/cases/CasesPage";
 import { NotFoundPage, PlaceholderPage } from "./pages/PlaceholderPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
+import { CatalogPage, ProductPage } from "./pages/sourcing/CatalogPage";
+import { InquiriesPage } from "./pages/sourcing/InquiriesPage";
+import { InquiryDetailPage } from "./pages/sourcing/InquiryDetailPage";
+import { TemplatesPage } from "./pages/sourcing/TemplatesPage";
 import { SystemPage } from "./pages/system/SystemPage";
 import { AppShell } from "./shell/AppShell";
 
@@ -37,6 +43,13 @@ export function App() {
         <Route path="parties" element={<PartiesPage />} />
         <Route path="parties/funnels" element={<FunnelsPage />} />
         <Route path="parties/:id" element={<PartyDetailPage />} />
+        <Route path="sourcing" element={<InquiriesPage />} />
+        <Route path="sourcing/inquiries/:id" element={<InquiryDetailPage />} />
+        <Route path="sourcing/catalog" element={<CatalogPage />} />
+        <Route path="sourcing/catalog/:id" element={<ProductPage />} />
+        <Route path="sourcing/templates" element={<TemplatesPage />} />
+        <Route path="cases" element={<CasesPage />} />
+        <Route path="cases/:id" element={<CaseDetailPage />} />
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="documents/:id" element={<DocumentDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />

@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import { Bdi } from "../../components/Bdi";
 import { Badge, Button, Card, EmptyState, ErrorNote, Loading, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
-import type { CommandCenter, FollowupRow } from "../../lib/types";
+import type { CommandCenter, FollowupRow, SourcingSummary } from "../../lib/types";
 import { useQuickLog } from "./QuickLog";
 import { FollowupActions, PartyName, stageLabel } from "./shared";
 
@@ -34,6 +36,50 @@ function FollowupList({ rows, tone }: { rows: FollowupRow[]; tone?: "danger" }) 
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Phase 5: items without RFQ, overdue RFQ replies, offers expiring soon, cases not covered, coverage %. */
+function SourcingSection({ s }: { s: SourcingSummary }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const list = (rows: { key: string; to: string; label: ReactNode; extra?: ReactNode }[]) => rows.length === 0 ? <EmptyState>{t("cc.nothing")}</EmptyState> : (
+    <ul className="divide-y divide-line">{rows.map((r) => (
+      <li key={r.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
+        <Link to={r.to} className="min-w-0 truncate text-accent hover:underline">{r.label}</Link>{r.extra}
+      </li>
+    ))}</ul>
+  );
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-base font-semibold">{t("cc.sourcing.title")}</h2>
+        <span className="rounded-md border border-line px-3 py-1 text-sm">
+          {t("cc.sourcing.coverage")}: <b className="tabular-nums">{s.coverage_status_percent === null ? "—" : `${f.num(s.coverage_status_percent, 1)}%`}</b>
+          <span className="ms-1 text-xs text-muted tabular-nums">({f.num(s.open_items_with_status)}/{f.num(s.open_items)})</span>
+        </span>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sourcing.noRfq")} <Badge tone={s.items_without_rfq.length ? "warning" : "neutral"}>{f.num(s.items_without_rfq.length)}</Badge></span>}>
+          {list(s.items_without_rfq.map((i) => ({ key: i.item_id, to: `/cases/${i.case_id}?tab=items&item=${i.item_id}`, label: <Bdi>{i.name}</Bdi>,
+            extra: <span className="text-xs text-muted"><Bdi>{i.case_title}</Bdi></span> })))}
+        </Card>
+        <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sourcing.rfqOverdue")} <Badge tone={s.rfq_overdue.length ? "danger" : "neutral"}>{f.num(s.rfq_overdue.length)}</Badge></span>}>
+          {list(s.rfq_overdue.map((r) => ({ key: r.recipient_id, to: `/cases/${r.case_id}?tab=rfqs&rfq=${r.rfq_id}`,
+            label: <Bdi>{(f.lang === "fa" ? r.party_name_fa || r.party_name_en : r.party_name_en || r.party_name_fa) ?? ""}</Bdi>,
+            extra: <span className="text-xs text-muted"><Bdi>{r.rfq_title}</Bdi> · <span className="tabular-nums">{f.day(r.respond_by)}</span></span> })))}
+        </Card>
+        <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sourcing.expiring")} <Badge tone={s.offers_expiring.length ? "warning" : "neutral"}>{f.num(s.offers_expiring.length)}</Badge></span>}>
+          {list(s.offers_expiring.map((o) => ({ key: o.offer_id, to: `/cases/${o.case_id}?tab=offers&offer=${o.offer_id}`,
+            label: <Bdi>{(f.lang === "fa" ? o.party_name_fa || o.party_name_en : o.party_name_en || o.party_name_fa) ?? ""}</Bdi>,
+            extra: <span className="text-xs text-danger">{t("sourcing.compare.daysLeft", { n: f.num(o.days_left) })}</span> })))}
+        </Card>
+        <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sourcing.notCovered")} <Badge tone={s.cases_not_covered.length ? "warning" : "neutral"}>{f.num(s.cases_not_covered.length)}</Badge></span>}>
+          {list(s.cases_not_covered.map((c) => ({ key: c.case_id, to: `/cases/${c.case_id}`, label: <Bdi>{c.case_title}</Bdi>,
+            extra: <span className="text-xs text-muted">{t("cc.sourcing.itemsMissing", { n: f.num(c.not_covered), total: f.num(c.items) })}</span> })))}
+        </Card>
+      </div>
+    </section>
   );
 }
 
@@ -87,6 +133,7 @@ export function CommandCenterPage() {
           )}
         </Card>
       </div>
+      <SourcingSection s={d.sourcing} />
       <div className="grid gap-4 xl:grid-cols-2">
         {FUNNELS.map((role) => (
           <Card key={role} title={t(`funnel.title.${role}`)} actions={<Link className="text-sm text-accent hover:underline" to={`/parties/funnels?role=${role}`}>{t("funnel.openBoard")}</Link>}>

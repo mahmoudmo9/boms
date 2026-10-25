@@ -25,7 +25,8 @@
     },
     "add": "افزودن",
     "yes": "بله",
-    "no": "خیر"
+    "no": "خیر",
+    "remove": "حذف از فهرست"
   },
   "nav": {
     "label": "منوی اصلی",
@@ -49,7 +50,10 @@
       "events": "رویدادها",
       "system": "سیستم و پشتیبان‌گیری",
       "partiesList": "طرف‌ها",
-      "funnels": "قیف‌ها"
+      "funnels": "قیف‌ها",
+      "inquiries": "استعلام‌های ورودی",
+      "catalog": "فهرست کالا",
+      "templates": "قالب پیام‌ها"
     }
   },
   "placeholder": {
@@ -81,7 +85,13 @@
       "unit": "واحدها",
       "party": "طرف‌ها",
       "contact": "اشخاص رابط",
-      "interaction": "تعاملات"
+      "interaction": "تعاملات",
+      "inquiry": "استعلام‌های ورودی",
+      "case": "پرونده‌ها",
+      "line_item": "اقلام",
+      "rfq": "استعلام‌های قیمت",
+      "offer": "پیشنهادها",
+      "product": "کالاها"
     }
   },
   "date": {
@@ -203,7 +213,15 @@
       "party": "طرف",
       "contact": "شخص رابط",
       "interaction": "تعامل",
-      "followup": "پیگیری"
+      "followup": "پیگیری",
+      "inquiry": "استعلام ورودی",
+      "case": "پرونده",
+      "line_item": "قلم",
+      "rfq": "استعلام قیمت",
+      "offer": "پیشنهاد",
+      "product": "کالا",
+      "product_category": "دستهٔ کالا",
+      "message_template": "قالب پیام"
     },
     "actions": {
       "create": "ایجاد",
@@ -245,7 +263,31 @@
       "interaction_add": "ثبت تعامل",
       "correct": "اصلاح",
       "reschedule": "تغییر تاریخ",
-      "cancel": "لغو"
+      "cancel": "لغو",
+      "decision": "تصمیم ثبت شد",
+      "convert": "تبدیل به پرونده",
+      "reject": "رد شد",
+      "inquiry_add": "استعلام اضافه شد",
+      "case_add": "پرونده اضافه شد",
+      "rfq_add": "استعلام قیمت اضافه شد",
+      "offer_add": "پیشنهاد اضافه شد",
+      "recipient_add": "تأمین‌کننده اضافه شد",
+      "recipient_update": "پیام ویرایش شد",
+      "recipient_remove": "تأمین‌کننده حذف شد",
+      "recipient_status": "وضعیت تأمین‌کننده",
+      "sent": "ارسال ثبت شد",
+      "status": "وضعیت تغییر کرد",
+      "superseded": "جایگزین شد",
+      "select_offer": "پیشنهاد انتخاب شد",
+      "unselect_offer": "انتخاب برداشته شد",
+      "no_coverage": "بدون پوشش علامت خورد",
+      "no_coverage_clear": "بدون پوشش برداشته شد",
+      "item_update": "ردیف پیشنهاد ویرایش شد",
+      "alias_add": "نام دیگر اضافه شد",
+      "alias_remove": "نام دیگر حذف شد",
+      "capability_add": "توانمندی اضافه شد",
+      "capability_remove": "توانمندی حذف شد",
+      "move": "منتقل شد"
     }
   },
   "system": {
@@ -348,7 +390,11 @@
     "version": "نسخه BOMS",
     "staleLeadDays": "سرنخ راکد پس از",
     "staleLeadDaysHint": "سرنخ‌هایی که این مدت تعاملی نداشته‌اند در مرکز فرماندهی نمایش داده می‌شوند.",
-    "days": "روز"
+    "days": "روز",
+    "company": "شرکت",
+    "companyName": "نام شرکت",
+    "signature": "امضا ({{language}})",
+    "signatureHint": "برای {signature} در پیام‌های استعلام."
   },
   "errors": {
     "generic": "خطایی رخ داد. دوباره تلاش کنید.",
@@ -395,7 +441,56 @@
     "naive_datetime": "زمان منطقه زمانی ندارد.",
     "in_use": "حذف ممکن نیست: هنوز استفاده می‌شود.",
     "invalid_phone": "این شماره تلفن ممکن نیست ({{reason}}).",
-    "confirm_name_mismatch": "نام تایپ‌شده با نام طرف یکی نیست."
+    "confirm_name_mismatch": "نام تایپ‌شده با نام طرف یکی نیست.",
+    "invalid_template": "آکولاد نامتوازن در قالب؛ برای نمایش خود آکولاد، آن را دوبار تایپ کنید.",
+    "decision_required": "ابتدا تصمیم ادامه/توقف را ثبت کنید.",
+    "hard_check_failed": "یکی از بررسی‌های قطعی «خیر» است.",
+    "confirmation_required": "تصمیم زرد نیاز به تأیید شما دارد.",
+    "decision_red": "تصمیم قرمز است: استعلام رد شده است.",
+    "already_converted": "این استعلام قبلاً به پرونده تبدیل شده است.",
+    "inquiry_closed": "استعلام بسته شده است.",
+    "ordering_before_payment_reason_required": "سفارش پیش از پرداخت نیاز به جملهٔ تأیید صریح شما دارد.",
+    "unknown_payment_term": "شرط پرداخت ناشناخته است.",
+    "currency_required": "مبلغ باید ارز داشته باشد.",
+    "owner_required": "قلم باید به یک استعلام یا پرونده تعلق داشته باشد.",
+    "unknown_unit": "واحد ناشناخته است.",
+    "unknown_currency": "ارز ناشناخته است.",
+    "unknown_product": "کالا ناشناخته است.",
+    "unknown_reference": "رکورد ارجاع‌شده وجود ندارد.",
+    "item_not_of_case": "این قلم متعلق به پروندهٔ دیگری است.",
+    "item_cancelled": "این قلم لغو شده است.",
+    "duplicate_recipient": "این تأمین‌کننده قبلاً گیرنده است.",
+    "do_not_contact": "با این طرف نباید تماس گرفت.",
+    "recipient_sent": "پیام قبلاً ارسال شده است.",
+    "recipient_closed": "این گیرنده بسته شده است.",
+    "rfq_sent": "پس از ارسال استعلام، اقلام قابل تغییر نیستند.",
+    "rfq_closed": "استعلام بسته شده است.",
+    "case_not_open": "پرونده باز نیست.",
+    "message_required": "متن پیام خالی است.",
+    "no_template": "برای این زبان و کانال قالبی نیست.",
+    "unknown_placeholder": "جای‌نگهدار ناشناخته: {{unknown}}",
+    "price_required": "قلم موجود باید قیمت واحد داشته باشد.",
+    "items_required": "پیشنهاد باید دست‌کم یک ردیف داشته باشد.",
+    "recipient_mismatch": "گیرندهٔ استعلام تأمین‌کننده یا پروندهٔ دیگری است.",
+    "supersede_mismatch": "فقط پیشنهاد همان تأمین‌کننده و پرونده جایگزین می‌شود.",
+    "offer_not_active": "پیشنهاد قبلی فعال نیست.",
+    "offer_not_valid": "پیشنهاد دیگر معتبر نیست.",
+    "offer_not_for_item": "این ردیف پیشنهاد برای قلم دیگری است.",
+    "reason_required": "دلیل لازم است.",
+    "duplicate_capability": "این توانمندی قبلاً ثبت شده است.",
+    "unknown_code": "کد ناشناخته است.",
+    "tag_required": "برچسب خالی است.",
+    "invalid_capability_filter": "از hs:کد، isic:کد یا tag:متن استفاده کنید.",
+    "extractor_not_configured": "استخراج خودکار اقلام پیکربندی نشده است.",
+    "unreadable_file": "فایل خوانده نشد.",
+    "unsupported_file": "از ‎.xlsx یا ‎.csv استفاده کنید یا جدول را بچسبانید.",
+    "duplicate_alias": "این نام دیگر قبلاً ثبت شده است.",
+    "alias_required": "نام دیگر خالی است.",
+    "title_required": "عنوان لازم است.",
+    "invalid_item": "قلم ذخیره نشد.",
+    "invalid_offer": "پیشنهاد ذخیره نشد.",
+    "invalid_decision": "تصمیم ذخیره نشد.",
+    "unknown_category": "دسته ناشناخته است."
   },
   "cc": {
     "subtitle": "پیگیری‌ها و سرنخ‌های {{date}}.",
@@ -406,7 +501,16 @@
     "nothing": "موردی نیست",
     "openParty": "باز کردن",
     "lastContact": "آخرین تماس {{date}}",
-    "noContactYet": "هنوز تماسی نبوده"
+    "noContactYet": "هنوز تماسی نبوده",
+    "sourcing": {
+      "title": "تأمین",
+      "coverage": "اقلام دارای وضعیت پوشش",
+      "noRfq": "اقلام بدون استعلام",
+      "rfqOverdue": "پاسخ‌های استعلامِ دیرشده",
+      "expiring": "پیشنهادهای رو به انقضا (۷ روز)",
+      "notCovered": "پرونده‌های بدون پوشش کامل",
+      "itemsMissing": "{{n}} از {{total}} قلم باز"
+    }
   },
   "funnel": {
     "title": {
@@ -640,5 +744,471 @@
     "cascadeHint": "فقط برای داده آزمایشی: این طرف را با همه تعامل‌ها، پیگیری‌ها و پیوندهای اسناد حذف می‌کند. خود فایل‌ها در اسناد می‌مانند. حذف در گزارش رویدادها ثبت می‌شود.",
     "typeName": "برای تأیید، نام طرف را تایپ کنید",
     "cascadeButton": "حذف طرف با همه سوابق"
+  },
+  "sourcing": {
+    "inquiries": "استعلام‌های ورودی",
+    "inquiriesSubtitle": "درخواست‌های ورودی از هر کانال؛ پیش از تبدیل به پرونده با تصمیم ادامه/توقف غربال می‌شوند.",
+    "casesSubtitle": "معاملات در جریان: اقلام، استعلام از تأمین‌کنندگان، پیشنهادها و مقایسه.",
+    "searchPlaceholder": "جستجو در موضوع، متن، اقلام…",
+    "noInquiries": "استعلامی نیست",
+    "noCases": "پرونده‌ای نیست",
+    "noItems": "هنوز قلمی ثبت نشده",
+    "items": "اقلام",
+    "currency": "ارز",
+    "incoterm": "شرایط تحویل",
+    "incotermPlace": "محل",
+    "reason": "دلیل",
+    "noCoverage": "بدون پوشش",
+    "markNoCoverage": "علامت «بدون پوشش»",
+    "clearNoCoverage": "برداشتن «بدون پوشش»",
+    "productSearch": "جستجو در فهرست کالا…",
+    "unlinkProduct": "جدا کردن",
+    "status": {
+      "label": "وضعیت",
+      "item": {
+        "uncovered": "بدون پوشش",
+        "rfq_sent": "استعلام‌شده",
+        "has_offer": "دارای پیشنهاد",
+        "selected": "انتخاب‌شده",
+        "sold": "فروخته‌شده",
+        "delivered": "تحویل‌شده",
+        "closed": "بسته‌شده",
+        "cancelled": "لغوشده"
+      },
+      "inquiry": {
+        "new": "جدید",
+        "needs_info": "نیاز به اطلاعات",
+        "ready_for_screening": "آمادهٔ غربالگری",
+        "rejected": "ردشده",
+        "no_reply": "بی‌پاسخ",
+        "converted": "تبدیل به پرونده"
+      },
+      "case": {
+        "open": "باز",
+        "won": "موفق",
+        "lost": "از دست رفته",
+        "closed": "بسته",
+        "cancelled": "لغوشده"
+      },
+      "rfq": {
+        "draft": "پیش‌نویس",
+        "sent": "ارسال‌شده",
+        "answered": "پاسخ‌گرفته",
+        "no_response": "بی‌پاسخ",
+        "expired": "منقضی",
+        "cancelled": "لغوشده"
+      },
+      "recipient": {
+        "draft": "پیش‌نویس",
+        "sent": "ارسال‌شده",
+        "replied": "پاسخ داد",
+        "declined": "رد کرد",
+        "no_response": "بی‌پاسخ",
+        "expired": "منقضی"
+      },
+      "offer": {
+        "active": "فعال",
+        "superseded": "جایگزین‌شده",
+        "withdrawn": "پس‌گرفته",
+        "expired": "منقضی"
+      }
+    },
+    "channels": {
+      "whatsapp": "واتس‌اپ",
+      "email": "ایمیل",
+      "phone": "تلفن",
+      "tender_portal": "سامانهٔ مناقصه",
+      "in_person": "حضوری",
+      "letter": "نامه",
+      "wechat": "وی‌چت",
+      "other": "سایر"
+    },
+    "paymentTerms": {
+      "full_prepayment": "پیش‌پرداخت کامل",
+      "partial_prepayment": "پیش‌پرداخت بخشی",
+      "lc_or_guarantee": "اعتبار اسنادی یا ضمانت‌نامه",
+      "pay_after_delivery": "پرداخت پس از تحویل",
+      "order_before_payment": "سفارش پیش از پرداخت"
+    },
+    "inquiry": {
+      "new": "استعلام جدید",
+      "party": "از طرف",
+      "channel": "کانال",
+      "kind": "نوع",
+      "kinds": {
+        "rfq": "درخواست قیمت",
+        "tender": "مناقصه",
+        "direct_order": "سفارش مستقیم",
+        "other": "سایر"
+      },
+      "received": "دریافت",
+      "responseDue": "مهلت پاسخ",
+      "subject": "موضوع",
+      "rawText": "متن اصلی",
+      "rawTextHint": "همان‌گونه که رسیده؛ بدون تغییر ذخیره می‌شود.",
+      "fromInteraction": "به تعاملِ مبدأ پیوند خورده است.",
+      "fromThisInteraction": "ایجاد استعلام",
+      "reject": "رد کردن",
+      "rejected": "رد شد",
+      "untitled": "استعلام بدون موضوع"
+    },
+    "decision": {
+      "title": "تصمیم ادامه / توقف",
+      "light": "چراغ",
+      "lights": {
+        "green": "سبز",
+        "yellow": "زرد",
+        "red": "قرمز"
+      },
+      "reason": "دلیل (یک خط)",
+      "checks": {
+        "feasible_sourcing": "تأمین شدنی است",
+        "exposure_acceptable": "ریسک مالی پذیرفتنی است",
+        "requirements_ok": "الزامات مشکلی ندارد"
+      },
+      "checkHints": {
+        "feasible_sourcing": "آیا کالا اصلاً و به‌موقع قابل تأمین است؟",
+        "exposure_acceptable": "آیا مبلغ در معرض ریسک پذیرفتنی است؟",
+        "requirements_ok": "تحریم، مجوزها، مسیر پرداخت."
+      },
+      "answers": {
+        "yes": "بله",
+        "no": "خیر",
+        "unknown": "نامعلوم"
+      },
+      "note": "یادداشت",
+      "exposure": "برآورد ریسک مالی",
+      "exposureHint": "برآورد دستی (فعلاً محاسبهٔ خودکار ندارد).",
+      "paymentTerm": "شرایط پرداخت",
+      "obpReason": "تأیید سفارش پیش از پرداخت",
+      "obpHint": "الزامی: چرا این ریسک را می‌پذیرید.",
+      "confirmYellow": "ادامه با چراغ زرد را تأیید می‌کنم",
+      "redHint": "قرمز استعلام را با این دلیل رد می‌کند.",
+      "save": "ثبت تصمیم"
+    },
+    "gate": {
+      "already_converted": "قبلاً به پرونده تبدیل شده است.",
+      "decision_required": "ابتدا تصمیم ادامه/توقف را ثبت کنید.",
+      "hard_check_failed": "یک بررسی قطعی «خیر» است:",
+      "decision_red": "تصمیم قرمز است.",
+      "confirmation_required": "تصمیم زرد نیاز به تأیید شما دارد."
+    },
+    "convert": {
+      "title": "پرونده",
+      "button": "تبدیل به پرونده",
+      "openCase": "باز کردن پرونده"
+    },
+    "case": {
+      "new": "پروندهٔ جدید",
+      "edit": "ویرایش پرونده",
+      "title": "عنوان",
+      "buyer": "خریدار",
+      "withoutInquiry": "پرونده بدون استعلام هم قابل ایجاد است.",
+      "fromInquiry": "از استعلام",
+      "tabs": {
+        "items": "اقلام",
+        "rfqs": "استعلام‌ها",
+        "offers": "پیشنهادها",
+        "comparison": "مقایسه",
+        "documents": "اسناد",
+        "history": "تاریخچه"
+      }
+    },
+    "item": {
+      "add": "افزودن قلم",
+      "edit": "ویرایش قلم",
+      "name": "قلم",
+      "description": "شرح",
+      "quantity": "مقدار",
+      "unit": "واحد",
+      "unitOther": "سایر (تایپ کنید)…",
+      "unitText": "واحد (متن آزاد)",
+      "targetPrice": "قیمت هدف",
+      "destination": "مقصد",
+      "requiredBy": "مهلت تحویل",
+      "packaging": "بسته‌بندی",
+      "hsCode": "کد تعرفه",
+      "route": "مسیر",
+      "routes": {
+        "unknown": "نامعلوم",
+        "domestic": "داخلی",
+        "foreign": "خارجی",
+        "both": "هر دو"
+      },
+      "product": "کالای فهرست",
+      "specs": "مشخصات",
+      "specKey": "ویژگی",
+      "specValue": "مقدار ویژگی",
+      "specUnit": "واحد",
+      "addSpec": "افزودن ویژگی",
+      "removeSpec": "حذف ویژگی",
+      "attachments": "نقشه / برگهٔ مشخصات",
+      "documentText": "متن سند",
+      "copyLineHint": "روی یک خط بزنید تا در قلم کپی شود.",
+      "noText": "متن استخراج‌شده‌ای نیست",
+      "duplicateName": "نام تکراری",
+      "cancel": "لغو قلم",
+      "cancelInstead": "به‌جای آن لغو کنید."
+    },
+    "import": {
+      "title": "ورود اقلام",
+      "button": "ورود",
+      "ai": "استخراج با هوش مصنوعی",
+      "aiDisabled": "در این نسخه پیکربندی نشده است",
+      "paste": "جدول یا فهرست را بچسبانید",
+      "pasteHint": "از اکسل، ایمیل یا واتس‌اپ؛ هر قلم در یک خط.",
+      "delimiter": "ستون‌ها",
+      "delimiters": {
+        "auto": "تشخیص خودکار",
+        "tab": "تب",
+        "comma": "ویرگول انگلیسی",
+        "semicolon": "نقطه‌ویرگول",
+        "lines": "هر خط یک قلم"
+      },
+      "next": "بعدی",
+      "or": "یا",
+      "upload": "بارگذاری ‎.xlsx / .csv",
+      "skipHeader": "سطر اول عنوان است",
+      "back": "تغییر منبع",
+      "columnField": "ستون {{n}}",
+      "ignore": "نادیده",
+      "moreRows": "و {{count}} سطر دیگر",
+      "preview": "پیش‌نمایش",
+      "previewHint": "سطرهای مشکل‌دار انتخاب نشده‌اند؛ اینجا اصلاح کنید یا کنار بگذارید.",
+      "save": "افزودن {{count}} قلم",
+      "fields": {
+        "name": "نام قلم",
+        "description": "شرح",
+        "quantity": "مقدار",
+        "unit": "واحد",
+        "target_price": "قیمت هدف",
+        "target_currency": "ارز",
+        "packaging": "بسته‌بندی",
+        "hs_code": "کد تعرفه",
+        "required_by": "مهلت تحویل",
+        "incoterm": "شرایط تحویل",
+        "incoterm_place": "محل تحویل",
+        "notes": "یادداشت",
+        "spec": "ویژگی (مشخصات)"
+      },
+      "errors": {
+        "invalid_number": "عدد نیست",
+        "name_required": "بدون نام",
+        "invalid_currency": "ارز نادرست",
+        "invalid_date": "تاریخ نادرست (مثل 2026-12-01)",
+        "invalid_incoterm": "شرایط تحویل ناشناخته",
+        "invalid_hs_code": "کد تعرفهٔ نادرست"
+      }
+    },
+    "rfq": {
+      "new": "استعلام قیمت جدید",
+      "create": "ایجاد استعلام",
+      "empty": "هنوز استعلامی نیست",
+      "title": "عنوان",
+      "respondBy": "مهلت پاسخ",
+      "items": "اقلام",
+      "itemsCount": "{{count}} قلم",
+      "recipients": "تأمین‌کنندگان",
+      "noRecipients": "هنوز تأمین‌کننده‌ای نیست",
+      "addRecipient": "افزودن تأمین‌کننده",
+      "searchSuppliers": "جستجوی تأمین‌کنندگان…",
+      "noSuppliers": "تأمین‌کننده‌ای پیدا نشد (طرف باید نقش تأمین‌کننده داشته باشد).",
+      "supplierHint": "پیش‌فرض: تأمین‌کنندهٔ خارجی ایمیل انگلیسی، تأمین‌کنندهٔ ایرانی واتس‌اپ فارسی.",
+      "suggestions": "پیشنهاد بر اساس توانمندی (کد تعرفه)",
+      "match": {
+        "heading": "سرفصل",
+        "chapter": "فصل"
+      },
+      "channel": "کانال",
+      "language": "زبان",
+      "subject": "موضوع",
+      "message": "متن پیام",
+      "copyText": "کپی متن",
+      "copySubject": "کپی موضوع",
+      "copied": "کپی شد",
+      "openMail": "باز کردن در برنامهٔ ایمیل",
+      "noEmail": "نشانی ایمیلی ثبت نشده",
+      "rerender": "ساخت دوبارهٔ متن",
+      "markSent": "ثبت ارسال",
+      "markSentHint": "BOMS چیزی ارسال نمی‌کند. یک تعامل خروجی با همین متن و یک پیگیری ثبت می‌شود.",
+      "chaseAction": "پیگیری پاسخ استعلام",
+      "declined": "رد کرد",
+      "exportXlsx": "اکسل",
+      "cancel": "لغو استعلام"
+    },
+    "offer": {
+      "record": "ثبت پیشنهاد",
+      "empty": "هنوز پیشنهادی نیست",
+      "supplier": "تأمین‌کننده",
+      "supersedes": "جایگزین پیشنهاد قبلی",
+      "keepPrevious": "خیر، پیشنهاد قبلی فعال بماند",
+      "previousOf": "پیشنهاد {{date}} ({{currency}})",
+      "channel": "دریافت از",
+      "received": "تاریخ دریافت",
+      "validUntil": "معتبر تا",
+      "leadTime": "زمان تحویل (روز)",
+      "leadTimeShort": "روز",
+      "paymentTerms": "شرایط پرداخت",
+      "available": "موجود",
+      "notAvailable": "ناموجود",
+      "unitPrice": "قیمت واحد",
+      "per": "به ازای",
+      "moq": "حداقل سفارش",
+      "deviation": "انحراف از مشخصات",
+      "grid": {
+        "unit_price": "قیمت واحد",
+        "price_per_quantity": "قیمت به ازای",
+        "moq": "حداقل سفارش",
+        "lead_time_days": "زمان تحویل (روز)",
+        "spec_deviation": "انحراف از مشخصات"
+      },
+      "gridHint": "Enter یا ↓ به سطر بعدی در همان ستون می‌رود.",
+      "compliance": "یادداشت انطباق",
+      "rawText": "متن اصلی (چسبانده‌شده)",
+      "files": "پیوست‌ها (PDF، اکسل، تصویر)",
+      "defaultNoFollowup": "در حال مقایسهٔ پیشنهادها",
+      "withdraw": "پس‌گرفتن",
+      "pastValidity": "گذشته از اعتبار"
+    },
+    "coverage": {
+      "title": "پوشش",
+      "gateOk": "همهٔ اقلام پوشش دارند",
+      "gateMissing": "{{count}} قلم باقی مانده",
+      "validOffers": "پیشنهاد معتبر",
+      "bestPrices": "بهترین قیمت هر ارز",
+      "missingList": "هنوز انتخاب یا علامت‌گذاری نشده"
+    },
+    "compare": {
+      "item": "قلم",
+      "allItems": "همهٔ اقلام",
+      "noFx": "بدون تبدیل ارز: پیشنهادها در هر ارز جداگانه مقایسه می‌شوند.",
+      "noOffers": "پیشنهاد معتبری نیست",
+      "columns": {
+        "price": "قیمت",
+        "incoterm": "شرایط تحویل",
+        "moq": "حداقل سفارش",
+        "leadTime": "زمان تحویل",
+        "payment": "پرداخت",
+        "validity": "اعتبار",
+        "compliance": "انطباق",
+        "deviation": "انحراف",
+        "documents": "اسناد"
+      },
+      "kinds": {
+        "weight": "بر حسب وزن",
+        "length": "بر حسب طول",
+        "area": "بر حسب مساحت",
+        "volume": "بر حسب حجم",
+        "count": "بر حسب تعداد",
+        "time": "بر حسب زمان"
+      },
+      "noUnit": "بدون واحد",
+      "lowest": "کمترین",
+      "notComparable": "مستقیم قابل مقایسه نیست",
+      "badges": {
+        "incoterm_differs": "شرایط تحویل متفاوت",
+        "unit_differs": "واحد قابل تبدیل نیست"
+      },
+      "days": "{{n}} روز",
+      "daysLeft": "{{n}} روز مانده",
+      "select": "انتخاب",
+      "selected": "انتخاب‌شده",
+      "changeTitle": "تغییر پیشنهاد انتخاب‌شده"
+    },
+    "catalog": {
+      "title": "فهرست کالا",
+      "subtitle": "کالاها به‌عنوان مرجع و حافظهٔ قیمت: همهٔ قیمت‌های پیشنهادی و دفعات درخواست.",
+      "new": "کالای جدید",
+      "empty": "کالایی نیست",
+      "product": "کالا",
+      "searchPlaceholder": "نام، نام دیگر، CAS یا کد تعرفه…",
+      "category": "دسته",
+      "categories": "دسته‌ها",
+      "allCategories": "همهٔ دسته‌ها",
+      "sort": "مرتب‌سازی",
+      "sorts": {
+        "name": "نام",
+        "last_requested": "آخرین درخواست",
+        "offers": "تعداد پیشنهاد"
+      },
+      "defaultUnit": "واحد پیش‌فرض",
+      "kindNote": "نوع / گرید",
+      "aliases": "نام‌های دیگر",
+      "aliasesHint": "هر خط یکی: گرید، نام تجاری، شمارهٔ CAS.",
+      "alias": "نام دیگر",
+      "aliasPlaceholder": "گرید، نام تجاری، CAS…",
+      "possibleDuplicates": "کالاهای مشابه وجود دارد",
+      "matchBy": {
+        "name": "نام مشابه",
+        "alias": "نام دیگر مشابه"
+      },
+      "offers": "پیشنهادها",
+      "offersCount": "{{count}} پیشنهاد",
+      "lastRequested": "آخرین درخواست",
+      "priceMemory": "حافظهٔ قیمت",
+      "noPrices": "هنوز قیمتی نیست",
+      "unitGroup": "واحد",
+      "period": "دوره",
+      "periods": {
+        "all_time": "همه",
+        "last_12_months": "۱۲ ماه اخیر"
+      },
+      "count": "تعداد",
+      "min": "کمینه",
+      "median": "میانه",
+      "max": "بیشینه",
+      "allOffers": "همهٔ قیمت‌های پیشنهادی",
+      "demand": "تقاضا",
+      "inquiries": "استعلام‌ها",
+      "cases": "پرونده‌ها",
+      "month": "ماه",
+      "suppliersByOffers": "تأمین‌کنندگان بر اساس پیشنهاد",
+      "suppliersByCapability": "تأمین‌کنندگان بر اساس توانمندی",
+      "noSuppliers": "هنوز نیست",
+      "noHs": "برای دیدن تأمین‌کنندگان بر اساس توانمندی، کد تعرفه را وارد کنید."
+    },
+    "templates": {
+      "title": "قالب پیام‌ها",
+      "subtitle": "متن‌های استعلام برای هر زبان و کانال.",
+      "signatureLink": "نام شرکت و امضا در تنظیمات است.",
+      "new": "قالب جدید",
+      "edit": "ویرایش قالب",
+      "language": "کد زبان",
+      "name": "نام",
+      "default": "پیش‌فرض این زبان و کانال",
+      "isDefault": "پیش‌فرض",
+      "placeholders": "جای‌نگهدارها",
+      "braces": "برای نمایش خود آکولاد، آن را دوبار تایپ کنید.",
+      "preview": "پیش‌نمایش (دادهٔ نمونه)",
+      "unknown": "جای‌نگهدار ناشناخته",
+      "ph": {
+        "supplier_name": "نام تأمین‌کننده",
+        "contact_name": "نام شخص رابط (یا تأمین‌کننده)",
+        "case_title": "عنوان پرونده",
+        "items_table": "جدول اقلام: ردیف، نام، مقدار و واحد، مشخصات اصلی، بسته‌بندی، مقصد، شرایط تحویل، مهلت",
+        "respond_by": "مهلت پاسخ",
+        "signature": "امضای شما (تنظیمات)"
+      }
+    },
+    "capabilities": {
+      "title": "توانمندی‌ها",
+      "empty": "برچسب توانمندی ندارد. اختیاری است و برای پیشنهاد تأمین‌کننده و فیلتر استفاده می‌شود.",
+      "kind": "نوع",
+      "kinds": {
+        "hs": "تعرفه",
+        "isic": "ISIC",
+        "tag": "برچسب"
+      },
+      "search_hs": "جستجوی فصل یا سرفصل تعرفه (کد یا عنوان)…",
+      "search_isic": "جستجوی بخش یا قسمت ISIC…",
+      "top": "همهٔ فصل‌ها",
+      "open": "باز کردن",
+      "tag": "برچسب",
+      "tagPlaceholder": "برند، گرید، هر چیز…",
+      "untranslated": "هنوز ترجمه نشده",
+      "unknownCode": "در ویرایش فعلی نیست",
+      "filterKind": "توانمندی",
+      "filterPlaceholder": "3907، C20، برچسب…"
+    }
   }
 }

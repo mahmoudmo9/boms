@@ -25,7 +25,8 @@
     },
     "add": "Add",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "remove": "Remove"
   },
   "nav": {
     "label": "Main navigation",
@@ -49,7 +50,10 @@
       "events": "Event Log",
       "system": "System & Backup",
       "partiesList": "Parties",
-      "funnels": "Funnels"
+      "funnels": "Funnels",
+      "inquiries": "Inquiries",
+      "catalog": "Catalog",
+      "templates": "Message templates"
     }
   },
   "placeholder": {
@@ -81,7 +85,13 @@
       "unit": "Units",
       "party": "Parties",
       "contact": "Contacts",
-      "interaction": "Interactions"
+      "interaction": "Interactions",
+      "inquiry": "Inquiries",
+      "case": "Cases",
+      "line_item": "Line items",
+      "rfq": "RFQs",
+      "offer": "Offers",
+      "product": "Products"
     }
   },
   "date": {
@@ -203,7 +213,15 @@
       "party": "Party",
       "contact": "Contact",
       "interaction": "Interaction",
-      "followup": "Follow-up"
+      "followup": "Follow-up",
+      "inquiry": "Inquiry",
+      "case": "Case",
+      "line_item": "Line item",
+      "rfq": "RFQ",
+      "offer": "Offer",
+      "product": "Product",
+      "product_category": "Product category",
+      "message_template": "Message template"
     },
     "actions": {
       "create": "Created",
@@ -245,7 +263,31 @@
       "interaction_add": "Interaction logged",
       "correct": "Corrected",
       "reschedule": "Rescheduled",
-      "cancel": "Cancelled"
+      "cancel": "Cancelled",
+      "decision": "Decision recorded",
+      "convert": "Converted to case",
+      "reject": "Rejected",
+      "inquiry_add": "Inquiry added",
+      "case_add": "Case added",
+      "rfq_add": "RFQ added",
+      "offer_add": "Offer added",
+      "recipient_add": "Supplier added",
+      "recipient_update": "Message edited",
+      "recipient_remove": "Supplier removed",
+      "recipient_status": "Supplier status",
+      "sent": "Marked as sent",
+      "status": "Status changed",
+      "superseded": "Superseded",
+      "select_offer": "Offer selected",
+      "unselect_offer": "Selection cleared",
+      "no_coverage": "Marked no coverage",
+      "no_coverage_clear": "No coverage cleared",
+      "item_update": "Offer row updated",
+      "alias_add": "Alias added",
+      "alias_remove": "Alias removed",
+      "capability_add": "Capability added",
+      "capability_remove": "Capability removed",
+      "move": "Moved"
     }
   },
   "system": {
@@ -348,7 +390,11 @@
     "version": "BOMS version",
     "staleLeadDays": "Stale lead after",
     "staleLeadDaysHint": "Leads without any interaction for this long appear in the command center.",
-    "days": "days"
+    "days": "days",
+    "company": "Company",
+    "companyName": "Company name",
+    "signature": "Signature ({{language}})",
+    "signatureHint": "Used for {signature} in RFQ messages."
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -395,7 +441,56 @@
     "naive_datetime": "The time has no time zone.",
     "in_use": "Cannot delete: it is still in use.",
     "invalid_phone": "This is not a possible phone number ({{reason}}).",
-    "confirm_name_mismatch": "The typed name does not match the party name."
+    "confirm_name_mismatch": "The typed name does not match the party name.",
+    "invalid_template": "Unbalanced brace in the template; type a brace twice to show it as text.",
+    "decision_required": "Record a go/no-go decision first.",
+    "hard_check_failed": "A hard check is answered “no”.",
+    "confirmation_required": "A yellow decision needs your confirmation.",
+    "decision_red": "The decision is red: the inquiry is rejected.",
+    "already_converted": "This inquiry is already a case.",
+    "inquiry_closed": "The inquiry is closed.",
+    "ordering_before_payment_reason_required": "Ordering before payment needs your explicit approval line.",
+    "unknown_payment_term": "Unknown payment term.",
+    "currency_required": "An amount needs a currency.",
+    "owner_required": "An item belongs to an inquiry or a case.",
+    "unknown_unit": "Unknown unit.",
+    "unknown_currency": "Unknown currency.",
+    "unknown_product": "Unknown product.",
+    "unknown_reference": "A referenced record does not exist.",
+    "item_not_of_case": "The item belongs to another case.",
+    "item_cancelled": "The item is cancelled.",
+    "duplicate_recipient": "This supplier is already a recipient.",
+    "do_not_contact": "This party is marked do-not-contact.",
+    "recipient_sent": "The message was already sent.",
+    "recipient_closed": "This recipient is closed.",
+    "rfq_sent": "Items cannot change after the RFQ was sent.",
+    "rfq_closed": "The RFQ is closed.",
+    "case_not_open": "The case is not open.",
+    "message_required": "The message text is empty.",
+    "no_template": "No message template for this language and channel.",
+    "unknown_placeholder": "Unknown placeholder: {{unknown}}",
+    "price_required": "An available item needs a unit price.",
+    "items_required": "An offer needs at least one item row.",
+    "recipient_mismatch": "The RFQ recipient is another supplier or case.",
+    "supersede_mismatch": "Only an offer of the same supplier and case can be replaced.",
+    "offer_not_active": "The previous offer is not active.",
+    "offer_not_valid": "The offer is no longer valid.",
+    "offer_not_for_item": "This offer row is for another item.",
+    "reason_required": "A reason is required.",
+    "duplicate_capability": "The party already has this capability.",
+    "unknown_code": "Unknown code.",
+    "tag_required": "The tag is empty.",
+    "invalid_capability_filter": "Use hs:code, isic:code or tag:text.",
+    "extractor_not_configured": "Item extraction is not configured.",
+    "unreadable_file": "The file could not be read.",
+    "unsupported_file": "Use .xlsx or .csv, or paste the table.",
+    "duplicate_alias": "This alias already exists.",
+    "alias_required": "The alias is empty.",
+    "title_required": "A title is required.",
+    "invalid_item": "The item could not be saved.",
+    "invalid_offer": "The offer could not be saved.",
+    "invalid_decision": "The decision could not be saved.",
+    "unknown_category": "Unknown category."
   },
   "cc": {
     "subtitle": "Follow-ups and leads for {{date}}.",
@@ -406,7 +501,16 @@
     "nothing": "Nothing here",
     "openParty": "Open",
     "lastContact": "last contact {{date}}",
-    "noContactYet": "never contacted"
+    "noContactYet": "never contacted",
+    "sourcing": {
+      "title": "Sourcing",
+      "coverage": "Items with a coverage status",
+      "noRfq": "Items without an RFQ",
+      "rfqOverdue": "RFQ replies overdue",
+      "expiring": "Offers expiring in 7 days",
+      "notCovered": "Cases not fully covered",
+      "itemsMissing": "{{n}} of {{total}} items open"
+    }
   },
   "funnel": {
     "title": {
@@ -640,5 +744,471 @@
     "cascadeHint": "For test data only: deletes this party with all its interactions, follow-ups and document links. The files themselves stay in Documents. The deletion is recorded in the event log.",
     "typeName": "Type the party name to confirm",
     "cascadeButton": "Delete party and all its history"
+  },
+  "sourcing": {
+    "inquiries": "Inquiries",
+    "inquiriesSubtitle": "Incoming requests from any channel, screened with a go/no-go decision before they become cases.",
+    "casesSubtitle": "Deals in progress: items, RFQs to suppliers, offers and their comparison.",
+    "searchPlaceholder": "Search subject, text, items…",
+    "noInquiries": "No inquiries",
+    "noCases": "No cases",
+    "noItems": "No items yet",
+    "items": "Items",
+    "currency": "Currency",
+    "incoterm": "Incoterm",
+    "incotermPlace": "Place",
+    "reason": "Reason",
+    "noCoverage": "No coverage",
+    "markNoCoverage": "Mark no coverage",
+    "clearNoCoverage": "Clear no coverage",
+    "productSearch": "Search the catalog…",
+    "unlinkProduct": "Unlink",
+    "status": {
+      "label": "Status",
+      "item": {
+        "uncovered": "Uncovered",
+        "rfq_sent": "RFQ sent",
+        "has_offer": "Has offer",
+        "selected": "Selected",
+        "sold": "Sold",
+        "delivered": "Delivered",
+        "closed": "Closed",
+        "cancelled": "Cancelled"
+      },
+      "inquiry": {
+        "new": "New",
+        "needs_info": "Needs info",
+        "ready_for_screening": "Ready for screening",
+        "rejected": "Rejected",
+        "no_reply": "No reply",
+        "converted": "Converted to case"
+      },
+      "case": {
+        "open": "Open",
+        "won": "Won",
+        "lost": "Lost",
+        "closed": "Closed",
+        "cancelled": "Cancelled"
+      },
+      "rfq": {
+        "draft": "Draft",
+        "sent": "Sent",
+        "answered": "Answered",
+        "no_response": "No response",
+        "expired": "Expired",
+        "cancelled": "Cancelled"
+      },
+      "recipient": {
+        "draft": "Draft",
+        "sent": "Sent",
+        "replied": "Replied",
+        "declined": "Declined",
+        "no_response": "No response",
+        "expired": "Expired"
+      },
+      "offer": {
+        "active": "Active",
+        "superseded": "Superseded",
+        "withdrawn": "Withdrawn",
+        "expired": "Expired"
+      }
+    },
+    "channels": {
+      "whatsapp": "WhatsApp",
+      "email": "E-mail",
+      "phone": "Phone",
+      "tender_portal": "Tender portal",
+      "in_person": "In person",
+      "letter": "Letter",
+      "wechat": "WeChat",
+      "other": "Other"
+    },
+    "paymentTerms": {
+      "full_prepayment": "Full prepayment",
+      "partial_prepayment": "Partial prepayment",
+      "lc_or_guarantee": "LC or guarantee",
+      "pay_after_delivery": "Pay after delivery",
+      "order_before_payment": "Order before payment"
+    },
+    "inquiry": {
+      "new": "New inquiry",
+      "party": "From (party)",
+      "channel": "Channel",
+      "kind": "Kind",
+      "kinds": {
+        "rfq": "Request for quotation",
+        "tender": "Tender",
+        "direct_order": "Direct order",
+        "other": "Other"
+      },
+      "received": "Received",
+      "responseDue": "Reply due",
+      "subject": "Subject",
+      "rawText": "Original text",
+      "rawTextHint": "Pasted as received; it is stored unchanged.",
+      "fromInteraction": "Linked to the interaction it came from.",
+      "fromThisInteraction": "Create inquiry",
+      "reject": "Reject",
+      "rejected": "Rejected",
+      "untitled": "Inquiry without subject"
+    },
+    "decision": {
+      "title": "Go / no-go decision",
+      "light": "Traffic light",
+      "lights": {
+        "green": "Green",
+        "yellow": "Yellow",
+        "red": "Red"
+      },
+      "reason": "Reason (one line)",
+      "checks": {
+        "feasible_sourcing": "Sourcing feasible",
+        "exposure_acceptable": "Exposure acceptable",
+        "requirements_ok": "Requirements OK"
+      },
+      "checkHints": {
+        "feasible_sourcing": "Can the goods be sourced at all, in time?",
+        "exposure_acceptable": "Is the money at risk acceptable?",
+        "requirements_ok": "Sanctions, permits, payment route."
+      },
+      "answers": {
+        "yes": "Yes",
+        "no": "No",
+        "unknown": "Unknown"
+      },
+      "note": "Note",
+      "exposure": "Exposure estimate",
+      "exposureHint": "Entered estimate (no automatic calculation yet).",
+      "paymentTerm": "Payment terms",
+      "obpReason": "Approval to order before payment",
+      "obpHint": "Required: why you accept this risk.",
+      "confirmYellow": "I confirm going ahead with a yellow light",
+      "redHint": "Red rejects the inquiry with this reason.",
+      "save": "Save decision"
+    },
+    "gate": {
+      "already_converted": "Already converted to a case.",
+      "decision_required": "Record the go/no-go decision first.",
+      "hard_check_failed": "Blocked by a hard check answered “no”:",
+      "decision_red": "The decision is red.",
+      "confirmation_required": "A yellow decision needs your confirmation."
+    },
+    "convert": {
+      "title": "Case",
+      "button": "Convert to case",
+      "openCase": "Open the case"
+    },
+    "case": {
+      "new": "New case",
+      "edit": "Edit case",
+      "title": "Title",
+      "buyer": "Buyer",
+      "withoutInquiry": "A case can also start without an inquiry.",
+      "fromInquiry": "From inquiry",
+      "tabs": {
+        "items": "Items",
+        "rfqs": "RFQs",
+        "offers": "Offers",
+        "comparison": "Comparison",
+        "documents": "Documents",
+        "history": "History"
+      }
+    },
+    "item": {
+      "add": "Add item",
+      "edit": "Edit item",
+      "name": "Item",
+      "description": "Description",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "unitOther": "Other (type it)…",
+      "unitText": "Unit (free text)",
+      "targetPrice": "Target price",
+      "destination": "Destination",
+      "requiredBy": "Required by",
+      "packaging": "Packaging",
+      "hsCode": "HS code",
+      "route": "Route",
+      "routes": {
+        "unknown": "Unknown",
+        "domestic": "Domestic",
+        "foreign": "Foreign",
+        "both": "Both"
+      },
+      "product": "Catalog product",
+      "specs": "Specifications",
+      "specKey": "Property",
+      "specValue": "Property value",
+      "specUnit": "Unit",
+      "addSpec": "Add property",
+      "removeSpec": "Remove property",
+      "attachments": "Drawings / datasheets",
+      "documentText": "Document text",
+      "copyLineHint": "Click a line to copy it into the item.",
+      "noText": "No extracted text",
+      "duplicateName": "Same name twice",
+      "cancel": "Cancel item",
+      "cancelInstead": "Cancel it instead."
+    },
+    "import": {
+      "title": "Import items",
+      "button": "Import",
+      "ai": "Extract with AI",
+      "aiDisabled": "Not configured in this version",
+      "paste": "Paste a table or a list",
+      "pasteHint": "From Excel, e-mail or WhatsApp; one item per line.",
+      "delimiter": "Columns",
+      "delimiters": {
+        "auto": "Detect columns",
+        "tab": "Tab",
+        "comma": "Comma",
+        "semicolon": "Semicolon",
+        "lines": "One item per line"
+      },
+      "next": "Next",
+      "or": "or",
+      "upload": "Upload .xlsx / .csv",
+      "skipHeader": "First row is a header",
+      "back": "Change source",
+      "columnField": "Column {{n}}",
+      "ignore": "Ignore",
+      "moreRows": "and {{count}} more rows",
+      "preview": "Preview",
+      "previewHint": "Rows with problems are unchecked; fix them here or leave them out.",
+      "save": "Add {{count}} items",
+      "fields": {
+        "name": "Item name",
+        "description": "Description",
+        "quantity": "Quantity",
+        "unit": "Unit",
+        "target_price": "Target price",
+        "target_currency": "Currency",
+        "packaging": "Packaging",
+        "hs_code": "HS code",
+        "required_by": "Required by",
+        "incoterm": "Incoterm",
+        "incoterm_place": "Incoterm place",
+        "notes": "Notes",
+        "spec": "Property (spec)"
+      },
+      "errors": {
+        "invalid_number": "Not a number",
+        "name_required": "No name",
+        "invalid_currency": "Bad currency",
+        "invalid_date": "Bad date (use 2026-12-01)",
+        "invalid_incoterm": "Unknown Incoterm",
+        "invalid_hs_code": "Bad HS code"
+      }
+    },
+    "rfq": {
+      "new": "New RFQ",
+      "create": "Create RFQ",
+      "empty": "No RFQs yet",
+      "title": "Title",
+      "respondBy": "Reply by",
+      "items": "Items",
+      "itemsCount": "{{count}} items",
+      "recipients": "Suppliers",
+      "noRecipients": "No suppliers yet",
+      "addRecipient": "Add supplier",
+      "searchSuppliers": "Search suppliers…",
+      "noSuppliers": "No supplier found (parties need the supplier role).",
+      "supplierHint": "Foreign suppliers default to e-mail in English, Iranian ones to WhatsApp in Persian.",
+      "suggestions": "Suggested by capability (HS code)",
+      "match": {
+        "heading": "Heading",
+        "chapter": "Chapter"
+      },
+      "channel": "Channel",
+      "language": "Language",
+      "subject": "Subject",
+      "message": "Message",
+      "copyText": "Copy text",
+      "copySubject": "Copy subject",
+      "copied": "Copied",
+      "openMail": "Open in mail app",
+      "noEmail": "No e-mail address on file",
+      "rerender": "Regenerate text",
+      "markSent": "Mark as sent",
+      "markSentHint": "BOMS sends nothing. This records an outgoing interaction with this exact text and a follow-up.",
+      "chaseAction": "Chase RFQ response",
+      "declined": "Declined",
+      "exportXlsx": "Excel",
+      "cancel": "Cancel RFQ"
+    },
+    "offer": {
+      "record": "Record offer",
+      "empty": "No offers yet",
+      "supplier": "Supplier",
+      "supersedes": "Replaces an earlier offer",
+      "keepPrevious": "No, keep the earlier one active",
+      "previousOf": "Offer of {{date}} ({{currency}})",
+      "channel": "Received via",
+      "received": "Received",
+      "validUntil": "Valid until",
+      "leadTime": "Lead time (days)",
+      "leadTimeShort": "Days",
+      "paymentTerms": "Payment terms",
+      "available": "Available",
+      "notAvailable": "Not available",
+      "unitPrice": "Unit price",
+      "per": "Per",
+      "moq": "MOQ",
+      "deviation": "Deviation",
+      "grid": {
+        "unit_price": "Unit price",
+        "price_per_quantity": "Price per quantity",
+        "moq": "MOQ",
+        "lead_time_days": "Lead time (days)",
+        "spec_deviation": "Deviation"
+      },
+      "gridHint": "Enter or ↓ moves to the next row in the same column.",
+      "compliance": "Compliance notes",
+      "rawText": "Original text (pasted)",
+      "files": "Attachments (PDF, Excel, image)",
+      "defaultNoFollowup": "Comparing offers",
+      "withdraw": "Withdraw",
+      "pastValidity": "Past validity"
+    },
+    "coverage": {
+      "title": "Coverage",
+      "gateOk": "All items covered",
+      "gateMissing": "{{count}} items missing",
+      "validOffers": "Valid offers",
+      "bestPrices": "Best price per currency",
+      "missingList": "Not yet selected or marked"
+    },
+    "compare": {
+      "item": "Item",
+      "allItems": "All items",
+      "noFx": "No currency conversion: offers are compared within each currency.",
+      "noOffers": "No valid offers",
+      "columns": {
+        "price": "Price",
+        "incoterm": "Incoterm",
+        "moq": "MOQ",
+        "leadTime": "Lead time",
+        "payment": "Payment",
+        "validity": "Valid until",
+        "compliance": "Compliance",
+        "deviation": "Deviation",
+        "documents": "Docs"
+      },
+      "kinds": {
+        "weight": "by weight",
+        "length": "by length",
+        "area": "by area",
+        "volume": "by volume",
+        "count": "by count",
+        "time": "by time"
+      },
+      "noUnit": "no unit",
+      "lowest": "Lowest",
+      "notComparable": "Not directly comparable",
+      "badges": {
+        "incoterm_differs": "Different Incoterms",
+        "unit_differs": "Unit not convertible"
+      },
+      "days": "{{n}} days",
+      "daysLeft": "{{n}} days left",
+      "select": "Select",
+      "selected": "Selected",
+      "changeTitle": "Change the selected offer"
+    },
+    "catalog": {
+      "title": "Catalog",
+      "subtitle": "Products as reference and price memory: every price offered and how often they were requested.",
+      "new": "New product",
+      "empty": "No products",
+      "product": "Product",
+      "searchPlaceholder": "Name, alias, CAS or HS code…",
+      "category": "Category",
+      "categories": "Categories",
+      "allCategories": "All categories",
+      "sort": "Sort",
+      "sorts": {
+        "name": "Name",
+        "last_requested": "Last requested",
+        "offers": "Number of offers"
+      },
+      "defaultUnit": "Default unit",
+      "kindNote": "Kind / grade note",
+      "aliases": "Aliases",
+      "aliasesHint": "One per line: grades, trade names, CAS numbers.",
+      "alias": "Alias",
+      "aliasPlaceholder": "Grade, trade name, CAS…",
+      "possibleDuplicates": "Similar products already exist",
+      "matchBy": {
+        "name": "similar name",
+        "alias": "similar alias"
+      },
+      "offers": "Offers",
+      "offersCount": "{{count}} offers",
+      "lastRequested": "Last requested",
+      "priceMemory": "Price memory",
+      "noPrices": "No prices yet",
+      "unitGroup": "Unit",
+      "period": "Period",
+      "periods": {
+        "all_time": "All time",
+        "last_12_months": "Last 12 months"
+      },
+      "count": "Offers",
+      "min": "Min",
+      "median": "Median",
+      "max": "Max",
+      "allOffers": "All offered prices",
+      "demand": "Demand",
+      "inquiries": "Inquiries",
+      "cases": "Cases",
+      "month": "Month",
+      "suppliersByOffers": "Suppliers by offers",
+      "suppliersByCapability": "Suppliers by capability",
+      "noSuppliers": "None yet",
+      "noHs": "Set an HS code to see suppliers by capability."
+    },
+    "templates": {
+      "title": "Message templates",
+      "subtitle": "RFQ texts per language and channel.",
+      "signatureLink": "Company name and signature are in Settings.",
+      "new": "New template",
+      "edit": "Edit template",
+      "language": "Language code",
+      "name": "Name",
+      "default": "Default for this language and channel",
+      "isDefault": "Default",
+      "placeholders": "Placeholders",
+      "braces": "To show a brace itself, type it twice.",
+      "preview": "Preview (sample data)",
+      "unknown": "Unknown placeholders",
+      "ph": {
+        "supplier_name": "supplier's name",
+        "contact_name": "contact's name (or the supplier's)",
+        "case_title": "case title",
+        "items_table": "item table: no, name, quantity + unit, key specs, packaging, destination, Incoterm, required by",
+        "respond_by": "reply-by date",
+        "signature": "your signature (Settings)"
+      }
+    },
+    "capabilities": {
+      "title": "Capabilities",
+      "empty": "No capability tags. They are optional and used for supplier suggestions and filters.",
+      "kind": "Kind",
+      "kinds": {
+        "hs": "HS",
+        "isic": "ISIC",
+        "tag": "Tag"
+      },
+      "search_hs": "Search HS chapter or heading (code or title)…",
+      "search_isic": "Search ISIC section or division…",
+      "top": "All chapters",
+      "open": "Open",
+      "tag": "Tag",
+      "tagPlaceholder": "Brand, grade, anything…",
+      "untranslated": "not translated yet",
+      "unknownCode": "not in the current edition",
+      "filterKind": "Capability",
+      "filterPlaceholder": "3907, C20, tag…"
+    }
   }
 }

@@ -14,6 +14,7 @@ import { defaultPhoneRegion, isPhoneType } from "../../lib/phone";
 import { useFormat } from "../../lib/prefs";
 import type { Contact, ContactMethod, DocumentDetail, EventItem, Followup, Interaction, Party, PartyDetail, SharedResult, SharedWith } from "../../lib/types";
 import { EventList } from "../events/EventLogPage";
+import { CapabilitiesCard } from "../sourcing/Capabilities";
 import { CountrySelect } from "./PartiesPage";
 import { PartyPicker, useQuickLog } from "./QuickLog";
 import { CancelFollowupButton, CHANNELS, DeleteButton, FollowupActions, METHOD_TYPES, PartyName, ROLES, SharedNumberPrompt, StageSelect, stageLabel } from "./shared";
@@ -113,6 +114,7 @@ function Overview({ party }: { party: PartyDetail }) {
         <Card title={t("parties.openFollowups")} padded={false}>
           <FollowupRows rows={party.open_followups} />
         </Card>
+        <CapabilitiesCard partyId={party.id} />
       </div>
       <Card title={t("parties.details")}>
         <form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={(e: FormEvent) => { e.preventDefault(); save.mutate(); }}>
@@ -506,7 +508,8 @@ function InteractionItem({ row, party, highlight }: { row: Interaction; party: P
         <Badge>{t(`interactions.directions.${row.direction}`)}</Badge>
         <span className="tabular-nums text-muted">{f.date(row.occurred_at, true)}</span>
         {contact && <Bdi className="text-muted">{contact.name_fa || contact.name_en}</Bdi>}
-        <button type="button" className="ms-auto text-xs text-accent hover:underline" onClick={() => setEditing(!editing)}>{t("interactions.correct")}</button>
+        <Link to={`/sourcing?from_interaction=${row.id}`} className="ms-auto text-xs text-accent hover:underline">{t("sourcing.inquiry.fromThisInteraction")}</Link>
+        <button type="button" className="text-xs text-accent hover:underline" onClick={() => setEditing(!editing)}>{t("interactions.correct")}</button>
       </div>
       {editing ? <InteractionEditForm row={row} party={party} onDone={() => setEditing(false)} /> : (
         <>

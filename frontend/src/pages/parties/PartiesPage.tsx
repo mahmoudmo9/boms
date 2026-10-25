@@ -23,17 +23,35 @@ export function useCountries() {
   });
 }
 
-export function CountrySelect({ value, onChange, id, allowEmpty = true }: { value: string; onChange: (v: string) => void; id?: string; allowEmpty?: boolean }) {
+export function CountrySelect({ value, onChange, id, allowEmpty = true, emptyLabel }: { value: string; onChange: (v: string) => void; id?: string; allowEmpty?: boolean; emptyLabel?: string }) {
   const { t } = useTranslation();
   const f = useFormat();
   const countries = useCountries();
   return (
     <Select id={id} value={value} onChange={(e) => onChange(e.target.value)} aria-label={t("parties.country")}>
-      {allowEmpty && <option value="">{t("common.all")}</option>}
+      {allowEmpty && <option value="">{emptyLabel ?? t("common.all")}</option>}
       {(countries.data?.items ?? []).map((c) => (
         <option key={c.iso2} value={c.iso2}>{f.lang === "fa" ? c.name_fa : c.name_en}</option>
       ))}
     </Select>
+  );
+}
+
+/** "Handles HS 3907 / ISIC C20 / tag X" (capability tags of the sourcing module). */
+function CapabilityFilter({ value, onChange }: { value: string; onChange: (v: string | null) => void }) {
+  const { t } = useTranslation();
+  const [kind, text] = value.includes(":") ? [value.split(":")[0], value.slice(value.indexOf(":") + 1)] : ["hs", ""];
+  const [draftKind, setDraftKind] = useState(kind);
+  const apply = (k: string, v: string) => onChange(v.trim() ? `${k}:${v.trim()}` : null);
+  return (
+    <div className="flex gap-1">
+      <Select className="w-24" aria-label={t("sourcing.capabilities.filterKind")} value={draftKind} onChange={(e) => { setDraftKind(e.target.value); if (text) apply(e.target.value, text); }}>
+        {(["hs", "isic", "tag"] as const).map((k) => <option key={k} value={k}>{t(`sourcing.capabilities.kinds.${k}`)}</option>)}
+      </Select>
+      <Input key={value} className="w-36" dir="auto" placeholder={t("sourcing.capabilities.filterPlaceholder")} defaultValue={text}
+        onKeyDown={(e) => e.key === "Enter" && apply(draftKind, (e.target as HTMLInputElement).value)}
+        onBlur={(e) => e.target.value !== text && apply(draftKind, e.target.value)} />
+    </div>
   );
 }
 
@@ -142,6 +160,7 @@ export function PartiesPage() {
   const stage = params.get("stage") ?? "";
   const country = params.get("country") ?? "";
   const status = params.get("status") ?? "active";
+  const capability = params.get("capability") ?? "";
   const page = Number(params.get("page") ?? 1);
   const sort: SortState = { id: params.get("sort") ?? "updated_at", desc: params.get("order") !== "asc" };
   const set = (changes: Record<string, string | null>) => {
@@ -152,9 +171,9 @@ export function PartiesPage() {
   };
 
   const list = useQuery({
-    queryKey: ["parties", "list", q, role, stage, country, status, page, sort.id, sort.desc],
+    queryKey: ["parties", "list", q, role, stage, country, status, capability, page, sort.id, sort.desc],
     queryFn: () => api<Page<Party>>("/api/parties", {
-      query: { q, role, stage, country, status, page, page_size: PAGE_SIZE, sort: sort.id, order: sort.desc ? "desc" : "asc" },
+      query: { q, role, stage, country, status, capability, page, page_size: PAGE_SIZE, sort: sort.id, order: sort.desc ? "desc" : "asc" },
     }),
     placeholderData: keepPreviousData,
   });
@@ -201,6 +220,7 @@ export function PartiesPage() {
             {(stages.data ?? []).filter((s) => s.role === role).map((s) => <option key={s.code} value={s.code}>{stageLabel(t, role, s.code)}</option>)}
           </Select>
           <div className="w-48"><CountrySelect value={country} onChange={(v) => set({ country: v })} /></div>
+          <CapabilityFilter value={capability} onChange={(v) => set({ capability: v })} />
           <Select className="w-36" aria-label={t("parties.status")} value={status} onChange={(e) => set({ status: e.target.value })}>
             <option value="active">{t("parties.statuses.active")}</option>
             <option value="archived">{t("parties.statuses.archived")}</option>

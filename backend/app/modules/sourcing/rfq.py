@@ -176,7 +176,11 @@ def _add_recipient(db: Session, rfq: Rfq, data: dict, source: str, actor: str | 
         raise Conflict("duplicate_recipient", "This supplier is already a recipient of the RFQ",
                        {"party_id": str(party.id)})
     defaults = defaults_for_party(party)
-    recipient = RfqRecipient(rfq_id=rfq.id, party_id=party.id, contact_id=data.get("contact_id"),
+    contact_id = data.get("contact_id")
+    if contact_id is None:  # default: the primary active contact, else the first active one
+        active = [c for c in parties.contacts_of(db, party.id) if c.status == "active"]
+        contact_id = next((c.id for c in active if c.is_primary), active[0].id if active else None)
+    recipient = RfqRecipient(rfq_id=rfq.id, party_id=party.id, contact_id=contact_id,
                              channel=data.get("channel") or defaults["channel"],
                              language=data.get("language") or defaults["language"], template_id=data.get("template_id"))
     db.add(recipient)
