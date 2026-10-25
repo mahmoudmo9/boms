@@ -8,6 +8,7 @@ param([string]$RestoreFrom = '')
 . "$PSScriptRoot\common.ps1"
 
 $source = Get-SourceRoot
+Assert-ReleaseFolder $source
 $version = Get-AppVersion $source
 Write-Host "BOMS installer - version $version" -ForegroundColor White
 

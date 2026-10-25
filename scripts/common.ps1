@@ -32,6 +32,25 @@ function Get-SourceRoot {
     return (Split-Path -Parent $PSScriptRoot)
 }
 
+function Assert-ReleaseFolder([string]$Root) {
+    # install/update must run from a built release (scripts\build_release.py), not from a git checkout.
+    $missing = @()
+    if (-not (Test-Path (Join-Path $Root 'VERSION'))) { $missing += 'VERSION' }
+    if (-not (Test-Path (Join-Path $Root 'backend\requirements.lock'))) { $missing += 'backend\requirements.lock' }
+    if (-not (Test-Path (Join-Path $Root 'backend\app\static\index.html'))) { $missing += 'backend\app\static (built frontend)' }
+    if (-not (Get-ChildItem -Path (Join-Path $Root 'wheelhouse') -Filter '*.whl' -ErrorAction SilentlyContinue)) {
+        $missing += 'wheelhouse\*.whl (Python packages)'
+    }
+    if ($missing.Count -gt 0) {
+        Write-Host ''
+        Write-Host "ERROR: $Root is not a BOMS release folder. Missing: $($missing -join ', ')" -ForegroundColor Red
+        Write-Host 'This looks like the source code (git checkout). Build the release first:' -ForegroundColor Yellow
+        Write-Host '    python scripts\build_release.py      (needs Python 3.12, Node.js and internet)'
+        Write-Host 'then extract dist\boms-<version>-win64.zip and run scripts\install.bat from the extracted folder.'
+        exit 1
+    }
+}
+
 function Get-AppVersion([string]$Root) {
     $file = Join-Path $Root 'VERSION'
     if (Test-Path $file) { return (Get-Content $file -Raw).Trim() }

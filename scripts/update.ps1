@@ -8,6 +8,7 @@
 $config = Read-BomsConfig
 if (-not $config) { Stop-WithError 'BOMS is not installed on this PC. Run install.bat instead.' }
 $source = Get-SourceRoot
+Assert-ReleaseFolder $source
 if ((Resolve-Path $source).Path -eq (Resolve-Path $script:AppDir).Path) {
     Stop-WithError 'Run update.bat from the extracted NEW release folder, not from C:\BOMS\app.'
 }

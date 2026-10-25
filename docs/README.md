@@ -8,7 +8,7 @@
 
 ### نصب
 
-۱. فایل `boms-<نسخه>-win64.zip` را از حالت فشرده خارج کنید.
+۱. فایل `boms-<نسخه>-win64.zip` را از حالت فشرده خارج کنید (این فایل با `scripts/build_release.py` ساخته می‌شود؛ پوشه کد منبع git را نمی‌توان مستقیم نصب کرد).
 ۲. در پوشه `scripts` روی `install.bat` دوبار کلیک کنید (با کاربر معمولی ویندوز، نه Administrator).
 ۳. اگر Python 3.12 یا PostgreSQL 18 نصب نباشد، برنامه نصب سعی می‌کند آن‌ها را با `winget` نصب کند. اگر اینترنت در دسترس نباشد، دقیقاً می‌گوید کدام فایل را از کجا دانلود کنید و منتظر می‌ماند.
 ۴. پوشه داده‌ها را انتخاب کنید (پیش‌فرض `D:\BOMS-Data` یا اگر درایو D نباشد `C:\BOMS-Data`)، رمز کاربر `postgres` را وارد کنید و برای BOMS رمز عبور (دو بار) انتخاب کنید.
@@ -41,7 +41,8 @@ an automated restore test. Later phases add the business workspaces shown in the
 
 ### Install
 
-1. Extract `boms-<version>-win64.zip`.
+1. Extract `boms-<version>-win64.zip` (built with `scripts/build_release.py`; the git source folder
+   cannot be installed directly because it has no wheels, no built UI and no `VERSION` file).
 2. In the `scripts` folder, double-click `install.bat` (as your normal Windows user).
 3. If Python 3.12 or PostgreSQL 18 is missing, the installer tries `winget`. Offline, it prints exactly
    which installer to download from where, waits, and continues once it is installed.
