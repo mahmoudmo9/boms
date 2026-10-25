@@ -1,0 +1,94 @@
+@import "tailwindcss";
+@import "@fontsource/vazirmatn/arabic-400.css";
+@import "@fontsource/vazirmatn/arabic-500.css";
+@import "@fontsource/vazirmatn/arabic-700.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens. Components use only these (bg-bg, bg-surface, border-line, text-fg, text-muted, accent...). */
+:root {
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface-2: #f9fafb;
+  --line: #e5e7eb;
+  --line-strong: #d1d5db;
+  --fg: #111827;
+  --muted: #6b7280;
+  --accent: #1d4ed8;
+  --accent-hover: #1e40af;
+  --accent-soft: #e0e7ff;
+  --accent-fg: #ffffff;
+  --danger: #b91c1c;
+  --danger-soft: #fee2e2;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #b45309;
+  --warning-soft: #fef3c7;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0f1115;
+  --surface: #171a21;
+  --surface-2: #1d212a;
+  --line: #2a2f3a;
+  --line-strong: #3a4150;
+  --fg: #e5e7eb;
+  --muted: #9ca3af;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-soft: #1e2a4a;
+  --accent-fg: #ffffff;
+  --danger: #f87171;
+  --danger-soft: #3b1618;
+  --success: #4ade80;
+  --success-soft: #11291b;
+  --warning: #fbbf24;
+  --warning-soft: #33260b;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  /* Vazirmatn carries only the Arabic-script subset, so Latin text falls through to the system font. */
+  --font-sans: "Vazirmatn", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

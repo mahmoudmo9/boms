@@ -117,3 +117,23 @@ def test_security_headers(anon_client):
     r = anon_client.get("/api/health")
     assert "default-src 'self'" in r.headers["content-security-policy"]
     assert r.headers["x-content-type-options"] == "nosniff"
+
+
+def test_frontend_served_with_spa_fallback(anon_client, tmp_path, monkeypatch):
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "index.html").write_text("<html>BOMS</html>")
+    (tmp_path / "assets" / "app-123.js").write_text("console.log(1)")
+    (tmp_path / "manifest.webmanifest").write_text("{}")
+    monkeypatch.setenv("BOMS_STATIC_DIR", str(tmp_path))
+    from app.main import create_app
+    from tests.conftest import ApiClient
+
+    with ApiClient(create_app(), base_url="http://127.0.0.1:8765") as c:
+        r = c.get("/documents/123")
+        assert r.status_code == 200 and "BOMS" in r.text and r.headers["cache-control"] == "no-cache"
+        r = c.get("/assets/app-123.js")
+        assert "immutable" in r.headers["cache-control"] and r.headers["content-type"].startswith("text/javascript")
+        assert c.get("/manifest.webmanifest").headers["content-type"] == "application/manifest+json"
+        assert c.get("/api/nope").status_code == 404
+        assert c.get("/../../etc/passwd").text == "<html>BOMS</html>"
+        assert c.get("/", headers={"Host": "evil:8765"}).status_code == 400

@@ -25,7 +25,7 @@ def _provider(kind: str):
             f"ORDER BY score DESC, {key} LIMIT :limit"
         ), {"needle": needle, "like": like, "exact": needle, "limit": limit}).all()
         return [SearchHit(id=r.code, title=r.name_en, title_i18n={"fa": r.name_fa, "en": r.name_en},
-                          subtitle=r.code, score=float(r.score), link=f"/basedata/{page}?q={r.code}",
+                          subtitle=r.code, score=float(r.score), link=f"/settings/basedata/{page}?q={r.code}",
                           extra={"active": r.active}) for r in rows]
 
     return search
