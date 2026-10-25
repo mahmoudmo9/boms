@@ -106,6 +106,31 @@ def cmd_set_password(_: argparse.Namespace) -> None:
     print("Password changed")
 
 
+def cmd_store_secret(args: argparse.Namespace) -> None:
+    """Store a secret in Windows Credential Manager; the value comes from BOMS_SECRET_VALUE."""
+    from app.core.secrets import set_secret
+
+    value = os.environ.get("BOMS_SECRET_VALUE")
+    if not value:
+        sys.exit("BOMS_SECRET_VALUE is not set")
+    set_secret(args.name, value)
+    print(f"Stored secret {args.name}")
+
+
+def cmd_has_secret(args: argparse.Namespace) -> None:
+    sys.exit(0 if get_secret(args.name, required=False) else 1)
+
+
+def cmd_status(_: argparse.Namespace) -> None:
+    """Exit 0 if the database is reachable and migrated; print the revision."""
+    from sqlalchemy import text
+
+    from app.core.db import get_engine
+
+    with get_engine().connect() as conn:
+        print(conn.execute(text("SELECT version_num FROM public.alembic_version")).scalar())
+
+
 def cmd_backup(args: argparse.Namespace) -> None:
     from app.modules.system import backup
 
@@ -145,6 +170,13 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--language", choices=["fa", "en"], default="fa")
     p.set_defaults(func=cmd_create_user)
     sub.add_parser("set-password").set_defaults(func=cmd_set_password)
+    p = sub.add_parser("store-secret")
+    p.add_argument("name", choices=["db_password", "session_key", "archive_password"])
+    p.set_defaults(func=cmd_store_secret)
+    p = sub.add_parser("has-secret")
+    p.add_argument("name", choices=["db_password", "session_key", "archive_password"])
+    p.set_defaults(func=cmd_has_secret)
+    sub.add_parser("status").set_defaults(func=cmd_status)
     p = sub.add_parser("backup")
     p.add_argument("--kind", choices=["manual", "nightly", "pre_update"], default="manual")
     p.set_defaults(func=cmd_backup)

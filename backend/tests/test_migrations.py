@@ -61,3 +61,18 @@ def test_app_role_is_not_superuser():
     with dbadmin.superuser_conn(superuser_conninfo()) as conn:
         row = conn.execute("SELECT rolsuper FROM pg_roles WHERE rolname = %s", (os.environ["BOMS_DB_USER"],)).fetchone()
     assert row == (False,)
+
+
+def test_launcher_applies_install_config(tmp_path, monkeypatch):
+    import json
+
+    from app import launch
+
+    for env in launch.CONFIG_KEYS.values():
+        monkeypatch.delenv(env, raising=False)
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"data_dir": "D:\\BOMS-Data", "db_name": "boms", "http_port": 8765, "pg_bin": ""}),
+                    encoding="utf-8-sig")
+    launch.apply_config(path)
+    assert os.environ["BOMS_DATA_DIR"] == "D:\\BOMS-Data" and os.environ["BOMS_HTTP_PORT"] == "8765"
+    assert "BOMS_PG_BIN" not in os.environ

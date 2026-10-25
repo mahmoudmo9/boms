@@ -7,3 +7,6 @@ frontend/dist/
 backend/app/static/
 dev-data/
 *.egg-info/
+tsconfig.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
+dist/

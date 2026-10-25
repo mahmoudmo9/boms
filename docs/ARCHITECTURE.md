@@ -13,13 +13,35 @@ backend/app/
   modules/
     system/        user + auth, settings, base data (countries/currencies/units), jobs, backup
     events/        append-only event log (core.event) + audit trail reader (core.audit)
-    documents/     file store, documents, document links           (milestone 2)
-    search/        global search + registration interface          (milestone 2)
-  worker/          job runner + scheduler                          (milestone 2)
+    documents/     file store, documents, document links, PDF text extraction job
+    search/        global search + provider registry
+  worker/          job runner, handler registry, scheduler  (python -m app.worker)
   cli.py           commands used by the Windows scripts
-  main.py          FastAPI app
-backend/migrations/  Alembic, hand-written SQL
+  launch.py        Task Scheduler entry point (reads C:\BOMS\config.json, runs backend or worker)
+  main.py          FastAPI app (API + built frontend from app/static)
+backend/migrations/  Alembic, hand-written SQL (0001 core, 0002 system, 0003 documents/search)
+frontend/          React + TypeScript + Vite + Tailwind (logical properties only), i18next
+scripts/           Windows install/update/backup/restore/start/stop (.ps1 + .bat), release builder
+wheelhouse/        Windows wheels (filled by scripts/build_release.py, not committed)
 ```
+
+### Extension points for later modules
+
+A new module (for example `modules/parties/`) adds its own `models.py`, `service.py`, `router.py`
+and a migration for its tables in its schema (`ref`, `outreach`, `tender`, ...). It plugs into the
+shared machinery **without editing other modules**:
+
+- **Background jobs**: `modules/<name>/handlers.py` with `@job_handler("parties.something")`;
+  the worker imports every module's `handlers.py` at start. Enqueue with
+  `app.modules.system.jobs.enqueue(db, type, payload)`.
+- **Global search**: `modules/<name>/searchable.py` calling
+  `app.modules.search.registry.register(SearchProvider(...))`; discovered automatically.
+- **Events**: `app.modules.events.service.record(...)` in the same transaction.
+- **Documents**: link documents to its entities with `documents.service.link(db, doc_id, "party", id)`.
+- **Audit**: attach `core.audit_row('<pk>')` and `core.set_updated_at()` triggers to new mutable tables.
+- **Backups** cover every table in the app schemas automatically (row counts per table).
+- **UI**: add the route in `frontend/src/App.tsx`, remove the workspace's `phase` in
+  `frontend/src/lib/nav.ts`, add keys to both `fa.json` and `en.json` (a test enforces parity).
 
 ### Module rule
 
@@ -103,3 +125,53 @@ module's ORM models to write to them.
 - Decimals are sent as strings. Datetimes as ISO 8601 UTC.
 - The UI sends `X-BOMS-Client: ui`; events from those requests get
   `source = 'ui'`, other HTTP clients `api`, the worker `worker`, CLI `script`.
+
+## Documents
+
+- Upload is streamed to `<data>/files/.incoming` while computing SHA-256 and enforcing the size limit
+  (Settings → max upload, default 100 MB), then moved to `files/<aa>/<bb>/<sha256>` (no extension) and
+  made read-only. An existing hash returns `409 duplicate_document` with the existing id and title.
+- Rejected by extension (`exe dll bat cmd ps1 js vbs msi scr com jar lnk hta`) and by content
+  (PE `MZ`, ELF, Windows shortcut header, MSI compound file, Java archive, `#!`, `@echo off`,
+  `<hta:application`).
+- MIME type is sniffed for PDF and images; only those are previewed inline. Everything else downloads
+  as an attachment with the original file name.
+- PDFs get a `documents.extract_text` job (PyMuPDF, text layer only). `text_status`: `pending`,
+  `done`, `empty` (probably a scan), `failed` (corrupt/encrypted).
+- No hard delete in Phase 1.
+
+## Search
+
+`core.document.search_vector` is a generated `tsvector` (`simple` config) over normalized title and
+file name (weight A), notes (B) and extracted text (C, first 300k chars). Queries are normalized with
+`normalize_fa`, turned into prefix `tsquery` terms, and combined with `pg_trgm` word similarity
+(threshold 0.4) on title + file name for typo tolerance. Base data uses substring + trigram matching on
+code and both names. All expressions have GIN indexes. Results are grouped by provider type.
+
+## Jobs and scheduler
+
+- `sys.job` rows; the worker claims with `UPDATE … WHERE id = (SELECT … FOR UPDATE SKIP LOCKED)`.
+- The handler runs in a transaction that also marks the job `done`, so its writes commit only on
+  success. Failures retry after `30 s × 2^(attempt-1)` (max 1 h) up to `max_attempts`, recording
+  `last_error`. One worker runs at a time (PostgreSQL advisory lock); at start it re-queues jobs left
+  `running` by a stopped worker.
+- The scheduler (in the worker loop, local time) computes each schedule's latest due time and enqueues
+  once if the last run is older, so runs missed while the PC was off happen once at the next start.
+  Phase 1: nightly backup (`backup.time`, default 02:00) and monthly restore test (1st of the month,
+  backup time + 1 h).
+- Heartbeat: `<data>/logs/worker.heartbeat`, written every loop (≈2 s); "alive" = younger than 60 s.
+
+## Backup
+
+See `OPERATIONS.md`. Row counts are taken in a `REPEATABLE READ` transaction whose snapshot is
+exported to `pg_dump --snapshot`, so the restore test can compare counts exactly.
+
+## Frontend
+
+React 19 + TypeScript, Vite, Tailwind CSS 4 with design tokens (CSS variables for light/dark),
+TanStack Query/Table, react-router, i18next. `dir`/`lang` on `<html>` follow the user's language;
+layout uses logical utilities only (`npm run lint` fails on `ml-/mr-/left-/right-/text-left…`).
+Dates: Jalali (`date-fns-jalali`) or Gregorian, Persian or Latin digits, from the user's settings;
+the API always uses ISO UTC. Vazirmatn (Arabic-script subset, bundled woff2) for Persian, system font
+for Latin. Mixed-direction values are wrapped in `<bdi>`. No CDN, no external requests; no service
+worker (the PWA manifest alone makes the app installable).
