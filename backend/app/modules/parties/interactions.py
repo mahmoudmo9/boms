@@ -2,7 +2,8 @@
 
 Rule "next action is mandatory": every new interaction comes with exactly one of a follow-up or a
 ``no_followup_reason``. Checked here (422) and again at commit by a deferred constraint trigger.
-Interactions are immutable except corrections of subject/body, which are recorded as events with before/after.
+Interactions are immutable except corrections (subject/body, and party/contact/channel/direction/time under a
+transaction-local flag), which are recorded as events with before/after.
 """
 
 import re
@@ -69,18 +70,62 @@ def create_interaction(db: Session, data: dict, source: str, actor: str | None =
     return row, created_followup
 
 
+MOVABLE = ("party_id", "contact_id", "channel", "direction", "occurred_at")
+
+
 def correct_interaction(db: Session, interaction_id: uuid.UUID, changes: dict, source: str,
                         actor: str | None = None) -> Interaction:
+    """Correct subject/body and, since v0.2.1, party/contact/channel/direction/time.
+
+    The non-text columns are writable only under the transaction-local flag ``boms.interaction_edit`` (checked
+    by core.interaction_guard). Moving to another party moves the follow-ups created from this interaction.
+    """
     row = get_interaction(db, interaction_id)
+    for field in ("party_id", "channel", "direction", "occurred_at"):
+        if field in changes and changes[field] is None:
+            changes.pop(field)  # not nullable: null means "unchanged"
+    if "occurred_at" in changes:
+        try:
+            changes["occurred_at"] = ensure_aware(changes["occurred_at"])
+        except ValueError:
+            raise AppError("naive_datetime", "occurred_at needs a timezone", status=422) from None
+    party_id = changes.get("party_id", row.party_id)
+    if "party_id" in changes:
+        service.get_party(db, party_id)
+    contact_id = changes.get("contact_id", row.contact_id)
+    if contact_id is not None and ("contact_id" in changes or party_id != row.party_id):
+        if service.get_contact(db, contact_id).party_id != party_id:
+            raise AppError("contact_not_of_party", "The contact belongs to another party", status=422)
+
     before, after = {}, {}
-    for field in ("subject", "body"):
+    for field in ("subject", "body", *MOVABLE):
         if field in changes and getattr(row, field) != changes[field]:
             before[field] = getattr(row, field)
             after[field] = changes[field]
-            setattr(row, field, changes[field])
-    if after:
-        db.flush()
-        events.record(db, "interaction", row.id, "correct", {"before": before, "after": after}, source, actor=actor)
+    if not after:
+        return row
+    if any(field in after for field in MOVABLE):
+        db.execute(text("SELECT set_config('boms.interaction_edit', 'on', true)"))
+    old_party = row.party_id
+    for field, value in after.items():
+        setattr(row, field, value)
+    db.flush()
+    moved = []
+    if "party_id" in after:
+        for followup in db.scalars(select(Followup).where(Followup.interaction_id == row.id,
+                                                          Followup.party_id == old_party)):
+            followup.party_id = party_id
+            db.flush()
+            events.record(db, "followup", followup.id, "move", service.jsonable(
+                {"interaction_id": row.id, "old_party_id": old_party, "new_party_id": party_id}), source, actor=actor)
+            moved.append(str(followup.id))
+        payload = service.jsonable({"interaction_id": row.id, "old_party_id": old_party, "new_party_id": party_id})
+        events.record(db, "party", old_party, "interaction_move_out", payload, source, actor=actor)
+        events.record(db, "party", party_id, "interaction_move_in", payload, source, actor=actor)
+    data = {"before": before, "after": after}
+    if "party_id" in after:
+        data["moved_followups"] = moved
+    events.record(db, "interaction", row.id, "correct", service.jsonable(data), source, actor=actor)
     return row
 
 

@@ -2,19 +2,22 @@ import uuid
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Body, Depends, Query, Request, Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.errors import AppError
 from app.core.schemas import Page, page_params
 from app.core.web import request_source
-from app.modules.parties import command_center, interactions, service
+from app.modules.parties import command_center, interactions, normalize, service
 from app.modules.parties.schemas import (
+    ArchiveIn,
     Channel,
     ContactCreate,
     ContactOut,
     ContactPatch,
+    DeletePartyIn,
     DocumentLinkIn,
     DuplicateOut,
     FollowupCancel,
@@ -25,7 +28,7 @@ from app.modules.parties.schemas import (
     InteractionCreate,
     InteractionOut,
     InteractionPatch,
-    MethodIn,
+    MethodAdd,
     MethodOut,
     MethodPatch,
     PartyCreate,
@@ -37,6 +40,7 @@ from app.modules.parties.schemas import (
     StageChange,
 )
 from app.modules.system.auth import CurrentUser
+from app.modules.system.models import Country
 
 Db = Annotated[Session, Depends(get_db)]
 parties_router = APIRouter(prefix="/api/parties", tags=["parties"])
@@ -55,10 +59,15 @@ def _party_card(db: Session, parties: list) -> list[dict]:
             for p in parties]
 
 
+def _method_out(method) -> MethodOut:
+    return MethodOut.model_validate(method).model_copy(
+        update={"value_display": normalize.display_value(method.type, method.value, method.value_norm)})
+
+
 def _contact_out(db: Session, contacts: list) -> list[dict]:
     methods = service.methods_of(db, [c.id for c in contacts])
     return [ContactOut.model_validate(c).model_copy(
-        update={"methods": [MethodOut.model_validate(m) for m in methods[c.id]]}).model_dump() for c in contacts]
+        update={"methods": [_method_out(m) for m in methods[c.id]]}).model_dump() for c in contacts]
 
 
 def party_detail(db: Session, party_id: uuid.UUID) -> dict:
@@ -102,6 +111,12 @@ def duplicates(_: CurrentUser, db: Db, name_fa: str | None = None, name_en: str 
                                     for d in service.find_duplicates(db, name_fa, name_en, exclude)]}
 
 
+@parties_router.get("/phone-regions")
+def phone_regions(_: CurrentUser, db: Db):
+    countries = db.execute(select(Country.iso2, Country.name_fa, Country.name_en).order_by(Country.sort_order, Country.name_en)).all()
+    return normalize.phone_regions([tuple(c) for c in countries])
+
+
 @parties_router.get("/funnel/{role}")
 def funnel(role: Role, _: CurrentUser, db: Db):
     return command_center.funnel_board(db, role)
@@ -131,9 +146,20 @@ def update_party(party_id: uuid.UUID, body: PartyPatch, request: Request, user: 
     return party_detail(db, party_id)
 
 
+@parties_router.delete("/{party_id}")
+def delete_party(party_id: uuid.UUID, request: Request, user: CurrentUser, db: Db, cascade: bool = False,
+                 body: Annotated[DeletePartyIn | None, Body()] = None):
+    counts = service.delete_party(db, party_id, request_source(request), user.username, cascade=cascade,
+                                  confirm_name=body.confirm_name if body else None)
+    db.commit()
+    return {"deleted": True, "cascade": cascade, "counts": counts}
+
+
 @parties_router.post("/{party_id}/archive")
-def archive_party(party_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
-    service.set_status(db, party_id, "archived", request_source(request), user.username)
+def archive_party(party_id: uuid.UUID, request: Request, user: CurrentUser, db: Db,
+                  body: Annotated[ArchiveIn | None, Body()] = None):
+    service.set_status(db, party_id, "archived", request_source(request), user.username,
+                       open_followups=body.open_followups if body else "cancel")
     db.commit()
     return party_detail(db, party_id)
 
@@ -197,10 +223,17 @@ def list_contacts(party_id: uuid.UUID, _: CurrentUser, db: Db):
 
 
 @contacts_router.post("", status_code=201)
-def create_contact(body: ContactCreate, request: Request, user: CurrentUser, db: Db):
-    contact = service.create_contact(db, body.model_dump(), request_source(request), user.username)
+def create_contact(body: ContactCreate, request: Request, response: Response, user: CurrentUser, db: Db):
+    """201 with the contact, or 200 ``{created: false, shared_with}`` when a number belongs to another contact
+    and ``confirm_shared`` is not set (nothing is stored)."""
+    data = body.model_dump()
+    confirm = data.pop("confirm_shared")
+    contact, shared = service.create_contact(db, data, request_source(request), user.username, confirm_shared=confirm)
+    if contact is None:
+        response.status_code = 200
+        return {"created": False, "shared_with": shared}
     db.commit()
-    return _one_contact(db, contact.id)
+    return {**_one_contact(db, contact.id), "created": True, "shared_with": shared}
 
 
 @contacts_router.patch("/{contact_id}")
@@ -209,6 +242,12 @@ def update_contact(contact_id: uuid.UUID, body: ContactPatch, request: Request, 
                            user.username)
     db.commit()
     return _one_contact(db, contact_id)
+
+
+@contacts_router.delete("/{contact_id}", status_code=204)
+def delete_contact(contact_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    service.delete_contact(db, contact_id, request_source(request), user.username)
+    db.commit()
 
 
 @contacts_router.post("/{contact_id}/archive")
@@ -225,33 +264,53 @@ def unarchive_contact(contact_id: uuid.UUID, request: Request, user: CurrentUser
     return _one_contact(db, contact_id)
 
 
-@contacts_router.post("/{contact_id}/methods", status_code=201)
-def add_method(contact_id: uuid.UUID, body: MethodIn, request: Request, user: CurrentUser, db: Db):
-    method = service.add_method(db, contact_id, body.model_dump(), request_source(request), user.username)
+def _method_result(db: Session, method, shared: list[dict], response: Response, created_status: int) -> dict:
+    if method is None:
+        response.status_code = 200
+        return {"created": False, "shared_with": shared}
     db.commit()
-    return MethodOut.model_validate(method)
+    response.status_code = created_status
+    return {**_method_out(method).model_dump(), "created": True, "shared_with": shared}
+
+
+@contacts_router.post("/{contact_id}/methods", status_code=201)
+def add_method(contact_id: uuid.UUID, body: MethodAdd, request: Request, response: Response, user: CurrentUser,
+               db: Db):
+    data = body.model_dump()
+    confirm = data.pop("confirm_shared")
+    method, shared = service.add_method(db, contact_id, data, request_source(request), user.username,
+                                        confirm_shared=confirm)
+    return _method_result(db, method, shared, response, 201)
 
 
 @contacts_router.patch("/methods/{method_id}")
-def update_method(method_id: uuid.UUID, body: MethodPatch, request: Request, user: CurrentUser, db: Db):
-    method = service.update_method(db, method_id, body.model_dump(exclude_unset=True), request_source(request),
-                                   user.username)
+def update_method(method_id: uuid.UUID, body: MethodPatch, request: Request, response: Response, user: CurrentUser,
+                  db: Db):
+    data = body.model_dump(exclude_unset=True)
+    confirm = data.pop("confirm_shared", False)
+    method, shared = service.update_method(db, method_id, data, request_source(request), user.username,
+                                           confirm_shared=confirm)
+    return _method_result(db, method, shared, response, 200)
+
+
+@contacts_router.delete("/methods/{method_id}", status_code=204)
+def delete_method(method_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    service.delete_method(db, method_id, request_source(request), user.username)
     db.commit()
-    return MethodOut.model_validate(method)
 
 
 @contacts_router.post("/methods/{method_id}/archive")
 def archive_method(method_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
     method = service.set_method_status(db, method_id, "archived", request_source(request), user.username)
     db.commit()
-    return MethodOut.model_validate(method)
+    return _method_out(method)
 
 
 @contacts_router.post("/methods/{method_id}/unarchive")
 def unarchive_method(method_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
     method = service.set_method_status(db, method_id, "active", request_source(request), user.username)
     db.commit()
-    return MethodOut.model_validate(method)
+    return _method_out(method)
 
 
 # ---- interactions -------------------------------------------------------------------

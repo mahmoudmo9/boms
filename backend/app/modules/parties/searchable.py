@@ -38,17 +38,20 @@ def _parties(db, needle: str, raw: str, limit: int) -> list[SearchHit]:
 
 
 def _contacts(db, needle: str, raw: str, limit: int) -> list[SearchHit]:
-    digits = "".join(ch for ch in needle if ch.isdigit())
+    # Phone search in any format: the query's digits without leading zeros ("0912" -> "912", "0098 912..." ->
+    # "98912...") are matched inside the E.164 value_norm. Needs at least 4 typed digits.
+    typed = "".join(ch for ch in needle if ch.isdigit())
+    digits = typed.lstrip("0") if len(typed) >= 4 else ""
     rows = db.execute(text(
         f"""
         SELECT DISTINCT ON (c.id) c.id, c.party_id, c.name_fa, c.name_en, p.name_fa AS party_fa,
                p.name_en AS party_en, m.value AS method_value,
                greatest(word_similarity(:needle, {CONTACT_EXPR}),
-                        CASE WHEN m.value_norm LIKE :like THEN 1 ELSE 0 END) AS score
+                        CASE WHEN m.id IS NOT NULL THEN 1 ELSE 0 END) AS score
         FROM core.contact c
         JOIN core.party p ON p.id = c.party_id
         LEFT JOIN core.contact_method m ON m.contact_id = c.id
-             AND (m.value_norm LIKE :like OR (:digits <> '' AND length(:digits) >= 4 AND m.value_norm LIKE :dlike))
+             AND (m.value_norm LIKE :like OR (:digits <> '' AND m.value_norm LIKE :dlike))
         WHERE {CONTACT_EXPR} LIKE :like OR {CONTACT_EXPR} %> :needle OR m.id IS NOT NULL
         ORDER BY c.id, score DESC
         """

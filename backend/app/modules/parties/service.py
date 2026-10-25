@@ -27,7 +27,7 @@ from app.modules.parties.models import (
     Party,
     PartyRole,
 )
-from app.modules.parties.normalize import normalize_method
+from app.modules.parties.normalize import InvalidPhone, known_region, normalize_method
 
 DUPLICATE_SIMILARITY = 0.6
 PARTY_SORTS = {"name": Party.name_norm, "updated_at": Party.updated_at, "created_at": Party.created_at}
@@ -160,12 +160,22 @@ def update_party(db: Session, party_id: uuid.UUID, changes: dict, source: str, a
     return party
 
 
-def set_status(db: Session, party_id: uuid.UUID, status: str, source: str, actor: str | None = None) -> Party:
+def set_status(db: Session, party_id: uuid.UUID, status: str, source: str, actor: str | None = None,
+               open_followups: str = "cancel") -> Party:
+    """Archive/unarchive. On archive, open follow-ups are cancelled ("party archived") or kept."""
     party = get_party(db, party_id)
     if party.status != status:
         party.status = status
         db.flush()
-        events.record(db, "party", party.id, "archive" if status == "archived" else "unarchive", {}, source,
+        cancelled = []
+        if status == "archived" and open_followups == "cancel":
+            for row in db.scalars(select(Followup).where(Followup.party_id == party_id, Followup.status == "open")):
+                row.status, row.done_at, row.done_note = "cancelled", clock.now(), "party archived"
+                db.flush()
+                events.record(db, "followup", row.id, "cancel", {"note": "party archived"}, source, actor=actor)
+                cancelled.append(str(row.id))
+        data = {"open_followups": open_followups, "cancelled": cancelled} if status == "archived" else {}
+        events.record(db, "party", party.id, "archive" if status == "archived" else "unarchive", data, source,
                       actor=actor)
     return party
 
@@ -301,28 +311,46 @@ def _clear_primary_contact(db: Session, party_id: uuid.UUID, keep: uuid.UUID | N
                                      Contact.id != keep if keep else true()).values(is_primary=False))
 
 
-def _check_method_unique(db: Session, method_type: str, value_norm: str, exclude: uuid.UUID | None = None) -> None:
+def _normalize(method_type: str, value: str, region: str | None) -> str:
+    try:
+        value_norm = normalize_method(method_type, value, region)
+    except InvalidPhone as exc:
+        raise AppError("invalid_phone", f"Not a possible phone number ({exc.reason})", {"reason": exc.reason},
+                       status=422) from None
+    if not value_norm:
+        raise AppError("invalid_contact_value", "The value is empty after normalization", status=422)
+    return value_norm
+
+
+def _region_for(db: Session, contact: Contact, requested: str | None) -> str | None:
+    """Region for numbers typed without "+"/"00": the client's choice, else the party's country (else IR)."""
+    return known_region(requested) or known_region(db.get(Party, contact.party_id).country_iso2)
+
+
+def _shared_with(db: Session, contact_id: uuid.UUID | None, method_type: str, value_norm: str,
+                 exclude: uuid.UUID | None = None) -> list[dict]:
+    """Active methods with the same value. Same contact -> 409; other contacts -> returned as a warning."""
     query = (select(ContactMethod, Contact, Party)
              .join(Contact, Contact.id == ContactMethod.contact_id)
              .join(Party, Party.id == Contact.party_id)
-             .where(ContactMethod.type == method_type, ContactMethod.value_norm == value_norm))
+             .where(ContactMethod.type == method_type, ContactMethod.value_norm == value_norm,
+                    ContactMethod.status == "active"))
     if exclude:
         query = query.where(ContactMethod.id != exclude)
-    hit = db.execute(query).first()
-    if hit:
-        method, contact, party = hit
-        raise Conflict("duplicate_contact_method", f"This {method_type} is already registered", jsonable({
-            "type": method_type, "value": method.value, "value_norm": value_norm, "contact_id": contact.id,
-            "contact_name": contact.name_fa or contact.name_en, "party_id": party.id,
-            "party_name": party.name_fa or party.name_en}))
+    shared = []
+    for method, contact, party in db.execute(query):
+        if contact_id and contact.id == contact_id:
+            raise Conflict("duplicate_contact_method", f"This contact already has this {method_type}",
+                           jsonable({"type": method_type, "value": method.value, "contact_id": contact.id}))
+        shared.append(jsonable({"type": method_type, "value": method.value, "contact_id": contact.id,
+                                "contact_name": contact.name_fa or contact.name_en, "party_id": party.id,
+                                "party_name": party.name_fa or party.name_en}))
+    return shared
 
 
-def _add_method(db: Session, contact: Contact, data: dict, source: str, actor: str | None) -> ContactMethod:
+def _insert_method(db: Session, contact: Contact, data: dict, value_norm: str, source: str,
+                   actor: str | None) -> ContactMethod:
     value = data["value"].strip()
-    value_norm = normalize_method(data["type"], value)
-    if not value_norm:
-        raise AppError("invalid_contact_value", "The value is empty after normalization", status=422)
-    _check_method_unique(db, data["type"], value_norm)
     if data.get("is_primary"):
         db.execute(update(ContactMethod).where(ContactMethod.contact_id == contact.id, ContactMethod.is_primary)
                    .values(is_primary=False))
@@ -331,25 +359,41 @@ def _add_method(db: Session, contact: Contact, data: dict, source: str, actor: s
     db.add(method)
     _flush(db, "duplicate_contact_method")
     events.record(db, "contact", contact.id, "method_add",
-                  {"type": method.type, "value": value, "party_id": str(contact.party_id)}, source, actor=actor)
+                  {"type": method.type, "value": value, "value_norm": value_norm,
+                   "party_id": str(contact.party_id)}, source, actor=actor)
     return method
 
 
-def create_contact(db: Session, data: dict, source: str, actor: str | None = None) -> Contact:
-    get_party(db, data["party_id"])
+def create_contact(db: Session, data: dict, source: str, actor: str | None = None,
+                   confirm_shared: bool = False) -> tuple[Contact | None, list[dict]]:
+    """Returns (contact, shared_with); (None, shared_with) when a number is used elsewhere and not confirmed."""
+    party = get_party(db, data["party_id"])
     methods = data.pop("methods", [])
+    region_default = known_region(party.country_iso2)
+    prepared, shared, seen = [], [], set()
+    for method in methods:
+        value_norm = _normalize(method["type"], method["value"], known_region(method.get("region")) or region_default)
+        if (method["type"], value_norm) in seen:
+            raise Conflict("duplicate_contact_method", "The same value is given twice",
+                           {"type": method["type"], "value": method["value"]})
+        seen.add((method["type"], value_norm))
+        shared += _shared_with(db, None, method["type"], value_norm)
+        prepared.append((method, value_norm))
+    if shared and not confirm_shared:
+        return None, shared
     if data.get("is_primary"):
         _clear_primary_contact(db, data["party_id"], None)
     contact = Contact(**data)
     db.add(contact)
     _flush(db, "invalid_contact")
     events.record(db, "contact", contact.id, "create", jsonable({
-        "party_id": contact.party_id, "name_fa": contact.name_fa, "name_en": contact.name_en}), source, actor=actor)
+        "party_id": contact.party_id, "name_fa": contact.name_fa, "name_en": contact.name_en,
+        "confirmed_shared": shared}), source, actor=actor)
     events.record(db, "party", contact.party_id, "contact_add", jsonable({"contact_id": contact.id}), source,
                   actor=actor)
-    for method in methods:
-        _add_method(db, contact, method, source, actor)
-    return contact
+    for method, value_norm in prepared:
+        _insert_method(db, contact, method, value_norm, source, actor)
+    return contact, shared
 
 
 def update_contact(db: Session, contact_id: uuid.UUID, changes: dict, source: str, actor: str | None = None) -> Contact:
@@ -380,8 +424,14 @@ def set_contact_status(db: Session, contact_id: uuid.UUID, status: str, source: 
     return contact
 
 
-def add_method(db: Session, contact_id: uuid.UUID, data: dict, source: str, actor: str | None = None) -> ContactMethod:
-    return _add_method(db, get_contact(db, contact_id), data, source, actor)
+def add_method(db: Session, contact_id: uuid.UUID, data: dict, source: str, actor: str | None = None,
+               confirm_shared: bool = False) -> tuple[ContactMethod | None, list[dict]]:
+    contact = get_contact(db, contact_id)
+    value_norm = _normalize(data["type"], data["value"], _region_for(db, contact, data.get("region")))
+    shared = _shared_with(db, contact.id, data["type"], value_norm)
+    if shared and not confirm_shared:
+        return None, shared
+    return _insert_method(db, contact, data, value_norm, source, actor), shared
 
 
 def get_method(db: Session, method_id: uuid.UUID) -> ContactMethod:
@@ -391,15 +441,18 @@ def get_method(db: Session, method_id: uuid.UUID) -> ContactMethod:
     return method
 
 
-def update_method(db: Session, method_id: uuid.UUID, changes: dict, source: str,
-                  actor: str | None = None) -> ContactMethod:
+def update_method(db: Session, method_id: uuid.UUID, changes: dict, source: str, actor: str | None = None,
+                  confirm_shared: bool = False) -> tuple[ContactMethod | None, list[dict]]:
     method = get_method(db, method_id)
+    region = changes.pop("region", None)
+    shared: list[dict] = []
     if changes.get("value") is not None:
         value = changes["value"].strip()
-        value_norm = normalize_method(method.type, value)
-        if not value_norm:
-            raise AppError("invalid_contact_value", "The value is empty after normalization", status=422)
-        _check_method_unique(db, method.type, value_norm, exclude=method.id)
+        value_norm = _normalize(method.type, value, _region_for(db, get_contact(db, method.contact_id), region))
+        if method.status == "active":
+            shared = _shared_with(db, method.contact_id, method.type, value_norm, exclude=method.id)
+            if shared and not confirm_shared:
+                return None, shared
         changes["value"], changes["value_norm"] = value, value_norm
     if changes.get("is_primary"):
         db.execute(update(ContactMethod).where(ContactMethod.contact_id == method.contact_id,
@@ -409,7 +462,7 @@ def update_method(db: Session, method_id: uuid.UUID, changes: dict, source: str,
         _flush(db, "duplicate_contact_method")
         events.record(db, "contact", method.contact_id, "method_update",
                       jsonable({"method_id": method.id, "changes": diff}), source, actor=actor)
-    return method
+    return method, shared
 
 
 def set_method_status(db: Session, method_id: uuid.UUID, status: str, source: str,
@@ -419,10 +472,107 @@ def set_method_status(db: Session, method_id: uuid.UUID, status: str, source: st
         method.status = status
         if status == "archived":
             method.is_primary = False
-        db.flush()
+        _flush(db, "duplicate_contact_method")  # restoring may collide with an active copy on the same contact
         events.record(db, "contact", method.contact_id, f"method_{'archive' if status == 'archived' else 'unarchive'}",
                       jsonable({"method_id": method.id}), source, actor=actor)
     return method
+
+
+# ---- deletes (real deletes when nothing depends on the row; snapshot in the event) -----------
+
+def _row(obj) -> dict:
+    return jsonable({c.key: getattr(obj, c.key) for c in obj.__table__.columns if c.key not in {"name_norm", "body_norm"}})
+
+
+def delete_method(db: Session, method_id: uuid.UUID, source: str, actor: str | None = None) -> None:
+    method = get_method(db, method_id)
+    snapshot = _row(method)
+    db.delete(method)
+    db.flush()
+    events.record(db, "contact", method.contact_id, "method_delete", {"deleted": snapshot}, source, actor=actor)
+
+
+def delete_contact(db: Session, contact_id: uuid.UUID, source: str, actor: str | None = None) -> None:
+    contact = get_contact(db, contact_id)
+    used = db.scalar(select(func.count()).select_from(Interaction).where(Interaction.contact_id == contact.id)) or 0
+    if used:
+        raise Conflict("in_use", "The contact is referenced by interactions", {"interactions": used})
+    methods = list(db.scalars(select(ContactMethod).where(ContactMethod.contact_id == contact.id)))
+    snapshot = {**_row(contact), "methods": [_row(m) for m in methods]}
+    for method in methods:
+        db.delete(method)
+    db.flush()
+    db.delete(contact)
+    db.flush()
+    events.record(db, "contact", contact.id, "delete", {"deleted": snapshot}, source, actor=actor)
+    events.record(db, "party", contact.party_id, "contact_delete", jsonable({"contact_id": contact.id}), source,
+                  actor=actor)
+
+
+def dependency_counts(db: Session, party_id: uuid.UUID) -> dict[str, int]:
+    interaction_ids = [str(i) for i in db.scalars(select(Interaction.id).where(Interaction.party_id == party_id))]
+    docs = db.scalar(select(func.count()).select_from(DocumentLink).where(
+        ((DocumentLink.entity_type == "party") & (DocumentLink.entity_id == str(party_id)))
+        | ((DocumentLink.entity_type == "interaction") & DocumentLink.entity_id.in_(interaction_ids or [""])))) or 0
+    return {
+        "interactions": len(interaction_ids),
+        "followups": db.scalar(select(func.count()).select_from(Followup).where(Followup.party_id == party_id)) or 0,
+        "documents": docs,
+    }
+
+
+def delete_party(db: Session, party_id: uuid.UUID, source: str, actor: str | None = None, *,
+                 cascade: bool = False, confirm_name: str | None = None) -> dict:
+    """Delete a party. Without ``cascade`` only when nothing depends on it (else 409 in_use with counts).
+
+    ``cascade`` (test-data cleanup) also deletes its interactions, follow-ups and document links, and needs
+    the exact party name. Interaction deletes are allowed by a transaction-local flag only.
+    """
+    party = get_party(db, party_id)
+    counts = dependency_counts(db, party_id)
+    if cascade:
+        names = {(party.name_fa or "").strip(), (party.name_en or "").strip()} - {""}
+        if (confirm_name or "").strip() not in names:
+            raise AppError("confirm_name_mismatch", "Type the exact party name to confirm", status=422)
+    elif any(counts.values()):
+        raise Conflict("in_use", "The party has interactions, follow-ups or documents", counts)
+
+    contacts = list(db.scalars(select(Contact).where(Contact.party_id == party_id)))
+    methods = list(db.scalars(select(ContactMethod).where(ContactMethod.contact_id.in_([c.id for c in contacts]))))
+    roles = roles_of(db, party_id)
+    interactions = list(db.scalars(select(Interaction).where(Interaction.party_id == party_id)))
+    followups = list(db.scalars(select(Followup).where(Followup.party_id == party_id)))
+    links = party_documents(db, party_id)
+    snapshot = {
+        "party": _row(party),
+        "roles": [_row(r) for r in roles],
+        "contacts": [{**_row(c), "methods": [_row(m) for m in methods if m.contact_id == c.id]} for c in contacts],
+        "interactions": [_row(i) for i in interactions],
+        "followups": [_row(f) for f in followups],
+        "document_links": jsonable(links),
+    }
+
+    if cascade:
+        db.execute(text("SELECT set_config('boms.allow_interaction_delete', 'on', true)"))
+        for link in links:
+            documents.unlink(db, link["document_id"], link["link_id"], source=source, actor=actor)
+        for row in followups:
+            db.delete(row)
+        db.flush()
+        for row in interactions:
+            db.delete(row)
+        db.flush()
+    for row in methods:
+        db.delete(row)
+    db.flush()
+    for row in contacts + roles:
+        db.delete(row)
+    db.flush()
+    db.delete(party)
+    _flush(db, "in_use")
+    events.record(db, "party", party_id, "delete", {"cascade": cascade, "counts": counts, "deleted": snapshot},
+                  source, actor=actor)
+    return counts
 
 
 # ---- documents (core.document_link, owned by the documents module) ---------------------

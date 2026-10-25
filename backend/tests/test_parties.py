@@ -145,7 +145,7 @@ def test_archive_and_unarchive(client):
     active_ids = [p["id"] for p in client.get("/api/parties", params={"page_size": 200}).json()["items"]]
     assert party["id"] not in active_ids
     assert client.post(f"/api/parties/{party['id']}/unarchive").json()["status"] == "active"
-    assert client.delete(f"/api/parties/{party['id']}").status_code == 405
+    assert client.delete(f"/api/parties/{party['id']}").status_code == 200  # v0.2.1: nothing depends on it
 
 
 def test_duplicate_party_warning_and_confirm(client, db):
@@ -167,7 +167,7 @@ def test_duplicate_party_warning_and_confirm(client, db):
 # ---- contacts and methods ----------------------------------------------------------------
 
 @pytest.mark.parametrize("variant", ["+98 912 {x}", "0098-912-{x}", "۰۹۱۲{xf}", "(0912) {x}"])
-def test_identical_phone_collides_in_all_formats(client, db, variant):
+def test_identical_phone_is_shared_warning_in_all_formats(client, db, variant):
     x = f"{uuid.uuid4().int % 10**7:07d}"
     party = make_party(client)
     r = client.post("/api/contacts", json={"party_id": party["id"], "name_en": "Ali",
@@ -178,16 +178,16 @@ def test_identical_phone_collides_in_all_formats(client, db, variant):
     xf = x.translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
     r = client.post("/api/contacts", json={"party_id": other["id"], "name_en": "Reza",
                                            "methods": [{"type": "phone", "value": variant.format(x=x, xf=xf)}]})
-    assert r.status_code == 409, r.text
-    error = r.json()["error"]
-    assert error["code"] == "duplicate_contact_method" and error["details"]["party_id"] == party["id"]
+    assert r.status_code == 200, r.text  # v0.2.1: shared numbers warn instead of 409
+    body = r.json()
+    assert body["created"] is False and body["shared_with"][0]["party_id"] == party["id"]
     assert db.scalar(select(func.count()).select_from(Contact)) == contacts_before  # contact not persisted
 
 
 def test_phone_normalization():
     assert {normalize_method("phone", v) for v in
-            ["09123456789", "+98 912 345 6789", "0098 912 345 6789", "۰۹۱۲۳۴۵۶۷۸۹", "٠٩١٢٣٤٥٦٧٨٩"]} == {"989123456789"}
-    assert normalize_method("whatsapp", "+971 50 123 4567") == "971501234567"
+            ["09123456789", "+98 912 345 6789", "0098 912 345 6789", "۰۹۱۲۳۴۵۶۷۸۹", "٠٩١٢٣٤٥٦٧٨٩"]} == {"+989123456789"}
+    assert normalize_method("whatsapp", "+971 50 123 4567") == "+971501234567"
     assert normalize_method("email", " Ali@Example.COM ") == "ali@example.com"
     assert normalize_method("telegram", "@Some_User") == "some_user"
 
@@ -200,11 +200,15 @@ def test_email_duplicate_on_method_add_and_update(client, db):
     c2 = client.post("/api/contacts", json={"party_id": party["id"], "name_en": "B"}).json()
     before = db.scalar(select(func.count()).select_from(ContactMethod))
     r = client.post(f"/api/contacts/{c2['id']}/methods", json={"type": "email", "value": email.upper()})
-    assert r.status_code == 409
+    assert r.status_code == 200 and r.json()["created"] is False  # shared with contact A: warning
     assert db.scalar(select(func.count()).select_from(ContactMethod)) == before
+    r = client.post(f"/api/contacts/{c1['id']}/methods", json={"type": "email", "value": email.upper()})
+    assert r.status_code == 409  # the same contact twice
     m2 = client.post(f"/api/contacts/{c2['id']}/methods", json={"type": "email", "value": f"x{email}"}).json()
     r = client.patch(f"/api/contacts/methods/{m2['id']}", json={"value": email})
-    assert r.status_code == 409
+    assert r.status_code == 200 and r.json()["created"] is False
+    r = client.patch(f"/api/contacts/methods/{m2['id']}", json={"value": email, "confirm_shared": True})
+    assert r.status_code == 200 and r.json()["value_norm"] == email
     # the same number as phone and as whatsapp is allowed (different type)
     number = f"+44 7{uuid.uuid4().int % 10**9:09d}"
     assert client.post(f"/api/contacts/{c1['id']}/methods", json={"type": "phone", "value": number}).status_code == 201
@@ -221,7 +225,7 @@ def test_contact_archive_and_primary(client):
     assert client.post(f"/api/contacts/{b['id']}/archive").json()["status"] == "archived"
     m = client.post(f"/api/contacts/{a['id']}/methods", json={"type": "telegram", "value": f"@u{tag()}"}).json()
     assert client.post(f"/api/contacts/methods/{m['id']}/archive").json()["status"] == "archived"
-    assert client.delete(f"/api/contacts/{a['id']}").status_code == 405
+    assert client.delete(f"/api/contacts/{a['id']}").status_code == 204  # v0.2.1: no interaction uses it
 
 
 # ---- interactions and the mandatory next action -------------------------------------------
@@ -262,9 +266,10 @@ def test_interaction_is_immutable_except_subject_and_body(client, db):
     ev = client.get("/api/events", params={"entity_type": "interaction", "entity_id": row["id"],
                                            "action": "correct"}).json()["items"][0]
     assert ev["data"] == {"before": {"body": "original text"}, "after": {"body": "corrected text"}}
-    assert client.patch(f"/api/interactions/{row['id']}", json={"channel": "call"}).status_code == 422
+    r = client.patch(f"/api/interactions/{row['id']}", json={"channel": "call"})  # v0.2.1: correctable
+    assert r.status_code == 200 and r.json()["channel"] == "call"
     with pytest.raises(DBAPIError) as info:
-        db.execute(text("UPDATE core.interaction SET channel = 'call' WHERE id = :i"), {"i": row["id"]})
+        db.execute(text("UPDATE core.interaction SET channel = 'email' WHERE id = :i"), {"i": row["id"]})
     assert isinstance(info.value.orig, psycopg.errors.RestrictViolation)
     db.rollback()
     with pytest.raises(DBAPIError):
@@ -513,8 +518,9 @@ def test_duplicate_create_returns_409_and_persists_nothing_including_events(clie
     events_before = db.execute(text("SELECT count(*) FROM core.event")).scalar()
     contacts_before = db.scalar(select(func.count()).select_from(Contact))
     r = client.post("/api/contacts", json={"party_id": p2["id"], "name_en": "second",
-                                           "methods": [{"type": "phone", "value": "1"},
-                                                       {"type": "email", "value": value}]})
+                                           "methods": [{"type": "phone", "value": "0912 000 1234"},
+                                                       {"type": "email", "value": f"other{value}"},
+                                                       {"type": "email", "value": f"OTHER{value}"}]})
     assert r.status_code == 409
     db.expire_all()
     assert db.scalar(select(func.count()).select_from(Contact)) == contacts_before

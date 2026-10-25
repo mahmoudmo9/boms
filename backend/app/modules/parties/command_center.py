@@ -27,7 +27,7 @@ def _followup_rows(db: Session, condition) -> list[dict]:
         .order_by(Followup.due_on, Followup.created_at)
     ).all()
     return [{"id": f.id, "party_id": p.id, "party_name_fa": p.name_fa, "party_name_en": p.name_en,
-             "do_not_contact": p.do_not_contact, "action": f.action, "due_on": f.due_on,
+             "do_not_contact": p.do_not_contact, "party_status": p.status, "action": f.action, "due_on": f.due_on,
              "interaction_id": f.interaction_id} for f, p in rows]
 
 

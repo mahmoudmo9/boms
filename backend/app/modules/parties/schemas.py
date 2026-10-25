@@ -75,6 +75,14 @@ class StageChange(InputModel):
     reason: ShortText | None = None
 
 
+class ArchiveIn(InputModel):
+    open_followups: Literal["cancel", "keep"] = "cancel"
+
+
+class DeletePartyIn(InputModel):
+    confirm_name: Annotated[str, Field(max_length=300)] | None = None
+
+
 class DocumentLinkIn(InputModel):
     document_id: uuid.UUID
 
@@ -116,11 +124,18 @@ class MethodIn(InputModel):
     type: MethodType
     value: Annotated[str, Field(min_length=1, max_length=300)]
     is_primary: bool = False
+    region: Iso2 | None = None  # country for phone numbers typed without "+"/"00"
+
+
+class MethodAdd(MethodIn):
+    confirm_shared: bool = False
 
 
 class MethodPatch(InputModel):
     value: Annotated[str, Field(min_length=1, max_length=300)] | None = None
     is_primary: bool | None = None
+    region: Iso2 | None = None
+    confirm_shared: bool = False
 
 
 class ContactCreate(_Names):
@@ -131,6 +146,7 @@ class ContactCreate(_Names):
     is_primary: bool = False
     notes: LongText | None = None
     methods: list[MethodIn] = Field(default_factory=list, max_length=20)
+    confirm_shared: bool = False
 
     @model_validator(mode="after")
     def _need_name(self):
@@ -152,6 +168,7 @@ class MethodOut(ApiModel):
     type: str
     value: str
     value_norm: str
+    value_display: str = ""
     is_primary: bool
     status: str
 
@@ -198,6 +215,11 @@ class InteractionCreate(InputModel):
 class InteractionPatch(InputModel):
     subject: ShortText | None = None
     body: Body | None = None
+    party_id: uuid.UUID | None = None
+    contact_id: uuid.UUID | None = None
+    channel: Channel | None = None
+    direction: Direction | None = None
+    occurred_at: datetime | None = None
 
 
 class InteractionOut(ApiModel):

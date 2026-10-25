@@ -22,6 +22,19 @@ def _tables(url: str) -> set[str]:
     return set(rows)
 
 
+def _schema(url: str) -> set[str]:
+    """Tables plus indexes and constraints: a migration that only changes those (0005) still differs."""
+    engine = create_engine(url)
+    with engine.connect() as conn:
+        rows = conn.execute(text(
+            "SELECT schemaname || '.' || indexname FROM pg_indexes WHERE schemaname IN ('sys', 'core') "
+            "UNION SELECT 'constraint ' || conname FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace "
+            "WHERE n.nspname IN ('sys', 'core')"
+        )).scalars().all()
+    engine.dispose()
+    return _tables(url) | set(rows)
+
+
 def test_upgrade_from_empty_then_downgrade_one_and_back():
     from app.core import dbadmin
 
@@ -31,6 +44,7 @@ def test_upgrade_from_empty_then_downgrade_one_and_back():
     try:
         command.upgrade(cfg, "head")
         at_head = _tables(url)
+        schema_at_head = _schema(url)
         assert {"core.event", "core.audit", "sys.app_user", "sys.setting", "sys.country",
                 "sys.currency", "sys.unit", "sys.job", "sys.backup_run"} <= at_head
 
@@ -43,9 +57,10 @@ def test_upgrade_from_empty_then_downgrade_one_and_back():
         script = ScriptDirectory.from_config(cfg)
         head = script.get_current_head()
         command.downgrade(cfg, "-1")
-        assert _tables(url) != at_head
+        assert _schema(url) != schema_at_head
         command.upgrade(cfg, "head")
         assert _tables(url) == at_head
+        assert _schema(url) == schema_at_head
 
         engine = create_engine(url)
         with engine.connect() as conn:
