@@ -9,6 +9,8 @@ One middleware, applied to every request (API and static files):
 """
 
 import hmac
+import json
+import re
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -52,6 +54,41 @@ def request_source(request: Request) -> str:
     return "ui" if request.headers.get("x-boms-client") == "ui" else "api"
 
 
+# C0 control characters except tab, newline and carriage return. PostgreSQL rejects NUL in text.
+CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def has_control_characters(value: str | None) -> bool:
+    return bool(value) and CONTROL_CHARS.search(value) is not None
+
+
+def _json_has_control_characters(value) -> bool:
+    if isinstance(value, str):
+        return has_control_characters(value)
+    if isinstance(value, dict):
+        return any(has_control_characters(k) or _json_has_control_characters(v) for k, v in value.items())
+    if isinstance(value, list):
+        return any(_json_has_control_characters(v) for v in value)
+    return False
+
+
+async def find_control_characters(request: Request) -> str | None:
+    """Where the request carries control characters (path, query, JSON body), or None."""
+    if has_control_characters(request.url.path):
+        return "the path"
+    if any(has_control_characters(k) or has_control_characters(v) for k, v in request.query_params.multi_items()):
+        return "query parameters"
+    if request.method in {"POST", "PUT", "PATCH"} and \
+            request.headers.get("content-type", "").startswith("application/json"):
+        try:
+            body = json.loads(await request.body() or b"null")
+        except ValueError:
+            return None  # malformed JSON: FastAPI answers 422 itself
+        if _json_has_control_characters(body):
+            return "the request body"
+    return None
+
+
 def _reject(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(error_body(code, message), status_code=status)
 
@@ -72,8 +109,12 @@ def install_security(app: FastAPI) -> None:
             if request.headers.get("sec-fetch-site") == "cross-site":
                 return _reject(403, "csrf_failed", "Cross-site request rejected")
             header = request.headers.get(CSRF_HEADER, "")
-            if not csrf_cookie or not header or not hmac.compare_digest(csrf_cookie, header):
+            # compare as bytes: compare_digest raises TypeError on non-ASCII str
+            if not csrf_cookie or not header or not hmac.compare_digest(csrf_cookie.encode(), header.encode()):
                 return _reject(403, "csrf_failed", "Missing or invalid CSRF token")
+
+        if bad := await find_control_characters(request):
+            return _reject(422, "invalid_input", f"Control characters are not allowed in {bad}")
 
         request.state.session = read_session(request.cookies.get(SESSION_COOKIE))
         request.state.session_changed = False

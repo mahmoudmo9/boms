@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 
 import { Bdi } from "../../components/Bdi";
 import { DataTable, Pagination } from "../../components/DataTable";
@@ -12,6 +12,15 @@ import { useFormat } from "../../lib/prefs";
 import type { BackupRun, Health, Job } from "../../lib/types";
 
 const POLL_MS = 5000;
+
+/** "1 of 2" / "۱ از ۲": a word between the numbers, each number isolated, so RTL cannot reorder them. */
+export function AttemptsCell({ attempts, max }: { attempts: string; max: string }) {
+  return (
+    <span className="tabular-nums whitespace-nowrap">
+      <Trans i18nKey="system.attemptsValue" values={{ attempts, max }} components={{ n: <bdi dir="ltr" /> }} />
+    </span>
+  );
+}
 
 function statusTone(status: string | null | undefined) {
   if (status === "succeeded" || status === "passed" || status === "done" || status === "ok") return "success" as const;
@@ -104,7 +113,11 @@ export function SystemPage() {
       { id: "created", header: t("system.created"), cell: ({ row }) => <span className="tabular-nums">{f.date(row.original.created_at, true)}</span> },
       { id: "type", header: t("system.jobType"), cell: ({ row }) => <Bdi ltr className="font-mono text-xs">{row.original.type}</Bdi> },
       { id: "status", header: t("system.status"), cell: ({ row }) => <Badge tone={statusTone(row.original.status)}>{t(`system.statuses.${row.original.status}`)}</Badge> },
-      { id: "attempts", header: t("system.attempts"), cell: ({ row }) => <span className="tabular-nums">{f.num(row.original.attempts)} / {f.num(row.original.max_attempts)}</span> },
+      {
+        id: "attempts",
+        header: t("system.attempts"),
+        cell: ({ row }) => <AttemptsCell attempts={f.num(row.original.attempts)} max={f.num(row.original.max_attempts)} />,
+      },
       {
         id: "error",
         header: t("system.lastError"),

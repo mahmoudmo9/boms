@@ -65,7 +65,7 @@ def read_session(token: str | None) -> dict | None:
         return None
     body, sig = token.rsplit(".", 1)
     expected = _b64(hmac.new(_key(), body.encode(), hashlib.sha256).digest())
-    if not hmac.compare_digest(sig, expected):
+    if not hmac.compare_digest(sig.encode(), expected.encode()):
         return None
     try:
         payload = json.loads(_unb64(body))

@@ -175,3 +175,47 @@ Dates: Jalali (`date-fns-jalali`) or Gregorian, Persian or Latin digits, from th
 the API always uses ISO UTC. Vazirmatn (Arabic-script subset, bundled woff2) for Persian, system font
 for Latin. Mixed-direction values are wrapped in `<bdi>`. No CDN, no external requests; no service
 worker (the PWA manifest alone makes the app installable).
+
+## Design note (not implemented): separate owner and runtime roles
+
+**Status:** proposal for the owner to decide; no code has been changed for it.
+
+**Today.** One role (`boms`) owns the database, the schemas and every table, and the app runs as that role.
+The append-only guards on `core.event` / `core.audit` (trigger + revoked UPDATE/DELETE/TRUNCATE) stop
+application bugs, but an owner can still `DROP TRIGGER`, `ALTER TABLE` or re-`GRANT` itself privileges
+(verified in review). So anything that runs SQL as `boms` (a bug, a future SQL-injection hole, a tool
+using the app's credentials) could rewrite the history.
+
+**Proposal.** Two roles:
+
+| Role | Login | Used by | Rights |
+|---|---|---|---|
+| `boms_owner` | yes, password in Credential Manager (`BOMS/owner_password`) | `init-db`, migrations, install/update/restore scripts only | owns the database, schemas, tables, functions, triggers |
+| `boms_app` | yes, password in Credential Manager (`BOMS/db_password`) | backend, worker, CLI backup and restore test | `USAGE` on schemas; `SELECT/INSERT/UPDATE/DELETE` on mutable tables; **only `SELECT, INSERT`** on `core.event` and `core.audit`; `USAGE` on sequences; `EXECUTE` on functions; `CREATEDB` for the restore test; not owner of anything, so it cannot drop triggers or change grants |
+
+`ALTER DEFAULT PRIVILEGES FOR ROLE boms_owner` grants `boms_app` the standard rights on future tables, and
+each migration that creates an append-only table adds its narrower grant explicitly.
+
+**What would change**
+
+- `app.cli init-db` (superuser): create both roles; database owned by `boms_owner`; set default
+  privileges; store the second secret. For an existing install, a one-time conversion as superuser:
+  create `boms_owner`, `REASSIGN OWNED BY boms TO boms_owner`, then grant `boms` (now the runtime role)
+  the rights above. This needs the `postgres` password once (the installer's Repair already asks for it).
+- Migrations (`migrations/env.py`, `app.cli migrate`): connect as `boms_owner` (new `owner_password`
+  secret) instead of the app role; a new migration adds the grants and default privileges.
+  Downgrades also run as owner.
+- `update.ps1`: migrations run as owner (the secret is in Credential Manager, so no new prompt);
+  the first update after this change runs the one-time conversion and needs the `postgres` password.
+- `restore.ps1` / `app.cli restore`: `pg_restore` as `boms_owner`; then re-apply the runtime grants.
+- Backup: `pg_dump` as `boms_app` works (it needs only `SELECT`). Restore test: unchanged (it restores into
+  a throw-away database that the app role creates and owns).
+- Tests: the fixtures create both roles; the append-only test additionally asserts that the runtime role
+  gets `must be owner` on `DROP TRIGGER`.
+
+**What it does not solve.** Anyone with the Windows user's session can read both secrets from Credential
+Manager, and the PostgreSQL superuser can do anything. The change raises the bar from "any SQL the app
+can run" to "deliberate use of the owner credentials".
+
+**Cost.** One more secret, one more connection setting for migrations, a one-time ownership conversion
+on existing installs, and test fixture changes. Roughly one day of work including Windows verification.

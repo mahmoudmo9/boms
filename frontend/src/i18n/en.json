@@ -249,7 +249,8 @@
     "secondary": "Second copy",
     "restoreTest": "Restore test",
     "jobType": "Type",
-    "attempts": "Attempts",
+    "attempts": "Attempts (of max)",
+    "attemptsValue": "<n>{{attempts}}</n> of <n>{{max}}</n>",
     "lastError": "Last error",
     "kinds": {
       "nightly": "Nightly",

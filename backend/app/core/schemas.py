@@ -7,6 +7,12 @@ class ApiModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class InputModel(BaseModel):
+    """Base for every POST/PATCH request body: unknown fields are a 422, not silently ignored."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class Page[T](BaseModel):
     items: list[T]
     total: int

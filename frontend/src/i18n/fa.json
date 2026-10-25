@@ -249,7 +249,8 @@
     "secondary": "نسخه دوم",
     "restoreTest": "آزمون بازیابی",
     "jobType": "نوع",
-    "attempts": "تلاش‌ها",
+    "attempts": "تلاش‌ها (از حداکثر)",
+    "attemptsValue": "<n>{{attempts}}</n> از <n>{{max}}</n>",
     "lastError": "آخرین خطا",
     "kinds": {
       "nightly": "شبانه",

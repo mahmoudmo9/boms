@@ -5,12 +5,11 @@ from datetime import datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.schemas import ApiModel, Page, page_params
+from app.core.schemas import ApiModel, InputModel, Page, page_params
 from app.core.web import request_source
 from app.modules.system import health, jobs
 from app.modules.system.auth import CurrentUser
@@ -50,7 +49,7 @@ class JobOut(ApiModel):
     finished_at: datetime | None
 
 
-class RestoreTestIn(BaseModel):
+class RestoreTestIn(InputModel):
     backup_run_id: uuid.UUID | None = None
 
 

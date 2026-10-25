@@ -4,12 +4,16 @@
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
+# Plain strings (not Join-Path) so this file can also be loaded by the test script on non-Windows.
 $script:BomsRoot = 'C:\BOMS'
-$script:AppDir = Join-Path $script:BomsRoot 'app'
-$script:ConfigPath = Join-Path $script:BomsRoot 'config.json'
-$script:VenvPython = Join-Path $script:AppDir 'venv\Scripts\python.exe'
-$script:VenvPythonW = Join-Path $script:AppDir 'venv\Scripts\pythonw.exe'
-$script:BackendDir = Join-Path $script:AppDir 'backend'
+$script:AppDir = "$($script:BomsRoot)\app"
+$script:ConfigPath = "$($script:BomsRoot)\config.json"
+$script:VenvPython = "$($script:AppDir)\venv\Scripts\python.exe"
+$script:VenvPythonW = "$($script:AppDir)\venv\Scripts\pythonw.exe"
+$script:BackendDir = "$($script:AppDir)\backend"
+$script:PgServiceName = 'postgresql-x64-18'
+$script:PgDefaultBin = 'C:\Program Files\PostgreSQL\18\bin'
+$script:PgMinMajor = 18
 $script:TaskNames = @('BOMS Backend', 'BOMS Worker')
 $script:HttpPort = 8765
 
@@ -136,9 +140,80 @@ function Find-Python312 {
     return $null
 }
 
+# ---- PostgreSQL bin folder detection ----------------------------------------------
+# Each probe returns a candidate bin folder (or $null); Find-PgBin tries them in order and
+# accepts the first folder whose pg_dump.exe reports major version 18 or newer.
+
+function Get-ExeDirectory([string]$CommandLine) {
+    # Service ImagePath, e.g.  "C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe" runservice -N ...
+    if (-not $CommandLine) { return $null }
+    $line = $CommandLine.Trim()
+    if ($line.StartsWith('"')) {
+        $end = $line.IndexOf('"', 1)
+        if ($end -lt 0) { return $null }
+        $exe = $line.Substring(1, $end - 1)
+    } else {
+        $match = [regex]::Match($line, '^(.+?\.exe)(\s|$)', 'IgnoreCase')
+        if (-not $match.Success) { return $null }
+        $exe = $match.Groups[1].Value
+    }
+    $slash = $exe.LastIndexOf('\')
+    if ($slash -lt 0) { return $null }
+    return $exe.Substring(0, $slash)
+}
+
+function Get-PgMajorVersion([string]$VersionText) {
+    # "pg_dump (PostgreSQL) 18.1" -> 18
+    $match = [regex]::Match([string]$VersionText, '\)\s*(\d+)')
+    if ($match.Success) { return [int]$match.Groups[1].Value }
+    return $null
+}
+
+function Get-PgBinFromEnv {
+    if ($env:BOMS_PG_BIN) { return $env:BOMS_PG_BIN }
+    return $null
+}
+
+function Get-PgBinFromService {
+    $svc = Get-CimInstance Win32_Service -Filter "Name = '$($script:PgServiceName)'" -ErrorAction SilentlyContinue
+    if ($svc) { return (Get-ExeDirectory $svc.PathName) }
+    return $null
+}
+
+function Get-PgBinFromRegistry {
+    $key = "HKLM:\SOFTWARE\PostgreSQL\Installations\$($script:PgServiceName)"
+    $item = Get-ItemProperty -Path $key -ErrorAction SilentlyContinue
+    if ($item -and $item.PSObject.Properties['Base Directory']) {
+        return ($item.'Base Directory'.TrimEnd('\') + '\bin')
+    }
+    return $null
+}
+
+function Get-PgBinDefault { return $script:PgDefaultBin }
+
+function Get-PgBinFromPath {
+    $cmd = Get-Command pg_dump.exe -ErrorAction SilentlyContinue
+    if ($cmd) { return (Split-Path -Parent $cmd.Source) }
+    return $null
+}
+
+function Test-PgBinDir([string]$Dir) {
+    if (-not $Dir) { return $false }
+    $exe = "$($Dir.TrimEnd('\'))\pg_dump.exe"
+    if (-not (Test-Path -LiteralPath $exe)) { return $false }
+    try { $text = & $exe --version 2>$null } catch { return $false }
+    $major = Get-PgMajorVersion $text
+    return ($null -ne $major -and $major -ge $script:PgMinMajor)
+}
+
 function Find-PgBin {
-    $path = 'C:\Program Files\PostgreSQL\18\bin'
-    if (Test-Path (Join-Path $path 'pg_dump.exe')) { return $path }
+    # Order: BOMS_PG_BIN, the postgresql-x64-18 service, the registry, the default folder, PATH.
+    $probes = @('Get-PgBinFromEnv', 'Get-PgBinFromService', 'Get-PgBinFromRegistry', 'Get-PgBinDefault',
+                'Get-PgBinFromPath')
+    foreach ($probe in $probes) {
+        $dir = & $probe
+        if ($dir -and (Test-PgBinDir $dir)) { return $dir.TrimEnd('\') }
+    }
     return $null
 }
 

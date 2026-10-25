@@ -4,13 +4,13 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import Field
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.errors import AppError
-from app.core.schemas import ApiModel, Page, page_params
-from app.core.web import request_source
+from app.core.schemas import ApiModel, InputModel, Page, page_params
+from app.core.web import has_control_characters, request_source
 from app.modules.documents import service
 from app.modules.documents.filetypes import INLINE_TYPES
 from app.modules.system.auth import CurrentUser
@@ -48,13 +48,13 @@ class DocumentDetail(DocumentOut):
     previewable: bool
 
 
-class DocumentPatch(BaseModel):
+class DocumentPatch(InputModel):
     title: str | None = Field(default=None, min_length=1, max_length=500)
     notes: str | None = Field(default=None, max_length=20000)
     language: Language | None = None
 
 
-class LinkIn(BaseModel):
+class LinkIn(InputModel):
     entity_type: str = Field(pattern=r"^[a-z][a-z0-9_.]{0,63}$")
     entity_id: str = Field(min_length=1, max_length=200)
     role: str = Field(default="attachment", pattern=r"^[a-z][a-z0-9_]{0,63}$")
@@ -71,6 +71,8 @@ def upload(request: Request, user: CurrentUser, db: Db, file: Annotated[UploadFi
            title: Annotated[str | None, Form(max_length=500)] = None,
            notes: Annotated[str | None, Form(max_length=20000)] = None,
            language: Annotated[Language | None, Form()] = None):
+    if any(has_control_characters(v) for v in (title, notes)):
+        raise AppError("invalid_input", "Control characters are not allowed in form fields", status=422)
     length = request.headers.get("content-length")
     if length and length.isdigit() and int(length) > service.max_upload_bytes(db) + 1024 * 1024:
         raise AppError("file_too_large", "File is larger than the upload limit",

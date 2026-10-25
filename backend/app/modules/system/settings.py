@@ -6,12 +6,13 @@ from collections.abc import Callable
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel, Field
+from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import VERSION, get_config
 from app.core.db import get_db
+from app.core.schemas import InputModel
 from app.core.errors import AppError
 from app.core.secrets import get_secret, set_secret
 from app.core.web import request_source
@@ -140,7 +141,7 @@ def patch_settings(body: dict[str, Any], request: Request, user: CurrentUser, db
     return _response(db)
 
 
-class ArchivePasswordIn(BaseModel):
+class ArchivePasswordIn(InputModel):
     password: str = Field(min_length=12, max_length=256)
 
 

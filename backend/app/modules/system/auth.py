@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.errors import AppError, Unauthorized
-from app.core.schemas import ApiModel
+from app.core.schemas import ApiModel, InputModel
 from app.core.security import login_limiter, password_version, verify_password
 from app.core.web import get_session, request_source, set_session
 from app.modules.events import service as events
@@ -84,16 +84,16 @@ class AuthState(BaseModel):
     user: UserOut | None = None
 
 
-class LoginIn(BaseModel):
+class LoginIn(InputModel):
     username: str = Field(max_length=64)
     password: str = Field(max_length=1024)
 
 
-class UnlockIn(BaseModel):
+class UnlockIn(InputModel):
     password: str = Field(max_length=1024)
 
 
-class PreferencesIn(BaseModel):
+class PreferencesIn(InputModel):
     username: str | None = Field(default=None, min_length=1, max_length=64)
     language: Literal["fa", "en"] | None = None
     calendar: Literal["jalali", "gregorian"] | None = None
@@ -102,7 +102,7 @@ class PreferencesIn(BaseModel):
     idle_lock_minutes: int | None = Field(default=None, ge=1, le=1440)
 
 
-class PasswordIn(BaseModel):
+class PasswordIn(InputModel):
     current_password: str = Field(max_length=1024)
     new_password: str = Field(max_length=1024)
 

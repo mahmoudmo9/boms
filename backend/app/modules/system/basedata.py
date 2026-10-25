@@ -4,13 +4,13 @@ from decimal import Decimal
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.errors import Conflict, NotFound
-from app.core.schemas import ApiModel, Page, page_params
+from app.core.schemas import ApiModel, InputModel, Page, page_params
 from app.core.text import normalize_fa
 from app.core.web import request_source
 from app.modules.events import service as events
@@ -34,7 +34,7 @@ class CountryOut(ApiModel):
     sort_order: int
 
 
-class CountryIn(BaseModel):
+class CountryIn(InputModel):
     iso2: str = Field(pattern=r"^[A-Za-z]{2}$")
     iso3: str = Field(pattern=r"^[A-Za-z]{3}$")
     name_fa: Name
@@ -48,7 +48,7 @@ class CountryIn(BaseModel):
         return v.upper()
 
 
-class CountryPatch(BaseModel):
+class CountryPatch(InputModel):
     iso3: str | None = Field(default=None, pattern=r"^[A-Za-z]{3}$")
     name_fa: Name | None = None
     name_en: Name | None = None
@@ -70,7 +70,7 @@ class CurrencyOut(ApiModel):
     active: bool
 
 
-class CurrencyIn(BaseModel):
+class CurrencyIn(InputModel):
     code: str = Field(pattern=r"^[A-Za-z]{3}$")
     name_fa: Name
     name_en: Name
@@ -84,7 +84,7 @@ class CurrencyIn(BaseModel):
         return v.upper()
 
 
-class CurrencyPatch(BaseModel):
+class CurrencyPatch(InputModel):
     name_fa: Name | None = None
     name_en: Name | None = None
     symbol: str | None = Field(default=None, max_length=10)
@@ -101,7 +101,7 @@ class UnitOut(ApiModel):
     active: bool
 
 
-class UnitIn(BaseModel):
+class UnitIn(InputModel):
     code: str = Field(pattern=r"^[a-z0-9_]{1,16}$")
     name_fa: Name
     name_en: Name
@@ -110,7 +110,7 @@ class UnitIn(BaseModel):
     active: bool = True
 
 
-class UnitPatch(BaseModel):
+class UnitPatch(InputModel):
     name_fa: Name | None = None
     name_en: Name | None = None
     kind: UnitKind | None = None
