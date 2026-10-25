@@ -91,7 +91,9 @@ def manifest_path(dump: Path) -> Path:
 
 def table_counts(conn) -> dict[str, int]:
     tables = conn.execute(
-        text("SELECT schemaname || '.' || tablename FROM pg_tables WHERE schemaname = ANY(:s) ORDER BY 1"),
+        # quote_ident: names like ops."case" are reserved words; plain names are returned unchanged
+        text("SELECT quote_ident(schemaname) || '.' || quote_ident(tablename) FROM pg_tables "
+             "WHERE schemaname = ANY(:s) ORDER BY 1"),
         {"s": list(APP_SCHEMAS)},
     ).scalars().all()
     return {t: conn.execute(text(f"SELECT count(*) FROM {t}")).scalar() for t in tables}

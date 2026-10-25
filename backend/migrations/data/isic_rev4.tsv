@@ -1,0 +1,111 @@
+# ISIC Rev.4 sections and 2-digit divisions (UN Statistics Division structure).
+# Columns: code, level, parent_code, title_en, title_fa (empty = not translated yet; UI falls back to English).
+A	section		Agriculture, forestry and fishing	کشاورزی، جنگلداری و ماهیگیری
+01	division	A	Crop and animal production, hunting and related service activities	
+02	division	A	Forestry and logging	
+03	division	A	Fishing and aquaculture	
+B	section		Mining and quarrying	استخراج معدن
+05	division	B	Mining of coal and lignite	
+06	division	B	Extraction of crude petroleum and natural gas	
+07	division	B	Mining of metal ores	
+08	division	B	Other mining and quarrying	
+09	division	B	Mining support service activities	
+C	section		Manufacturing	صنعت (ساخت)
+10	division	C	Manufacture of food products	
+11	division	C	Manufacture of beverages	
+12	division	C	Manufacture of tobacco products	
+13	division	C	Manufacture of textiles	
+14	division	C	Manufacture of wearing apparel	
+15	division	C	Manufacture of leather and related products	
+16	division	C	Manufacture of wood and of products of wood and cork, except furniture; manufacture of articles of straw and plaiting materials	
+17	division	C	Manufacture of paper and paper products	
+18	division	C	Printing and reproduction of recorded media	
+19	division	C	Manufacture of coke and refined petroleum products	
+20	division	C	Manufacture of chemicals and chemical products	
+21	division	C	Manufacture of basic pharmaceutical products and pharmaceutical preparations	
+22	division	C	Manufacture of rubber and plastics products	
+23	division	C	Manufacture of other non-metallic mineral products	
+24	division	C	Manufacture of basic metals	
+25	division	C	Manufacture of fabricated metal products, except machinery and equipment	
+26	division	C	Manufacture of computer, electronic and optical products	
+27	division	C	Manufacture of electrical equipment	
+28	division	C	Manufacture of machinery and equipment n.e.c.	
+29	division	C	Manufacture of motor vehicles, trailers and semi-trailers	
+30	division	C	Manufacture of other transport equipment	
+31	division	C	Manufacture of furniture	
+32	division	C	Other manufacturing	
+33	division	C	Repair and installation of machinery and equipment	
+D	section		Electricity, gas, steam and air conditioning supply	تأمین برق، گاز، بخار و تهویه هوا
+35	division	D	Electricity, gas, steam and air conditioning supply	
+E	section		Water supply; sewerage, waste management and remediation activities	آبرسانی؛ مدیریت فاضلاب و پسماند و بهسازی
+36	division	E	Water collection, treatment and supply	
+37	division	E	Sewerage	
+38	division	E	Waste collection, treatment and disposal activities; materials recovery	
+39	division	E	Remediation activities and other waste management services	
+F	section		Construction	ساختمان
+41	division	F	Construction of buildings	
+42	division	F	Civil engineering	
+43	division	F	Specialized construction activities	
+G	section		Wholesale and retail trade; repair of motor vehicles and motorcycles	عمده‌فروشی و خرده‌فروشی؛ تعمیر وسایل نقلیه موتوری و موتورسیکلت
+45	division	G	Wholesale and retail trade and repair of motor vehicles and motorcycles	
+46	division	G	Wholesale trade, except of motor vehicles and motorcycles	
+47	division	G	Retail trade, except of motor vehicles and motorcycles	
+H	section		Transportation and storage	حمل‌ونقل و انبارداری
+49	division	H	Land transport and transport via pipelines	
+50	division	H	Water transport	
+51	division	H	Air transport	
+52	division	H	Warehousing and support activities for transportation	
+53	division	H	Postal and courier activities	
+I	section		Accommodation and food service activities	فعالیت‌های خدماتی مربوط به تأمین جا و غذا
+55	division	I	Accommodation	
+56	division	I	Food and beverage service activities	
+J	section		Information and communication	اطلاعات و ارتباطات
+58	division	J	Publishing activities	
+59	division	J	Motion picture, video and television programme production, sound recording and music publishing activities	
+60	division	J	Programming and broadcasting activities	
+61	division	J	Telecommunications	
+62	division	J	Computer programming, consultancy and related activities	
+63	division	J	Information service activities	
+K	section		Financial and insurance activities	فعالیت‌های مالی و بیمه
+64	division	K	Financial service activities, except insurance and pension funding	
+65	division	K	Insurance, reinsurance and pension funding, except compulsory social security	
+66	division	K	Activities auxiliary to financial service and insurance activities	
+L	section		Real estate activities	فعالیت‌های املاک و مستغلات
+68	division	L	Real estate activities	
+M	section		Professional, scientific and technical activities	فعالیت‌های حرفه‌ای، علمی و فنی
+69	division	M	Legal and accounting activities	
+70	division	M	Activities of head offices; management consultancy activities	
+71	division	M	Architectural and engineering activities; technical testing and analysis	
+72	division	M	Scientific research and development	
+73	division	M	Advertising and market research	
+74	division	M	Other professional, scientific and technical activities	
+75	division	M	Veterinary activities	
+N	section		Administrative and support service activities	فعالیت‌های اداری و خدمات پشتیبانی
+77	division	N	Rental and leasing activities	
+78	division	N	Employment activities	
+79	division	N	Travel agency, tour operator, reservation service and related activities	
+80	division	N	Security and investigation activities	
+81	division	N	Services to buildings and landscape activities	
+82	division	N	Office administrative, office support and other business support activities	
+O	section		Public administration and defence; compulsory social security	اداره امور عمومی و دفاع؛ تأمین اجتماعی اجباری
+84	division	O	Public administration and defence; compulsory social security	
+P	section		Education	آموزش
+85	division	P	Education	
+Q	section		Human health and social work activities	فعالیت‌های مربوط به سلامت انسان و مددکاری اجتماعی
+86	division	Q	Human health activities	
+87	division	Q	Residential care activities	
+88	division	Q	Social work activities without accommodation	
+R	section		Arts, entertainment and recreation	هنر، سرگرمی و تفریح
+90	division	R	Creative, arts and entertainment activities	
+91	division	R	Libraries, archives, museums and other cultural activities	
+92	division	R	Gambling and betting activities	
+93	division	R	Sports activities and amusement and recreation activities	
+S	section		Other service activities	سایر فعالیت‌های خدماتی
+94	division	S	Activities of membership organizations	
+95	division	S	Repair of computers and personal and household goods	
+96	division	S	Other personal service activities	
+T	section		Activities of households as employers; undifferentiated goods- and services-producing activities of households for own use	فعالیت‌های خانوارها به‌عنوان کارفرما و تولید برای مصرف خود
+97	division	T	Activities of households as employers of domestic personnel	
+98	division	T	Undifferentiated goods- and services-producing activities of private households for own use	
+U	section		Activities of extraterritorial organizations and bodies	فعالیت‌های سازمان‌ها و هیئت‌های برون‌مرزی
+99	division	U	Activities of extraterritorial organizations and bodies	
