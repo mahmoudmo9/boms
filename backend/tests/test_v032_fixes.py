@@ -198,3 +198,19 @@ def test_no_reply_by_sentence_without_respond_by(client):
     # with a date the sentence is there
     dated = new_rfq(client, case, [item], recipients[:1])
     assert "reply by" in dated["recipients"][0]["message_text"]
+
+
+def test_expiry_job_repairs_statuses_stored_by_v031(client, db):
+    case, (item,) = make_case(client, [{"name": "Stale status item"}])
+    expired_rfq(client, case, [item], [supplier(client)])
+    rfq_service.expire_no_reply(db)
+    # what v0.3.1 stored for this situation
+    db.execute(text("UPDATE ops.line_item SET status = 'uncovered' WHERE id = :i"), {"i": item["id"]})
+    db.commit()
+    from app.modules.sourcing.handlers import expire
+
+    result = expire(db, {})
+    db.commit()
+    assert result["items_recomputed"] >= 1
+    assert item_of(client, item["id"])["status"] == "rfq_sent"
+    assert events(client, "line_item", item["id"], "status")[0]["data"]["new_status"] == "rfq_sent"

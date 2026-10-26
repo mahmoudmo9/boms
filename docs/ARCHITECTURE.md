@@ -392,7 +392,8 @@ no_response / removed, RFQ cancelled / deleted, no-coverage set or cleared, and 
 1. `cancelled` stays; `sold` / `delivered` / `closed` (later phases) are never touched;
 2. the selected offer row is still valid (offer `active`, not past `valid_until`, row `available`) -> `selected`;
 3. any valid available offer row -> `has_offer`;
-4. any RFQ that is not cancelled, includes the item and has a recipient `sent` or `replied` -> `rfq_sent`;
+4. any RFQ that is not cancelled, includes the item and has a recipient that is not `draft` (`sent`,
+   `replied`, `declined`, `no_response`, `expired`; v0.3.2 — before, only `sent`/`replied`) -> `rfq_sent`;
 5. otherwise `uncovered`.
 
 A selection that is no longer valid is cleared in the same transaction with an event `selection_lost`
@@ -431,3 +432,24 @@ always a duplicate (score 1). Used by create, create-from-item and update (`PATC
 **Mark as sent.** The dialog shows the follow-up that will be created (action in the recipient's language,
 due date from `respond_by`, both editable) or takes an explicit no-follow-up reason; the `rfq` event `sent`
 records `followup_id` (the follow-up row also points at the interaction) or `no_followup_reason`.
+
+### Sourcing fixes 2 (v0.3.2, no migration)
+
+- **`no_response` keeps `rfq_sent`.** See rule 4 above: an RFQ that was sent keeps its items at `rfq_sent` even
+  when nobody answered. Command center *Sourcing* gains `no_response_resend`: open-case items in `rfq_sent`
+  whose every non-draft recipient of every non-cancelled RFQ is `no_response` or `declined` ("no reply, send
+  again"). `items_without_rfq` stays "items still `uncovered`". The coverage percentage is unchanged.
+  Statuses stored by v0.3.1 under the old rule are repaired by the hourly `sourcing.expire` job, which also
+  recomputes items still `uncovered` that have a non-draft recipient (no migration; within an hour of the update).
+- **Cascade case delete** also cancels, through `parties.interactions.cancel_followup` (note "case deleted",
+  one event each), the open follow-ups attached to the interactions of the deleted RFQ recipients and offers
+  (found with the new public `parties.interactions.open_followups_of_interactions`). Interactions stay; other
+  follow-ups of the supplier are untouched; the delete snapshot lists `cancelled_followups`.
+- **Contact person on offers.** Offer, comparison row, RFQ recipient and product price history carry
+  `contact_name_fa/en` (archived contacts are still named). `contact_id` must belong to the offer's party on
+  create and patch (422 `contact_not_of_party`); the incoming interaction uses the same contact.
+- **RFQ screen.** Default title `RFQ <n> - <first item name>`, unique within the case, when none is typed.
+  `templates.render` drops every sentence that uses `{respond_by}` when the RFQ has no date (also for
+  owner-edited templates). Sent recipients' text is read-only in the UI; the API already answers 409
+  `recipient_sent` to text edits of non-draft recipients.
+

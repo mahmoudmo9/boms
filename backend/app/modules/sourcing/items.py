@@ -265,6 +265,16 @@ def recompute_item_status(db: Session, item: LineItem, source: str, actor: str |
     return new_status
 
 
+def uncovered_with_sent_rfq(db: Session) -> list[uuid.UUID]:
+    """Items still ``uncovered`` although a non-draft recipient of a non-cancelled RFQ includes them: statuses
+    stored by v0.3.1 before ``no_response``/``declined`` counted as sent (v0.3.2 sweep, idempotent)."""
+    return list(db.scalars(
+        select(LineItem.id).where(LineItem.status == "uncovered", LineItem.id.in_(
+            select(RfqItem.line_item_id).join(Rfq, Rfq.id == RfqItem.rfq_id)
+            .join(RfqRecipient, RfqRecipient.rfq_id == Rfq.id)
+            .where(Rfq.status != "cancelled", RfqRecipient.status != "draft")))))
+
+
 def recompute_items(db: Session, item_ids, source: str, actor: str | None = None, **kwargs) -> None:
     for item_id in dict.fromkeys(item_ids):
         item = db.get(LineItem, item_id)

@@ -241,3 +241,14 @@ Run once on the Windows PC after `update.bat` from 0.3.0 (not yet run there):
 - [ ] **Case danger zone** (case → History): the button stays disabled until the exact title is typed; afterwards the case, its RFQs and offers are gone, the documents still open from *Documents* and the supplier's sent/received interactions are still there.
 - [ ] **Duplicate product check:** with an existing product "پلی‌اتیلن سنگین / HDPE X", creating "پلي‌اتيلن سنگين" (Arabic ي/ك, Persian name only) warns; "hdpe x" alone warns; an unrelated name does not; *confirm* saves anyway.
 - [ ] **RFQ builder in Persian and English:** the language select shows "English"/"فارسی" in full next to the channel select; at a narrow window the two selects wrap instead of being cut.
+
+## Manual checks for v0.3.2 (sourcing fixes 2)
+
+Run once on the Windows PC after `update.bat` from 0.3.1 (not yet run there):
+
+- [ ] Run the 0.3.2 `scripts\update.bat`: it prints `0.3.1 -> 0.3.2`, a `pre_update` backup appears, and *Run restore test* passes afterwards (36 tables, no migration in this release).
+- [ ] **RFQ tab collapse:** on a case with a draft, a sent and an answered RFQ, only the draft is open; each closed RFQ is one line (title, status, items, reply-by date, one chip per supplier with contact and status, e.g. "Abbas ✓ replied"). *Expand all* / *Collapse all* work, Enter/Space on a title toggles it, the draft and waiting RFQs are listed first. The "⋯" menu holds Excel, Cancel RFQ and Delete. A sent supplier's text shows as "Text as sent" without an edit box; a draft one can be edited and regenerated. A new RFQ without a typed title is named "RFQ 2 - <first item>". An RFQ without a reply-by date has no "reply by …" sentence (English and Persian).
+- [ ] **Contact on offers:** *Record offer* from a sent supplier on the RFQ tab opens the offer form with that supplier and the person the RFQ was sent to; the contact shows on the offer card, in the comparison and on the product page, and the supplier's interaction has the same contact. Choosing another supplier clears the contact.
+- [ ] **No-reply list:** an RFQ whose reply-by date passed without answers keeps its items at *RFQ sent* (not under "Items without RFQ"); after the hourly job the item appears under Command Center → *Sourcing* → *No reply to RFQ*; sending a new RFQ to another supplier removes it.
+- [ ] **Case cascade delete:** delete a test case that has a sent RFQ (case → History → Danger zone): the supplier's "Chase RFQ response" follow-up disappears from the Command Center (cancelled with "case deleted"); other follow-ups of that supplier stay; the sent message stays in the supplier's interactions.
+
