@@ -383,7 +383,7 @@ export function CoverageCard({ caseId, onChanged }: { caseId: string; onChanged:
             {data.items.filter((i) => i.status !== "cancelled").map((i) => (
               <tr key={i.item_id} className="border-b border-line">
                 <td className="p-2"><Bdi>{i.name}</Bdi></td>
-                <td className="p-2"><div className="flex flex-wrap gap-1"><StatusBadge group="item" status={i.status} />{i.no_coverage_confirmed && <Badge tone="danger">{t("sourcing.noCoverage")}</Badge>}</div></td>
+                <td className="p-2"><div className="flex flex-wrap gap-1"><StatusBadge group="item" status={i.status} />{i.no_coverage_confirmed && <Badge tone="danger">{t("sourcing.noCoverage")}</Badge>}{i.selection_lost && <Badge tone="warning">{t("sourcing.selectionLost")}</Badge>}</div></td>
                 <td className="p-2 tabular-nums">{i.valid_offers}</td>
                 <td className="p-2"><div className="flex flex-col gap-0.5">{i.best_prices.map((b) => <Money key={`${b.currency}${b.unit_group}`} amount={b.unit_price} currency={b.currency} per={b.price_per_quantity} unit={unitLabel(b.unit_code, b.unit_text)} />)}</div></td>
                 <td className="p-2 text-end">{!i.no_coverage_confirmed && i.status !== "selected" && <Button variant="ghost" onClick={() => setMarking(i.item_id)}>{t("sourcing.markNoCoverage")}</Button>}</td>

@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams, useSearchParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { Icon } from "../../components/Icon";
 import { Button, ErrorNote, Field, Input, Loading, Modal, PageHeader, Select, Textarea } from "../../components/ui";
@@ -10,7 +10,7 @@ import { useFormat } from "../../lib/prefs";
 import type { CaseDetail } from "../../lib/types";
 import { PartyName } from "../parties/shared";
 import { ItemsCard } from "../sourcing/ItemsEditor";
-import { AttachedDocuments, CurrencySelect, HistoryCard, Money, StatusBadge, useInvalidateSourcing, usePaymentTerms } from "../sourcing/shared";
+import { AttachedDocuments, CascadeDeleteCard, CurrencySelect, HistoryCard, Money, StatusBadge, useInvalidateSourcing, usePaymentTerms } from "../sourcing/shared";
 import { CASE_STATUSES } from "./CasesPage";
 import { ComparisonTab, CoverageCard, OffersTab } from "./Offers";
 import { RfqsTab } from "./Rfqs";
@@ -54,6 +54,7 @@ export function CaseDetailPage() {
   const { t } = useTranslation();
   const f = useFormat();
   const invalidate = useInvalidateSourcing();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [editing, setEditing] = useState(false);
   const tab = (TABS.includes(params.get("tab") as Tab) ? params.get("tab") : "items") as Tab;
@@ -105,7 +106,12 @@ export function CaseDetailPage() {
       {tab === "offers" && <OffersTab caseData={c} highlight={params.get("offer")} />}
       {tab === "comparison" && <ComparisonTab caseData={c} />}
       {tab === "documents" && <AttachedDocuments documents={c.documents} linkPath={`/api/cases/${c.id}/documents`} onChanged={refresh} />}
-      {tab === "history" && <HistoryCard entityType="case" entityId={c.id} />}
+      {tab === "history" && <>
+        <HistoryCard entityType="case" entityId={c.id} />
+        <CascadeDeleteCard url={`/api/cases/${c.id}`} confirmKey="confirm_title" expected={c.title}
+          hint={t("sourcing.case.cascadeHint")} typeLabel={t("sourcing.case.typeTitle")} button={t("sourcing.case.cascadeButton")}
+          onDeleted={() => { invalidate(); navigate("/cases"); }} />
+      </>}
       {editing && <EditCaseDialog c={c} onClose={() => setEditing(false)} onSaved={refresh} />}
     </div>
   );

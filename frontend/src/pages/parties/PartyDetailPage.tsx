@@ -17,7 +17,7 @@ import { EventList } from "../events/EventLogPage";
 import { CapabilitiesCard } from "../sourcing/Capabilities";
 import { CountrySelect } from "./PartiesPage";
 import { PartyPicker, useQuickLog } from "./QuickLog";
-import { CancelFollowupButton, CHANNELS, DeleteButton, FollowupActions, METHOD_TYPES, PartyName, ROLES, SharedNumberPrompt, StageSelect, stageLabel } from "./shared";
+import { CancelFollowupButton, CHANNELS, DeleteButton, FollowupActions, InUseNote, METHOD_TYPES, PartyName, ROLES, SharedNumberPrompt, StageSelect, stageLabel } from "./shared";
 
 const TABS = ["overview", "contacts", "interactions", "documents", "history"] as const;
 type Tab = (typeof TABS)[number];
@@ -203,7 +203,8 @@ function DangerZone({ party, onDeleted }: { party: PartyDetail; onDeleted: () =>
             {t("delete.cascadeButton")}
           </Button>
         </div>
-        <ErrorNote error={purge.error} />
+        {purge.error instanceof ApiError && purge.error.code === "in_use"
+          ? <InUseNote counts={purge.error.details as Record<string, number>} /> : <ErrorNote error={purge.error} />}
       </div>
     </Card>
   );

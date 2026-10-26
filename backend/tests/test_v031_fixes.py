@@ -133,6 +133,8 @@ def test_selection_lost(client, db, monkeypatch, cause):
     assert ev["data"] == {"old_offer_item_id": offer_item_id, "cause": cause, "old_status": "selected",
                           "new_status": expected}
     assert item["id"] in gate_missing(client, case)
+    row = next(i for i in client.get(f"/api/cases/{case['id']}/coverage").json()["items"] if i["item_id"] == item["id"])
+    assert row["selection_lost"] is True
 
 
 def test_reactivate_gives_has_offer_not_selected(client):

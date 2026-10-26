@@ -34,7 +34,7 @@ function TemplateDialog({ template, onClose, onSaved }: { template: MessageTempl
         <Button variant="primary" busy={save.isPending} disabled={!form.name.trim() || !form.body_template.trim() || unknown.length > 0 || unbalanced} onClick={() => save.mutate()}>{t("common.save")}</Button></>}>
       <div className="grid max-h-[68vh] gap-3 overflow-y-auto pe-1 lg:grid-cols-2">
         <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-[4.5rem_auto_minmax(0,1fr)] gap-2">
             <Field label={t("sourcing.templates.language")} htmlFor="tp-lang"><Input id="tp-lang" dir="ltr" maxLength={3} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value.toLowerCase() })} /></Field>
             <Field label={t("sourcing.rfq.channel")} htmlFor="tp-ch">
               <Select id="tp-ch" value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value as Draft["channel"] })}>

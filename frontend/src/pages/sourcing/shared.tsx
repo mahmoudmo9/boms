@@ -6,11 +6,12 @@ import { Link } from "react-router";
 
 import { Bdi } from "../../components/Bdi";
 import { Icon } from "../../components/Icon";
-import { Badge, Button, Card, EmptyState, ErrorNote, IconButton, Input, Select, Spinner } from "../../components/ui";
+import { Badge, Button, Card, EmptyState, ErrorNote, Field, IconButton, Input, Select, Spinner } from "../../components/ui";
 import { api, ApiError, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Currency, DocumentDetail, EventItem, LinkedDocument, PaymentTerm, Product, Unit } from "../../lib/types";
 import { EventList } from "../events/EventLogPage";
+import { InUseNote } from "../parties/shared";
 
 export const INCOTERMS = ["EXW", "FCA", "FAS", "FOB", "CFR", "CIF", "CPT", "CIP", "DAP", "DPU", "DDP"] as const;
 export const SOURCE_CHANNELS = ["whatsapp", "email", "phone", "tender_portal", "in_person", "letter", "other"] as const;
@@ -270,4 +271,37 @@ export function useInvalidateSourcing() {
       void queryClient.invalidateQueries({ queryKey: [key] });
     }
   };
+}
+
+/** Test-data cleanup (v0.3.1): DELETE ?cascade=true after typing the exact title; files and interactions stay. */
+export function CascadeDeleteCard({ url, confirmKey, expected, hint, typeLabel, button, onDeleted }: {
+  url: string;
+  confirmKey: "confirm_title" | "confirm_subject";
+  expected: string;
+  hint: string;
+  typeLabel: string;
+  button: string;
+  onDeleted: () => void;
+}) {
+  const { t } = useTranslation();
+  const [typed, setTyped] = useState("");
+  const purge = useMutation({
+    mutationFn: () => api(url, { method: "DELETE", query: { cascade: true }, body: { [confirmKey]: typed.trim() } }),
+    onSuccess: onDeleted,
+  });
+  const inUse = purge.error instanceof ApiError && purge.error.code === "in_use" ? (purge.error.details as Record<string, number>) : null;
+  return (
+    <Card title={<span className="text-danger">{t("delete.dangerZone")}</span>} className="border-danger">
+      <div className="flex flex-col gap-2 text-sm">
+        <p>{hint}</p>
+        <Field label={typeLabel} htmlFor="cascade-confirm">
+          <Input id="cascade-confirm" dir="auto" autoComplete="off" value={typed} placeholder={expected} onChange={(e) => setTyped(e.target.value)} />
+        </Field>
+        <div>
+          <Button variant="danger" icon="alert" disabled={typed.trim() !== expected.trim()} busy={purge.isPending} onClick={() => purge.mutate()}>{button}</Button>
+        </div>
+        {inUse ? <InUseNote counts={inUse} /> : <ErrorNote error={purge.error} />}
+      </div>
+    </Card>
+  );
 }

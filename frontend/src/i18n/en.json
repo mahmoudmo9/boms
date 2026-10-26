@@ -490,7 +490,10 @@
     "invalid_item": "The item could not be saved.",
     "invalid_offer": "The offer could not be saved.",
     "invalid_decision": "The decision could not be saved.",
-    "unknown_category": "Unknown category."
+    "unknown_category": "Unknown category.",
+    "confirm_title_mismatch": "Type the exact case title to confirm.",
+    "confirm_subject_mismatch": "Type the exact inquiry subject (or DELETE when it has none) to confirm.",
+    "possible_duplicate": "Similar products exist. Check them, then confirm to save anyway."
   },
   "cc": {
     "subtitle": "Follow-ups and leads for {{date}}.",
@@ -509,7 +512,8 @@
       "rfqOverdue": "RFQ replies overdue",
       "expiring": "Offers expiring in 7 days",
       "notCovered": "Cases not fully covered",
-      "itemsMissing": "{{n}} of {{total}} items open"
+      "itemsMissing": "{{n}} of {{total}} items open",
+      "selectionLost": "Selections lost (last 14 days)"
     }
   },
   "funnel": {
@@ -738,7 +742,12 @@
     "counts": {
       "interactions": "interactions",
       "followups": "follow-ups",
-      "documents": "documents"
+      "documents": "documents",
+      "inquiries": "inquiries",
+      "cases": "cases",
+      "rfq_recipients": "RFQ recipients",
+      "offers": "offers",
+      "capabilities": "capability tags"
     },
     "dangerZone": "Danger zone",
     "cascadeHint": "For test data only: deletes this party with all its interactions, follow-ups and document links. The files themselves stay in Documents. The deletion is recorded in the event log.",
@@ -850,7 +859,11 @@
       "fromThisInteraction": "Create inquiry",
       "reject": "Reject",
       "rejected": "Rejected",
-      "untitled": "Inquiry without subject"
+      "untitled": "Inquiry without subject",
+      "cascadeHint": "For test data only: deletes this inquiry with its items, decision and document links. Files stay in Documents. The deletion is recorded in the event log.",
+      "typeSubject": "Type the inquiry subject to confirm",
+      "typeDelete": "Type DELETE to confirm",
+      "cascadeButton": "Delete inquiry and its items"
     },
     "decision": {
       "title": "Go / no-go decision",
@@ -912,7 +925,10 @@
         "comparison": "Comparison",
         "documents": "Documents",
         "history": "History"
-      }
+      },
+      "cascadeHint": "For test data only: deletes this case with its items, RFQs, recipients, offers and document links. Files stay in Documents and interactions stay in the parties' history. The deletion is recorded in the event log.",
+      "typeTitle": "Type the case title to confirm",
+      "cascadeButton": "Delete case and everything in it"
     },
     "item": {
       "add": "Add item",
@@ -1034,7 +1050,11 @@
       "chaseAction": "Chase RFQ response",
       "declined": "Declined",
       "exportXlsx": "Excel",
-      "cancel": "Cancel RFQ"
+      "cancel": "Cancel RFQ",
+      "followupPreview": "Will create the follow-up “{{action}}” due {{date}}.",
+      "followupNeedsDate": "The RFQ has no respond-by date: choose a follow-up date or record why no follow-up is needed.",
+      "dueFromRespondBy": "Taken from the RFQ respond-by date.",
+      "noFollowup": "No follow-up"
     },
     "offer": {
       "record": "Record offer",
@@ -1209,6 +1229,15 @@
       "unknownCode": "not in the current edition",
       "filterKind": "Capability",
       "filterPlaceholder": "3907, C20, tag…"
+    },
+    "selectionLost": "Selection lost, choose again",
+    "lostCause": {
+      "withdrawn": "offer withdrawn",
+      "expired": "offer expired",
+      "deleted": "offer deleted",
+      "superseded": "offer superseded",
+      "unavailable": "marked unavailable",
+      "invalid": "offer no longer valid"
     }
   }
 }

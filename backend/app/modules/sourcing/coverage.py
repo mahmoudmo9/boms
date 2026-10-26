@@ -7,10 +7,10 @@ unless the group mixes Incoterms: then every row gets a "not directly comparable
 
 import uuid
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError, Conflict, NotFound
@@ -19,6 +19,7 @@ from app.modules.parties import clock
 from app.modules.parties import service as parties
 from app.modules.sourcing import items as items_service
 from app.modules.sourcing.common import flush, jsonable, linked_documents
+from app.modules.sourcing.dashboard import SELECTION_LOST_DAYS
 from app.modules.sourcing.inquiries import get_case
 from app.modules.sourcing.models import LineItem, OfferItem, SupplierOffer
 from app.modules.sourcing.offers import is_valid
@@ -137,6 +138,17 @@ def comparison(db: Session, case_id: uuid.UUID, item_id: uuid.UUID | None = None
     return jsonable({"case_id": case.id, "items": result})
 
 
+def selection_lost_ids(db: Session, item_ids: list[uuid.UUID], today: date) -> set[uuid.UUID]:
+    """Items with a ``selection_lost`` event in the last 14 days (same window as the command center)."""
+    if not item_ids:
+        return set()
+    rows = db.execute(text(
+        "SELECT DISTINCT entity_id FROM core.event WHERE entity_type = 'line_item' AND action = 'selection_lost' "
+        "AND occurred_at >= :since AND entity_id = ANY(:ids)"
+    ), {"since": today - timedelta(days=SELECTION_LOST_DAYS), "ids": [str(i) for i in item_ids]}).scalars()
+    return {uuid.UUID(r) for r in rows}
+
+
 def coverage(db: Session, case_id: uuid.UUID, today: date | None = None) -> dict:
     case = get_case(db, case_id)
     today = today or clock.today()
@@ -147,7 +159,9 @@ def coverage(db: Session, case_id: uuid.UUID, today: date | None = None) -> dict
         if is_valid(offer, today) and offer_item.available:
             per_item[offer_item.line_item_id].append((offer_item, offer))
     items_out, missing = [], []
-    for item in items_service.items_of(db, case_id=case.id):
+    case_items = items_service.items_of(db, case_id=case.id)
+    lost = selection_lost_ids(db, [i.id for i in case_items], today)
+    for item in case_items:
         valid = per_item.get(item.id, [])
         best: dict[str, dict] = {}
         for offer_item, offer in valid:
@@ -167,7 +181,9 @@ def coverage(db: Session, case_id: uuid.UUID, today: date | None = None) -> dict
                           "no_coverage_confirmed": item.no_coverage_confirmed,
                           "no_coverage_reason": item.no_coverage_reason, "valid_offers": len(valid),
                           "best_prices": sorted(best.values(), key=lambda b: (b["currency"], b["unit_group"])),
-                          "selected_offer_item_id": item.selected_offer_item_id})
+                          "selected_offer_item_id": item.selected_offer_item_id,
+                          "selection_lost": item.id in lost and item.selected_offer_item_id is None
+                          and item.status != "cancelled"})
     return jsonable({"case_id": case.id, "items": items_out,
                      "gate": {"ok": not missing and bool(items_out), "missing": missing}})
 

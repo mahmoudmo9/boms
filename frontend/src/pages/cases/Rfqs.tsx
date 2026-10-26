@@ -114,12 +114,12 @@ export function RfqBuilder({ caseData, onClose, onCreated }: { caseData: CaseDet
                 <li key={r.party_id} className="flex flex-wrap items-center gap-2 rounded-md bg-surface-2 px-2.5 py-1.5 text-sm">
                   <PartyName fa={r.name_fa} en={r.name_en} />
                   {r.stage && <Badge>{stageLabel(t, "supplier", r.stage)}</Badge>}
-                  <span className="ms-auto flex gap-1.5">
-                    <Select className="w-32" aria-label={t("sourcing.rfq.channel")} value={r.channel}
+                  <span className="ms-auto flex flex-wrap gap-1.5">
+                    <Select className="w-auto min-w-28" aria-label={t("sourcing.rfq.channel")} value={r.channel}
                       onChange={(e) => setRecipients(recipients.map((x, j) => (i === j ? { ...x, channel: e.target.value } : x)))}>
                       {RFQ_CHANNELS.map((c) => <option key={c} value={c}>{t(`sourcing.channels.${c}`)}</option>)}
                     </Select>
-                    <Select className="w-24" aria-label={t("sourcing.rfq.language")} value={r.language}
+                    <Select className="w-auto min-w-28" aria-label={t("sourcing.rfq.language")} value={r.language}
                       onChange={(e) => setRecipients(recipients.map((x, j) => (i === j ? { ...x, language: e.target.value } : x)))}>
                       {LANGS.map((l) => <option key={l} value={l}>{t(`common.languageNames.${l}`)}</option>)}
                     </Select>
@@ -141,24 +141,37 @@ export function RfqBuilder({ caseData, onClose, onCreated }: { caseData: CaseDet
   );
 }
 
+/** v0.3.1: shows the follow-up that will be created (editable) or takes an explicit "no follow-up" reason. */
 function MarkSentDialog({ recipient, rfq, onClose, onDone }: { recipient: RfqRecipient; rfq: Rfq; onClose: () => void; onDone: () => void }) {
-  const { t } = useTranslation();
-  const [action, setAction] = useState(t("sourcing.rfq.chaseAction"));
+  const { t, i18n } = useTranslation();
+  const f = useFormat();
+  const [action, setAction] = useState(i18n.getFixedT(recipient.language)("sourcing.rfq.chaseAction"));
   const [due, setDue] = useState<string | null>(rfq.respond_by);
+  const [skip, setSkip] = useState(false);
+  const [reason, setReason] = useState("");
   const send = useMutation({
     mutationFn: () => api(`/api/rfqs/recipients/${recipient.id}/mark-sent`, {
-      method: "POST", body: { message_text: recipient.message_text, subject: recipient.subject, followup: { action, due_on: due } },
+      method: "POST", body: { message_text: recipient.message_text, subject: recipient.subject,
+        ...(skip ? { no_followup_reason: reason.trim() } : { followup: { action, due_on: due } }) },
     }),
     onSuccess: () => { onDone(); onClose(); },
   });
+  const ready = skip ? !!reason.trim() : !!action.trim() && !!due;
   return (
     <Modal open title={t("sourcing.rfq.markSent")} onClose={onClose}
       footer={<><Button onClick={onClose}>{t("common.cancel")}</Button>
-        <Button variant="primary" disabled={!action.trim() || !due} busy={send.isPending} onClick={() => send.mutate()}>{t("sourcing.rfq.markSent")}</Button></>}>
+        <Button variant="primary" disabled={!ready} busy={send.isPending} onClick={() => send.mutate()}>{t("sourcing.rfq.markSent")}</Button></>}>
       <div className="flex flex-col gap-3">
         <p className="text-sm">{t("sourcing.rfq.markSentHint")}</p>
-        <Field label={t("followups.action")} htmlFor="ms-action"><Input id="ms-action" dir="auto" value={action} onChange={(e) => setAction(e.target.value)} /></Field>
-        <Field label={t("followups.newDue")} htmlFor="ms-due"><DueDatePicker id="ms-due" value={due} onChange={setDue} /></Field>
+        {!skip && <>
+          <p className="rounded-md bg-surface-2 px-2.5 py-1.5 text-sm" data-testid="ms-preview">
+            {due ? t("sourcing.rfq.followupPreview", { action: action.trim() || "—", date: f.day(due) }) : t("sourcing.rfq.followupNeedsDate")}
+          </p>
+          <Field label={t("followups.action")} htmlFor="ms-action"><Input id="ms-action" dir="auto" value={action} onChange={(e) => setAction(e.target.value)} /></Field>
+          <Field label={t("followups.newDue")} htmlFor="ms-due" hint={rfq.respond_by ? t("sourcing.rfq.dueFromRespondBy") : undefined}><DueDatePicker id="ms-due" value={due} onChange={setDue} /></Field>
+        </>}
+        <Checkbox label={t("sourcing.rfq.noFollowup")} checked={skip} onChange={setSkip} />
+        {skip && <Field label={t("sourcing.reason")} htmlFor="ms-reason"><Input id="ms-reason" dir="auto" value={reason} onChange={(e) => setReason(e.target.value)} /></Field>}
         <ErrorNote error={send.error} />
       </div>
     </Modal>
@@ -193,11 +206,11 @@ function RecipientCard({ recipient, rfq, onChanged }: { recipient: RfqRecipient;
         <StatusBadge group="recipient" status={recipient.status} />
         {recipient.sent_at && <span className="text-xs text-muted tabular-nums">{f.date(recipient.sent_at, true)}</span>}
         {draft && (
-          <span className="ms-auto flex gap-1">
-            <Select className="w-32" aria-label={t("sourcing.rfq.channel")} value={recipient.channel} onChange={(e) => save.mutate({ channel: e.target.value })}>
+          <span className="ms-auto flex flex-wrap gap-1">
+            <Select className="w-auto min-w-28" aria-label={t("sourcing.rfq.channel")} value={recipient.channel} onChange={(e) => save.mutate({ channel: e.target.value })}>
               {RFQ_CHANNELS.map((c) => <option key={c} value={c}>{t(`sourcing.channels.${c}`)}</option>)}
             </Select>
-            <Select className="w-24" aria-label={t("sourcing.rfq.language")} value={recipient.language} onChange={(e) => save.mutate({ language: e.target.value })}>
+            <Select className="w-auto min-w-28" aria-label={t("sourcing.rfq.language")} value={recipient.language} onChange={(e) => save.mutate({ language: e.target.value })}>
               {LANGS.map((l) => <option key={l} value={l}>{t(`common.languageNames.${l}`)}</option>)}
             </Select>
           </span>

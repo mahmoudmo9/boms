@@ -248,13 +248,19 @@ export function Modal({ open, title, onClose, children, footer, wide }: {
 }) {
   const { t } = useTranslation();
   const panel = useRef<HTMLDivElement>(null);
+  // Callers pass inline onClose arrows (a new function every render). Keep it in a ref so the effect below runs
+  // only when the dialog opens: re-running it on each keystroke moved focus away from the field being typed in.
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
     window.addEventListener("keydown", onKey);
-    panel.current?.querySelector<HTMLElement>("input, select, textarea, button")?.focus();
+    const root = panel.current;
+    (root?.querySelector<HTMLElement>("[data-modal-body] :is(input, select, textarea)")
+      ?? root?.querySelector<HTMLElement>("[data-modal-body] button, footer button"))?.focus();
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[10vh]" onMouseDown={onClose}>
@@ -269,7 +275,7 @@ export function Modal({ open, title, onClose, children, footer, wide }: {
           <h2 className="text-sm font-semibold">{title}</h2>
           <IconButton icon="x" label={t("common.close")} onClick={onClose} />
         </header>
-        <div className="p-4">{children}</div>
+        <div className="p-4" data-modal-body>{children}</div>
         {footer && <footer className="flex justify-end gap-2 border-t border-line px-4 py-3">{footer}</footer>}
       </div>
     </div>

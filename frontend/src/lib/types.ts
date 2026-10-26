@@ -627,6 +627,7 @@ export interface Coverage {
     valid_offers: number;
     best_prices: { currency: string; unit_group: string; unit_price: string; price_per_quantity: string; unit_code: string | null; unit_text: string | null; offer_id: string; party_id: string }[];
     selected_offer_item_id: string | null;
+    selection_lost: boolean;
   }[];
   gate: { ok: boolean; missing: { item_id: string; name: string; status: string; valid_offers: number }[] };
 }
@@ -711,6 +712,7 @@ export interface SourcingSummary {
   rfq_overdue: { recipient_id: string; party_id: string; party_name_fa: string | null; party_name_en: string | null; rfq_id: string; rfq_title: string; case_id: string; respond_by: string }[];
   offers_expiring: { offer_id: string; case_id: string; case_title: string; party_id: string; party_name_fa: string | null; party_name_en: string | null; valid_until: string; currency: string; days_left: number }[];
   cases_not_covered: { case_id: string; case_title: string; items: number; not_covered: number }[];
+  selection_lost: { item_id: string; name: string; case_id: string; case_title: string; lost_at: string; cause: string }[];
   coverage_status_percent: number | null;
   open_items: number;
   open_items_with_status: number;

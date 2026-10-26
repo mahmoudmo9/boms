@@ -74,6 +74,10 @@ function SourcingSection({ s }: { s: SourcingSummary }) {
             label: <Bdi>{(f.lang === "fa" ? o.party_name_fa || o.party_name_en : o.party_name_en || o.party_name_fa) ?? ""}</Bdi>,
             extra: <span className="text-xs text-danger">{t("sourcing.compare.daysLeft", { n: f.num(o.days_left) })}</span> })))}
         </Card>
+        <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sourcing.selectionLost")} <Badge tone={s.selection_lost.length ? "danger" : "neutral"}>{f.num(s.selection_lost.length)}</Badge></span>}>
+          {list(s.selection_lost.map((i) => ({ key: i.item_id, to: `/cases/${i.case_id}?tab=items&item=${i.item_id}`, label: <Bdi>{i.name}</Bdi>,
+            extra: <span className="text-xs text-muted"><Bdi>{i.case_title}</Bdi> · {t(`sourcing.lostCause.${i.cause}`, { defaultValue: i.cause })}</span> })))}
+        </Card>
         <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sourcing.notCovered")} <Badge tone={s.cases_not_covered.length ? "warning" : "neutral"}>{f.num(s.cases_not_covered.length)}</Badge></span>}>
           {list(s.cases_not_covered.map((c) => ({ key: c.case_id, to: `/cases/${c.case_id}`, label: <Bdi>{c.case_title}</Bdi>,
             extra: <span className="text-xs text-muted">{t("cc.sourcing.itemsMissing", { n: f.num(c.not_covered), total: f.num(c.items) })}</span> })))}

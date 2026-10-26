@@ -10,7 +10,7 @@ import { useFormat } from "../../lib/prefs";
 import type { Check, CaseDetail, Decision, InquiryDetail } from "../../lib/types";
 import { PartyName } from "../parties/shared";
 import { ItemsCard } from "./ItemsEditor";
-import { AttachedDocuments, CurrencySelect, HistoryCard, StatusBadge, useInvalidateSourcing, usePaymentTerms } from "./shared";
+import { AttachedDocuments, CascadeDeleteCard, CurrencySelect, HistoryCard, StatusBadge, useInvalidateSourcing, usePaymentTerms } from "./shared";
 
 const CHECKS = ["feasible_sourcing", "exposure_acceptable", "requirements_ok"] as const;
 const LIGHT_TONE = { green: "success", yellow: "warning", red: "danger" } as const;
@@ -178,6 +178,9 @@ export function InquiryDetailPage() {
           <ConvertCard inquiry={inq} onDone={(caseId) => { invalidate(); navigate(`/cases/${caseId}`); }} />
           <DecisionPanel key={inq.decision?.updated_at ?? "new"} inquiry={inq} onSaved={refresh} />
           <HistoryCard title={t("parties.tabs.history")} entityType="inquiry" entityId={inq.id} />
+          {!inq.case_id && <CascadeDeleteCard url={`/api/inquiries/${inq.id}`} confirmKey="confirm_subject" expected={inq.subject?.trim() || "DELETE"}
+            hint={t("sourcing.inquiry.cascadeHint")} typeLabel={t(inq.subject?.trim() ? "sourcing.inquiry.typeSubject" : "sourcing.inquiry.typeDelete")}
+            button={t("sourcing.inquiry.cascadeButton")} onDeleted={() => { invalidate(); navigate("/sourcing"); }} />}
         </div>
       </div>
       {rejecting && (

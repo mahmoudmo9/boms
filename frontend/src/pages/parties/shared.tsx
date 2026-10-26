@@ -255,7 +255,7 @@ export function SharedNumberPrompt({ shared, busy, onYes, onNo }: {
 export function InUseNote({ counts, onArchive }: { counts: Record<string, number>; onArchive?: () => void }) {
   const { t } = useTranslation();
   const f = useFormat();
-  const parts = Object.entries(counts).map(([key, n]) => `${t(`delete.counts.${key}`)} ${f.num(n)}`);
+  const parts = Object.entries(counts).filter(([, n]) => n > 0).map(([key, n]) => `${t(`delete.counts.${key}`)} ${f.num(n)}`);
   return (
     <div role="alert" className="flex w-full flex-wrap items-center gap-2 rounded-md bg-danger-soft px-2.5 py-1.5 text-sm text-danger">
       <span>{t("delete.inUse")} {parts.join(" · ")}</span>
