@@ -199,7 +199,7 @@ def create_rfq(db: Session, data: dict, source: str, actor: str | None = None) -
         raise Conflict("case_not_open", f"The case is {case.status}", {"status": case.status})
     item_specs = data.get("items") or []
     _check_items(db, case.id, [i["line_item_id"] for i in item_specs])
-    rfq = Rfq(case_id=case.id, title=(data.get("title") or "").strip() or case.title,
+    rfq = Rfq(case_id=case.id, title=(data.get("title") or "").strip() or default_title(db, case, item_specs),
               language=data.get("language") or "en", respond_by=data.get("respond_by"), notes=data.get("notes"))
     db.add(rfq)
     flush(db, "invalid_rfq")
@@ -214,6 +214,16 @@ def create_rfq(db: Session, data: dict, source: str, actor: str | None = None) -
     for recipient in data.get("recipients") or []:
         _add_recipient(db, rfq, recipient, source, actor)
     return rfq
+
+
+def default_title(db: Session, case, item_specs: list[dict]) -> str:
+    """"RFQ <n> - <first item name>", n counting the case's RFQs, unique within the case (v0.3.2)."""
+    first = items_service.get_item(db, item_specs[0]["line_item_id"]).name if item_specs else case.title
+    titles = set(db.scalars(select(Rfq.title).where(Rfq.case_id == case.id)))
+    n = len(titles) + 1
+    while f"RFQ {n} - {first}" in titles:
+        n += 1
+    return f"RFQ {n} - {first}"
 
 
 def _draft(rfq: Rfq) -> None:
@@ -496,5 +506,8 @@ def export_xlsx(db: Session, rfq_id: uuid.UUID, language: str = "en") -> bytes:
 
 def recipient_out(db: Session, recipient: RfqRecipient) -> dict:
     party = parties.get_party(db, recipient.party_id)
+    contact = parties.get_contact(db, recipient.contact_id) if recipient.contact_id else None
     return {**row_snapshot(recipient), "party_name_fa": party.name_fa, "party_name_en": party.name_en,
+            "contact_name_fa": contact.name_fa if contact else None,
+            "contact_name_en": contact.name_en if contact else None,
             "party_country": party.country_iso2, "mailto": mailto(db, recipient), "email": email_of(db, recipient)}

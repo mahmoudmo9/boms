@@ -620,7 +620,10 @@ offers_router = APIRouter(prefix="/api/offers", tags=["sourcing"])
 def offer_detail(db: Session, offer_id: uuid.UUID) -> dict:
     row = offers.get_offer(db, offer_id)
     party = parties.get_party(db, row.party_id)
+    contact = parties.get_contact(db, row.contact_id) if row.contact_id else None
     return {**jsonable(row_snapshot(row)), "party_name_fa": party.name_fa, "party_name_en": party.name_en,
+            "contact_name_fa": contact.name_fa if contact else None,
+            "contact_name_en": contact.name_en if contact else None,
             "valid": offers.is_valid(row),
             "items": [jsonable(row_snapshot(i)) for i in offers.offer_items(db, row.id)],
             "documents": _documents(db, "offer", row.id)}

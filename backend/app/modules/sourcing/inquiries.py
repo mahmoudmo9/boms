@@ -218,11 +218,15 @@ def cascade_delete_inquiry(db: Session, inquiry_id: uuid.UUID, confirm_subject: 
     return counts
 
 
+CASE_DELETED_NOTE = "case deleted"
+
+
 def cascade_delete_case(db: Session, case_id: uuid.UUID, confirm_title: str | None, source: str,
                         actor: str | None = None) -> dict:
     """Test-data cleanup: the case with its line items, RFQs, recipients, offers, offer items and document links.
 
-    Needs the exact title. Files and interactions (from sends/offers) stay; the inquiry, if any, stays.
+    Needs the exact title. Files and interactions (from sends/offers) stay; the inquiry, if any, stays. Open
+    follow-ups of those interactions (the RFQ chases) are cancelled with the note "case deleted".
     """
     case = get_case(db, case_id)
     if (confirm_title or "").strip() != case.title.strip():
@@ -246,6 +250,12 @@ def cascade_delete_case(db: Session, case_id: uuid.UUID, confirm_title: str | No
     snapshot["document_links"] = (_unlink_all(db, "case", [case.id], source, actor)
                                   + _unlink_all(db, "line_item", [i.id for i in item_rows], source, actor)
                                   + _unlink_all(db, "offer", offer_ids, source, actor))
+    # open follow-ups created by "mark as sent" / recording an offer of the deleted rows (v0.3.2)
+    interaction_ids = [r.interaction_id for r in recipients if r.interaction_id] + \
+        [o.interaction_id for o in offer_rows if o.interaction_id]
+    cancelled = [party_interactions.cancel_followup(db, f.id, CASE_DELETED_NOTE, source, actor).id
+                 for f in party_interactions.open_followups_of_interactions(db, list(dict.fromkeys(interaction_ids)))]
+    snapshot["cancelled_followups"] = jsonable(cancelled)
     for item in item_rows:
         item.selected_offer_item_id = None
     for offer in offer_rows:
@@ -258,7 +268,8 @@ def cascade_delete_case(db: Session, case_id: uuid.UUID, confirm_title: str | No
     db.delete(case)
     flush(db, "in_use")
     counts = {"items": len(item_rows), "rfqs": len(rfqs), "recipients": len(recipients), "offers": len(offer_rows),
-              "offer_items": len(offer_item_rows), "documents": len(snapshot["document_links"])}
+              "offer_items": len(offer_item_rows), "documents": len(snapshot["document_links"]),
+              "followups_cancelled": len(cancelled)}
     events.record(db, "case", case_id, "delete", {"cascade": True, "counts": counts, "deleted": snapshot}, source,
                   actor=actor)
     return counts

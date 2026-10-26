@@ -250,6 +250,14 @@ def cancel_followup(db: Session, followup_id: uuid.UUID, note: str, source: str,
     return row
 
 
+def open_followups_of_interactions(db: Session, interaction_ids: list[uuid.UUID]) -> list[Followup]:
+    """Open follow-ups attached to these interactions (used by sourcing to cancel chases of deleted RFQs)."""
+    if not interaction_ids:
+        return []
+    return list(db.scalars(select(Followup).where(Followup.interaction_id.in_(interaction_ids),
+                                                  Followup.status == "open").order_by(Followup.created_at)))
+
+
 def list_followups(db: Session, *, status: str | None = "open", party_id: uuid.UUID | None = None,
                    due_from: date | None = None, due_to: date | None = None,
                    page: int = 1, page_size: int = 100) -> tuple[list[Followup], int]:

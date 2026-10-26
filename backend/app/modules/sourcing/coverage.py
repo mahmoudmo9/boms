@@ -99,7 +99,7 @@ def comparison(db: Session, case_id: uuid.UUID, item_id: uuid.UUID | None = None
     items = [i for i in items_service.items_of(db, case_id=case.id) if item_id is None or i.id == item_id]
     if item_id and not items:
         raise NotFound("not_found", "Item not found in this case")
-    party_names = {}
+    party_names, contact_names = {}, {}
     per_item: dict[uuid.UUID, list[dict]] = defaultdict(list)
     offer_docs: dict[str, list] = {}
     for offer_item, offer in _offer_rows(db, case.id):
@@ -108,6 +108,9 @@ def comparison(db: Session, case_id: uuid.UUID, item_id: uuid.UUID | None = None
         if offer.party_id not in party_names:
             party = parties.get_party(db, offer.party_id)
             party_names[offer.party_id] = (party.name_fa, party.name_en)
+        if offer.contact_id and offer.contact_id not in contact_names:
+            contact = parties.get_contact(db, offer.contact_id)
+            contact_names[offer.contact_id] = (contact.name_fa, contact.name_en)
         key, factor = unit_group(offer_item.unit_code, offer_item.unit_text, units)
         oid = str(offer.id)
         if oid not in offer_docs:
@@ -115,6 +118,8 @@ def comparison(db: Session, case_id: uuid.UUID, item_id: uuid.UUID | None = None
         per_item[offer_item.line_item_id].append({
             "offer_item_id": str(offer_item.id), "offer_id": oid, "party_id": str(offer.party_id),
             "party_name_fa": party_names[offer.party_id][0], "party_name_en": party_names[offer.party_id][1],
+            "contact_id": offer.contact_id, "contact_name_fa": contact_names.get(offer.contact_id, (None, None))[0],
+            "contact_name_en": contact_names.get(offer.contact_id, (None, None))[1],
             "unit_price": offer_item.unit_price, "currency": offer.currency,
             "price_per_quantity": offer_item.price_per_quantity, "unit_code": offer_item.unit_code,
             "unit_text": offer_item.unit_text, "unit_group": key, "normalized_price": normalized_price(offer_item.unit_price, offer_item.price_per_quantity, factor),

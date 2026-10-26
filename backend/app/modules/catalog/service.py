@@ -321,11 +321,12 @@ def price_memory(db: Session, product_id: uuid.UUID, today: date | None = None) 
         SELECT oi.id, oi.unit_price, oi.price_per_quantity, oi.unit_code, oi.unit_text, oi.moq, oi.moq_unit,
                o.id AS offer_id, o.received_at, o.currency, o.incoterm, o.incoterm_place, o.valid_until, o.status,
                o.party_id, p.name_fa AS party_fa, p.name_en AS party_en, li.quantity, li.unit_code AS item_unit,
-               li.case_id
+               li.case_id, o.contact_id, ct.name_fa AS contact_fa, ct.name_en AS contact_en
         FROM ops.offer_item oi
         JOIN ops.line_item li ON li.id = oi.line_item_id
         JOIN ops.supplier_offer o ON o.id = oi.offer_id
         JOIN core.party p ON p.id = o.party_id
+        LEFT JOIN core.contact ct ON ct.id = o.contact_id
         WHERE li.product_id = :p AND oi.available AND oi.unit_price IS NOT NULL
         ORDER BY o.received_at DESC
         """

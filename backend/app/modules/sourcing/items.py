@@ -222,8 +222,9 @@ def recompute_item_status(db: Session, item: LineItem, source: str, actor: str |
     """The ONLY place that derives an item's coverage status (v0.3.1), in this order:
 
     cancelled / sold / delivered / closed are never touched; a still-valid selected offer row -> selected;
-    any valid available offer row -> has_offer; any RFQ (not cancelled) whose recipient is sent or replied and
-    that includes the item -> rfq_sent; otherwise uncovered. A selection that is no longer valid is cleared
+    any valid available offer row -> has_offer; any RFQ (not cancelled) that includes the item and has a
+    recipient that is not ``draft`` (sent, replied, declined, no_response, expired; v0.3.2) -> rfq_sent;
+    otherwise uncovered. A selection that is no longer valid is cleared
     (event ``selection_lost``). ``exclude_offer_items`` treats rows about to be deleted as gone.
     ``no_coverage_confirmed`` is a separate flag and is not changed here.
     """
@@ -249,7 +250,7 @@ def recompute_item_status(db: Session, item: LineItem, source: str, actor: str |
     elif db.scalar(select(RfqRecipient.id).join(Rfq, Rfq.id == RfqRecipient.rfq_id)
                    .join(RfqItem, RfqItem.rfq_id == Rfq.id)
                    .where(RfqItem.line_item_id == item.id, Rfq.status != "cancelled",
-                          RfqRecipient.status.in_(("sent", "replied"))).limit(1)) is not None:
+                          RfqRecipient.status != "draft").limit(1)) is not None:
         new_status = "rfq_sent"
     else:
         new_status = "uncovered"

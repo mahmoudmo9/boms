@@ -40,6 +40,22 @@ def summary(db: Session, today: date | None = None) -> dict:
         ORDER BY o.valid_until
         """
     ), {"today": today, "until": today + timedelta(days=EXPIRING_DAYS)}).mappings().all()
+    # rfq_sent items whose every non-draft recipient (non-cancelled RFQs) is no_response or declined (v0.3.2)
+    resend = db.execute(text(
+        """
+        SELECT li.id AS item_id, li.name, li.case_id, c.title AS case_title,
+               count(DISTINCT r.id) AS recipients, max(q.respond_by) AS respond_by
+        FROM ops.line_item li
+        JOIN ops."case" c ON c.id = li.case_id
+        JOIN ops.rfq_item ri ON ri.line_item_id = li.id
+        JOIN ops.rfq q ON q.id = ri.rfq_id AND q.status <> 'cancelled'
+        JOIN ops.rfq_recipient r ON r.rfq_id = q.id AND r.status <> 'draft'
+        WHERE c.status = 'open' AND li.status = 'rfq_sent'
+        GROUP BY li.id, li.name, li.case_id, c.title, c.updated_at, li.position
+        HAVING bool_and(r.status IN ('no_response', 'declined'))
+        ORDER BY c.updated_at DESC, li.position
+        """
+    )).mappings().all()
     selection_lost = db.execute(text(
         """
         SELECT DISTINCT ON (li.id) li.id AS item_id, li.name, li.case_id, c.title AS case_title,
@@ -74,6 +90,7 @@ def summary(db: Session, today: date | None = None) -> dict:
         "offers_expiring": [{**dict(r), "days_left": (r["valid_until"] - today).days} for r in expiring],
         "cases_not_covered": sorted((c for c in cases.values() if c["not_covered"]),
                                     key=lambda c: -c["not_covered"]),
+        "no_response_resend": [dict(r) for r in resend],
         "selection_lost": sorted((dict(r) for r in selection_lost), key=lambda r: r["lost_at"], reverse=True),
         "coverage_status_percent": percent,
         "open_items": len(open_items),

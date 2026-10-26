@@ -160,7 +160,7 @@ def test_draft_recipient_is_not_rfq_sent(client):
 def test_recipient_decline_and_rfq_cancel_recompute(client):
     case, (item,), party, body = sent_case(client)
     client.post(f"/api/rfqs/recipients/{body['recipients'][0]['id']}/decline", json={"note": "no"})
-    assert item_of(client, item["id"])["status"] == "uncovered"
+    assert item_of(client, item["id"])["status"] == "rfq_sent"  # v0.3.2: a declined recipient still counts as sent
     case2, (item2,), _, body2 = sent_case(client)
     client.post(f"/api/rfqs/{body2['id']}/cancel", json={"reason": "stop"})
     assert item_of(client, item2["id"])["status"] == "uncovered"
@@ -291,7 +291,7 @@ def test_case_cascade_delete(client, db):
     r = client.request("DELETE", url, json={"confirm_title": case["title"]})
     assert r.status_code == 200, r.text
     assert r.json()["counts"] == {"items": 2, "rfqs": 1, "recipients": 1, "offers": 1, "offer_items": 1,
-                                  "documents": 2}
+                                  "documents": 2, "followups_cancelled": 1}
     assert client.get(f"/api/cases/{case['id']}").status_code == 404
     assert client.get(f"/api/rfqs/{body['id']}").status_code == 404
     assert client.get(f"/api/offers/{off['id']}").status_code == 404

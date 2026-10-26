@@ -50,7 +50,30 @@ def validate_template(subject: str, body: str) -> None:
                        {"unknown": unknown, "allowed": list(PLACEHOLDERS)}, status=422)
 
 
+_SENTENCE_END = re.compile(r"(?<=[.!?؟])\s+")
+
+
+def _drop_sentences_with(template: str, name: str) -> str:
+    """Remove every sentence that uses ``{name}`` (a line left empty is removed too)."""
+    token = re.compile(r"\{\s*" + name + r"\s*\}")
+    lines = []
+    for line in template.split("\n"):
+        if not token.search(line):
+            lines.append(line)
+            continue
+        kept = [part for part in _SENTENCE_END.split(line) if not token.search(part)]
+        if kept:
+            lines.append(" ".join(kept))
+    return "\n".join(lines)
+
+
 def render(template: str, values: dict[str, str]) -> str:
+    """Fill the placeholders. Without a reply-by date the sentence asking for a reply by that date is omitted
+    (v0.3.2) instead of rendering "reply by ." with an empty date."""
+    template = template or ""
+    if "respond_by" in values and not values["respond_by"]:
+        template = _drop_sentences_with(template, "respond_by")
+
     def replace(match: re.Match) -> str:
         token = match.group(0)
         if token == "{{":
