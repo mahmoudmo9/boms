@@ -513,7 +513,9 @@
       "expiring": "Offers expiring in 7 days",
       "notCovered": "Cases not fully covered",
       "itemsMissing": "{{n}} of {{total}} items open",
-      "selectionLost": "Selections lost (last 14 days)"
+      "selectionLost": "Selections lost (last 14 days)",
+      "noResponseResend": "No reply to RFQ",
+      "resendHint": "no reply, send again"
     }
   },
   "funnel": {
@@ -1024,6 +1026,7 @@
       "respondBy": "Reply by",
       "items": "Items",
       "itemsCount": "{{count}} items",
+      "itemsCount_one": "{{count}} item",
       "recipients": "Suppliers",
       "noRecipients": "No suppliers yet",
       "addRecipient": "Add supplier",
@@ -1054,7 +1057,12 @@
       "followupPreview": "Will create the follow-up “{{action}}” due {{date}}.",
       "followupNeedsDate": "The RFQ has no respond-by date: choose a follow-up date or record why no follow-up is needed.",
       "dueFromRespondBy": "Taken from the RFQ respond-by date.",
-      "noFollowup": "No follow-up"
+      "noFollowup": "No follow-up",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "more": "More actions",
+      "textAsSent": "Text as sent (read-only)",
+      "recordOffer": "Record offer"
     },
     "offer": {
       "record": "Record offer",
@@ -1088,7 +1096,10 @@
       "files": "Attachments (PDF, Excel, image)",
       "defaultNoFollowup": "Comparing offers",
       "withdraw": "Withdraw",
-      "pastValidity": "Past validity"
+      "pastValidity": "Past validity",
+      "contact": "Contact person",
+      "noContact": "— no contact —",
+      "contactFromRfq": "Pre-selected: the person the RFQ was sent to."
     },
     "coverage": {
       "title": "Coverage",

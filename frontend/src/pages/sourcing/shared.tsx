@@ -9,6 +9,7 @@ import { Icon } from "../../components/Icon";
 import { Badge, Button, Card, EmptyState, ErrorNote, Field, IconButton, Input, Select, Spinner } from "../../components/ui";
 import { api, ApiError, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
+import { personName } from "../../lib/sourcing";
 import type { Currency, DocumentDetail, EventItem, LinkedDocument, PaymentTerm, Product, Unit } from "../../lib/types";
 import { EventList } from "../events/EventLogPage";
 import { InUseNote } from "../parties/shared";
@@ -304,4 +305,12 @@ export function CascadeDeleteCard({ url, confirmKey, expected, hint, typeLabel, 
       </div>
     </Card>
   );
+}
+
+/** The contact person next to a supplier name (v0.3.2); archived contacts are still named. */
+export function ContactName({ fa, en, className = "" }: { fa: string | null | undefined; en: string | null | undefined; className?: string }) {
+  const f = useFormat();
+  const name = personName(fa, en, f.lang);
+  if (!name) return null;
+  return <span className={`inline-flex min-w-0 items-center gap-1 text-muted ${className}`}><Icon name="users" size={13} /><Bdi className="truncate">{name}</Bdi></span>;
 }

@@ -64,6 +64,10 @@ function SourcingSection({ s }: { s: SourcingSummary }) {
           {list(s.items_without_rfq.map((i) => ({ key: i.item_id, to: `/cases/${i.case_id}?tab=items&item=${i.item_id}`, label: <Bdi>{i.name}</Bdi>,
             extra: <span className="text-xs text-muted"><Bdi>{i.case_title}</Bdi></span> })))}
         </Card>
+        <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sourcing.noResponseResend")} <Badge tone={s.no_response_resend.length ? "warning" : "neutral"}>{f.num(s.no_response_resend.length)}</Badge></span>}>
+          {list(s.no_response_resend.map((i) => ({ key: i.item_id, to: `/cases/${i.case_id}?tab=rfqs`, label: <Bdi>{i.name}</Bdi>,
+            extra: <span className="text-xs text-muted"><Bdi>{i.case_title}</Bdi> · {t("cc.sourcing.resendHint")}</span> })))}
+        </Card>
         <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sourcing.rfqOverdue")} <Badge tone={s.rfq_overdue.length ? "danger" : "neutral"}>{f.num(s.rfq_overdue.length)}</Badge></span>}>
           {list(s.rfq_overdue.map((r) => ({ key: r.recipient_id, to: `/cases/${r.case_id}?tab=rfqs&rfq=${r.rfq_id}`,
             label: <Bdi>{(f.lang === "fa" ? r.party_name_fa || r.party_name_en : r.party_name_en || r.party_name_fa) ?? ""}</Bdi>,

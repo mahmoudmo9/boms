@@ -103,7 +103,7 @@ export function CaseDetailPage() {
         </div>
       )}
       {tab === "rfqs" && <RfqsTab caseData={c} highlight={params.get("rfq")} />}
-      {tab === "offers" && <OffersTab caseData={c} highlight={params.get("offer")} />}
+      {tab === "offers" && <OffersTab caseData={c} highlight={params.get("offer")} recordFor={params.get("record")} />}
       {tab === "comparison" && <ComparisonTab caseData={c} />}
       {tab === "documents" && <AttachedDocuments documents={c.documents} linkPath={`/api/cases/${c.id}/documents`} onChanged={refresh} />}
       {tab === "history" && <>

@@ -493,6 +493,8 @@ export interface RfqRecipient {
   party_name_fa: string | null;
   party_name_en: string | null;
   party_country: string | null;
+  contact_name_fa: string | null;
+  contact_name_en: string | null;
   mailto: string | null;
   email: string | null;
 }
@@ -547,6 +549,8 @@ export interface Offer {
   party_name_fa: string | null;
   party_name_en: string | null;
   contact_id: string | null;
+  contact_name_fa: string | null;
+  contact_name_en: string | null;
   rfq_recipient_id: string | null;
   received_at: string;
   channel: string;
@@ -572,6 +576,9 @@ export interface ComparisonRow {
   party_id: string;
   party_name_fa: string | null;
   party_name_en: string | null;
+  contact_id: string | null;
+  contact_name_fa: string | null;
+  contact_name_en: string | null;
   unit_price: string | null;
   currency: string;
   price_per_quantity: string;
@@ -673,7 +680,7 @@ export interface PriceStats {
 
 export interface ProductPage extends Product {
   prices: {
-    offers: { id: string; unit_price: string; price_per_quantity: string; unit_code: string | null; unit_text: string | null; moq: string | null; moq_unit: string | null; offer_id: string; received_at: string; currency: string; incoterm: string | null; incoterm_place: string | null; valid_until: string | null; status: string; party_id: string; party_fa: string | null; party_en: string | null; quantity: string | null; case_id: string; unit_group: string; normalized_price: string | null }[];
+    offers: { id: string; unit_price: string; price_per_quantity: string; unit_code: string | null; unit_text: string | null; moq: string | null; moq_unit: string | null; offer_id: string; received_at: string; currency: string; incoterm: string | null; incoterm_place: string | null; valid_until: string | null; status: string; party_id: string; party_fa: string | null; party_en: string | null; contact_id: string | null; contact_fa: string | null; contact_en: string | null; quantity: string | null; case_id: string; unit_group: string; normalized_price: string | null }[];
     summary: { currency: string; unit_group: string; all_time: PriceStats; last_12_months: PriceStats }[];
   };
   demand: {
@@ -712,6 +719,7 @@ export interface SourcingSummary {
   rfq_overdue: { recipient_id: string; party_id: string; party_name_fa: string | null; party_name_en: string | null; rfq_id: string; rfq_title: string; case_id: string; respond_by: string }[];
   offers_expiring: { offer_id: string; case_id: string; case_title: string; party_id: string; party_name_fa: string | null; party_name_en: string | null; valid_until: string; currency: string; days_left: number }[];
   cases_not_covered: { case_id: string; case_title: string; items: number; not_covered: number }[];
+  no_response_resend: { item_id: string; name: string; case_id: string; case_title: string; recipients: number; respond_by: string | null }[];
   selection_lost: { item_id: string; name: string; case_id: string; case_title: string; lost_at: string; cause: string }[];
   coverage_status_percent: number | null;
   open_items: number;

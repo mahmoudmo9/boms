@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   flattenComparison,
+  isActiveRfq,
   parsePasted,
+  personName,
   placeholdersIn,
   renderTemplate,
+  rfqDefaultOpen,
   setColumnField,
+  sortRfqs,
   suggestMapping,
   toNumberText,
   unknownPlaceholders,
@@ -108,5 +112,30 @@ describe("comparison grouping", () => {
 
   it("colours validity", () => {
     expect([validityTone(3), validityTone(10), validityTone(30), validityTone(null)]).toEqual(["danger", "warning", "neutral", "neutral"]);
+  });
+});
+
+describe("RFQ tab (v0.3.2)", () => {
+  it("opens draft RFQs and collapses every finished state", () => {
+    expect(rfqDefaultOpen("draft")).toBe(true);
+    for (const status of ["sent", "answered", "no_response", "expired", "cancelled"] as const) expect(rfqDefaultOpen(status)).toBe(false);
+  });
+  it("lists active RFQs first, each group newest first", () => {
+    const rows = [
+      { id: "old-answered", status: "answered", created_at: "2026-10-01T10:00:00Z" },
+      { id: "new-cancelled", status: "cancelled", created_at: "2026-10-20T10:00:00Z" },
+      { id: "old-sent", status: "sent", created_at: "2026-10-02T10:00:00Z" },
+      { id: "new-draft", status: "draft", created_at: "2026-10-21T10:00:00Z" },
+      { id: "mid-no-response", status: "no_response", created_at: "2026-10-10T10:00:00Z" },
+    ] as const;
+    expect(sortRfqs([...rows]).map((r) => r.id)).toEqual(["new-draft", "old-sent", "new-cancelled", "mid-no-response", "old-answered"]);
+    expect(isActiveRfq({ status: "sent" })).toBe(true);
+    expect(isActiveRfq({ status: "no_response" })).toBe(false);
+  });
+  it("names a person in the UI language with a fallback", () => {
+    expect(personName("عباس", "Abbas", "fa")).toBe("عباس");
+    expect(personName("عباس", "Abbas", "en")).toBe("Abbas");
+    expect(personName(null, "Abbas", "fa")).toBe("Abbas");
+    expect(personName(null, null, "en")).toBe("");
   });
 });

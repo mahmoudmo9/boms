@@ -12,7 +12,7 @@ import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Product, ProductPage as ProductPageData } from "../../lib/types";
 import { PartyName, stageLabel } from "../parties/shared";
-import { Money, productName, UnitInput, useInvalidateSourcing, useUnitLabel } from "./shared";
+import { ContactName, Money, productName, UnitInput, useInvalidateSourcing, useUnitLabel } from "./shared";
 
 const PAGE_SIZE = 50;
 
@@ -251,7 +251,7 @@ export function ProductPage() {
                     {p.prices.offers.map((o) => (
                       <tr key={o.id} className="border-b border-line">
                         <td className="p-2 tabular-nums text-muted"><Link to={`/cases/${o.case_id}?tab=offers&offer=${o.offer_id}`} className="hover:underline">{f.date(o.received_at)}</Link></td>
-                        <td className="p-2"><PartyName fa={o.party_fa} en={o.party_en} id={o.party_id} className="max-w-48" /></td>
+                        <td className="p-2"><PartyName fa={o.party_fa} en={o.party_en} id={o.party_id} className="max-w-48" /><ContactName fa={o.contact_fa} en={o.contact_en} className="block max-w-48 text-xs" /></td>
                         <td className="p-2"><Money amount={o.unit_price} currency={o.currency} per={o.price_per_quantity} unit={unitLabel(o.unit_code, o.unit_text)} /></td>
                         <td className="p-2"><Bdi ltr>{[o.incoterm, o.incoterm_place].filter(Boolean).join(" ")}</Bdi></td>
                         <td className="p-2"><Bdi ltr>{o.moq ? `${f.num(o.moq)} ${o.moq_unit ?? ""}` : ""}</Bdi></td>

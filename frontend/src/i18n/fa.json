@@ -513,7 +513,9 @@
       "expiring": "پیشنهادهای رو به انقضا (۷ روز)",
       "notCovered": "پرونده‌های بدون پوشش کامل",
       "itemsMissing": "{{n}} از {{total}} قلم باز",
-      "selectionLost": "انتخاب‌های از دست رفته (۱۴ روز اخیر)"
+      "selectionLost": "انتخاب‌های از دست رفته (۱۴ روز اخیر)",
+      "noResponseResend": "استعلام‌های بی‌پاسخ",
+      "resendHint": "پاسخی نیامد، دوباره بفرستید"
     }
   },
   "funnel": {
@@ -1024,6 +1026,7 @@
       "respondBy": "مهلت پاسخ",
       "items": "اقلام",
       "itemsCount": "{{count}} قلم",
+      "itemsCount_one": "{{count}} قلم",
       "recipients": "تأمین‌کنندگان",
       "noRecipients": "هنوز تأمین‌کننده‌ای نیست",
       "addRecipient": "افزودن تأمین‌کننده",
@@ -1054,7 +1057,12 @@
       "followupPreview": "پیگیری «{{action}}» با سررسید {{date}} ایجاد می‌شود.",
       "followupNeedsDate": "این استعلام مهلت پاسخ ندارد: تاریخ پیگیری را انتخاب کنید یا دلیل نیاز نداشتن به پیگیری را بنویسید.",
       "dueFromRespondBy": "از مهلت پاسخ استعلام گرفته شده است.",
-      "noFollowup": "بدون پیگیری"
+      "noFollowup": "بدون پیگیری",
+      "expandAll": "باز کردن همه",
+      "collapseAll": "بستن همه",
+      "more": "کارهای بیشتر",
+      "textAsSent": "متن ارسال‌شده (فقط خواندنی)",
+      "recordOffer": "ثبت پیشنهاد"
     },
     "offer": {
       "record": "ثبت پیشنهاد",
@@ -1088,7 +1096,10 @@
       "files": "پیوست‌ها (PDF، اکسل، تصویر)",
       "defaultNoFollowup": "در حال مقایسهٔ پیشنهادها",
       "withdraw": "پس‌گرفتن",
-      "pastValidity": "گذشته از اعتبار"
+      "pastValidity": "گذشته از اعتبار",
+      "contact": "فرد رابط",
+      "noContact": "— بدون فرد رابط —",
+      "contactFromRfq": "پیش‌فرض: فردی که استعلام برایش فرستاده شد."
     },
     "coverage": {
       "title": "پوشش",

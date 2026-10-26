@@ -1,7 +1,7 @@
 /** Pure sourcing helpers (tested): template placeholders, pasted-table parser, import column mapping,
  * comparison flattening. They mirror the backend rules so the UI can preview before saving. */
 
-import type { ComparisonItem, ComparisonRow } from "./types";
+import type { ComparisonItem, ComparisonRow, Rfq } from "./types";
 
 // ---- message templates ---------------------------------------------------------------------------
 
@@ -177,4 +177,26 @@ export function validityTone(daysLeft: number | null): "danger" | "warning" | "n
   if (daysLeft === null) return "neutral";
   if (daysLeft < 7) return "danger";
   return daysLeft < 14 ? "warning" : "neutral";
+}
+
+// ---- RFQ tab (v0.3.2): collapsed by default once sent, active RFQs first ----------------------------------
+
+/** Draft RFQs start expanded; sent, answered, no_response, expired and cancelled ones start collapsed. */
+export function rfqDefaultOpen(status: Rfq["status"]): boolean {
+  return status === "draft";
+}
+
+/** Active = draft, or sent and still waiting for replies. */
+export function isActiveRfq(rfq: Pick<Rfq, "status">): boolean {
+  return rfq.status === "draft" || rfq.status === "sent";
+}
+
+/** Active RFQs first, finished ones after; each group newest first. */
+export function sortRfqs<T extends Pick<Rfq, "status" | "created_at">>(rfqs: T[]): T[] {
+  return [...rfqs].sort((a, b) => Number(isActiveRfq(b)) - Number(isActiveRfq(a)) || b.created_at.localeCompare(a.created_at));
+}
+
+/** Person's name in the UI language, falling back to the other one. */
+export function personName(fa: string | null | undefined, en: string | null | undefined, lang: string): string {
+  return ((lang === "fa" ? fa || en : en || fa) ?? "").trim();
 }

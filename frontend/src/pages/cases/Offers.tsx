@@ -1,6 +1,6 @@
 /** Offers: record form (item grid with keyboard navigation), list, comparison matrix, coverage. */
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { type KeyboardEvent, Fragment, useState } from "react";
+import { type KeyboardEvent, Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
@@ -11,11 +11,11 @@ import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, Input, Mod
 import { api, ApiError } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
-import { flattenComparison, validityTone } from "../../lib/sourcing";
-import type { CaseDetail, ComparisonItem, Coverage, DocumentDetail, Offer, Party, Rfq } from "../../lib/types";
+import { flattenComparison, personName, validityTone } from "../../lib/sourcing";
+import type { CaseDetail, ComparisonItem, Contact, Coverage, DocumentDetail, Offer, Party, Rfq } from "../../lib/types";
 import { PartyPicker } from "../parties/QuickLog";
 import { DueDatePicker, PartyName } from "../parties/shared";
-import { CurrencySelect, IncotermSelect, Money, OFFER_CHANNELS, StatusBadge, UnitInput, useInvalidateSourcing, useUnitLabel } from "../sourcing/shared";
+import { ContactName, CurrencySelect, IncotermSelect, Money, OFFER_CHANNELS, StatusBadge, UnitInput, useInvalidateSourcing, useUnitLabel } from "../sourcing/shared";
 
 interface Row {
   line_item_id: string;
@@ -41,8 +41,9 @@ function gridKey(e: KeyboardEvent<HTMLInputElement>, row: number, column: string
   if (next) { e.preventDefault(); next.focus(); next.select(); }
 }
 
-export function OfferForm({ caseData, onClose, onSaved }: { caseData: CaseDetail; onClose: () => void; onSaved: () => void }) {
+export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { caseData: CaseDetail; onClose: () => void; onSaved: () => void; initialPartyId?: string }) {
   const { t } = useTranslation();
+  const f = useFormat();
   const rfqs = useQuery({ queryKey: ["rfqs", caseData.id], queryFn: () => api<Rfq[]>("/api/rfqs", { query: { case_id: caseData.id } }) });
   const existing = useQuery({ queryKey: ["offers", caseData.id], queryFn: () => api<Offer[]>("/api/offers", { query: { case_id: caseData.id } }) });
   const [party, setParty] = useState<Party | null>(null);
@@ -61,6 +62,13 @@ export function OfferForm({ caseData, onClose, onSaved }: { caseData: CaseDetail
   const [due, setDue] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const recipients = (rfqs.data ?? []).flatMap((r) => r.recipients);
+  // the offer answers this RFQ recipient (if any): its contact is pre-selected (v0.3.2)
+  const recipient = recipients.find((r) => r.party_id === party?.id && ["sent", "no_response"].includes(r.status));
+  const contacts = useQuery({ queryKey: ["contacts", party?.id], queryFn: () => api<Contact[]>("/api/contacts", { query: { party_id: party!.id } }), enabled: !!party });
+  const [contactId, setContactId] = useState("");
+  useEffect(() => { setContactId(recipient?.contact_id ?? ""); }, [party?.id, recipient?.id, recipient?.contact_id]);
+  useEffect(() => { if (initialPartyId) void api<Party>(`/api/parties/${initialPartyId}`).then(setParty); }, [initialPartyId]);
+  const contactOptions = (contacts.data ?? []).filter((c) => c.status === "active" || c.id === contactId);
   const previous = (existing.data ?? []).filter((o) => o.party_id === party?.id && o.status === "active");
   const setRow = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (i === j ? { ...r, ...patch } : r)));
 
@@ -82,7 +90,7 @@ export function OfferForm({ caseData, onClose, onSaved }: { caseData: CaseDetail
           compliance_notes: header.compliance_notes || null, raw_text: header.raw_text || null,
           received_at: header.received_at ? fromDateString(header.received_at).toISOString() : null,
           supersedes_offer_id: supersedes || null, document_ids: documentIds,
-          rfq_recipient_id: recipients.find((r) => r.party_id === party!.id && ["sent", "no_response"].includes(r.status))?.id ?? null,
+          rfq_recipient_id: recipient?.id ?? null, contact_id: contactId || null,
           followup: noFollowup ? null : { action, due_on: due },
           no_followup_reason: noFollowup ? reason : null,
           items: rows.filter((r) => r.include).map((r) => ({
@@ -103,7 +111,15 @@ export function OfferForm({ caseData, onClose, onSaved }: { caseData: CaseDetail
       footer={<><Button onClick={onClose}>{t("common.cancel")}</Button>
         <Button variant="primary" busy={save.isPending} disabled={!valid} onClick={() => save.mutate()}>{t("common.save")}</Button></>}>
       <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pe-1">
-        <Field label={t("sourcing.offer.supplier")} htmlFor="ql-party"><PartyPicker value={party} onChange={(p) => { setParty(p); setSupersedes(""); }} /></Field>
+        <Field label={t("sourcing.offer.supplier")} htmlFor="ql-party"><PartyPicker value={party} onChange={(p) => { setParty(p); setSupersedes(""); setContactId(""); }} /></Field>
+        {party && (
+          <Field label={t("sourcing.offer.contact")} htmlFor="of-contact" hint={recipient?.contact_id ? t("sourcing.offer.contactFromRfq") : undefined}>
+            <Select id="of-contact" value={contactId} onChange={(e) => setContactId(e.target.value)}>
+              <option value="">{t("sourcing.offer.noContact")}</option>
+              {contactOptions.map((c) => <option key={c.id} value={c.id}>{personName(c.name_fa, c.name_en, f.lang)}{c.status === "archived" ? ` (${t("parties.archived")})` : ""}</option>)}
+            </Select>
+          </Field>
+        )}
         {recipients.length > 0 && !party && (
           <div className="flex flex-wrap gap-1.5">
             {recipients.filter((r) => r.status !== "draft").map((r) => (
@@ -195,12 +211,12 @@ export function OfferForm({ caseData, onClose, onSaved }: { caseData: CaseDetail
   );
 }
 
-export function OffersTab({ caseData, highlight }: { caseData: CaseDetail; highlight: string | null }) {
+export function OffersTab({ caseData, highlight, recordFor }: { caseData: CaseDetail; highlight: string | null; recordFor?: string | null }) {
   const { t } = useTranslation();
   const f = useFormat();
   const unitLabel = useUnitLabel();
   const invalidate = useInvalidateSourcing();
-  const [recording, setRecording] = useState(false);
+  const [recording, setRecording] = useState(!!recordFor);
   const offers = useQuery({ queryKey: ["offers", caseData.id], queryFn: () => api<Offer[]>("/api/offers", { query: { case_id: caseData.id } }) });
   const refresh = () => { void offers.refetch(); invalidate(); };
   const withdraw = useMutation({ mutationFn: (id: string) => api(`/api/offers/${id}/status`, { method: "POST", body: { status: "withdrawn" } }), onSuccess: refresh });
@@ -214,6 +230,7 @@ export function OffersTab({ caseData, highlight }: { caseData: CaseDetail; highl
       {(offers.data ?? []).map((o) => (
         <Card key={o.id} className={o.id === highlight ? "border-accent" : ""}
           title={<span className="flex flex-wrap items-center gap-2"><PartyName fa={o.party_name_fa} en={o.party_name_en} id={o.party_id} />
+            <ContactName fa={o.contact_name_fa} en={o.contact_name_en} />
             <StatusBadge group="offer" status={o.status} />{!o.valid && o.status === "active" && <Badge tone="danger">{t("sourcing.offer.pastValidity")}</Badge>}</span>}
           actions={<>
             {o.status === "active" && <Button variant="ghost" onClick={() => withdraw.mutate(o.id)}>{t("sourcing.offer.withdraw")}</Button>}
@@ -243,7 +260,7 @@ export function OffersTab({ caseData, highlight }: { caseData: CaseDetail; highl
           )}
         </Card>
       ))}
-      {recording && <OfferForm caseData={caseData} onClose={() => setRecording(false)} onSaved={refresh} />}
+      {recording && <OfferForm caseData={caseData} initialPartyId={recordFor ?? undefined} onClose={() => setRecording(false)} onSaved={refresh} />}
     </div>
   );
 }
@@ -300,6 +317,7 @@ export function ComparisonMatrix({ item, onChanged }: { item: ComparisonItem; on
                 <tr key={line.offer_item_id} className={line.selected ? "bg-success-soft" : line.lowest ? "bg-accent-soft" : ""}>
                   <td className="sticky start-0 z-10 border-b border-line bg-surface p-2">
                     <PartyName fa={line.party_name_fa} en={line.party_name_en} id={line.party_id} className="max-w-48" />
+                    <ContactName fa={line.contact_name_fa} en={line.contact_name_en} className="block max-w-48 text-xs" />
                   </td>
                   <td className="border-b border-line p-2">
                     <div className="flex flex-wrap items-center gap-1">
