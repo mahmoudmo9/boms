@@ -381,3 +381,53 @@ Routes: `/api/inquiries`, `/api/cases` (+ `/{id}/coverage`, `/{id}/comparison`),
 `/api/rfqs`, `/api/offers`, `/api/message-templates`, `/api/products`, `/api/capabilities`. Delete only when
 nothing depends on a row (409 `in_use` with counts), otherwise cancel/withdraw/archive.
 
+
+### Sourcing fixes (v0.3.1, no migration)
+
+**Item status derivation.** `sourcing.items.recompute_item_status(db, item, source, actor, today=None)` is the
+only code that sets a line item's coverage status. It is called after every mutation that can change the
+answer: offer recorded / superseded / withdrawn / reactivated / deleted / expired, `valid_until` changed,
+offer row patched (`available`, price), selection set or cleared, RFQ recipient sent / declined / replied /
+no_response / removed, RFQ cancelled / deleted, no-coverage set or cleared, and the hourly expiry job. Order:
+1. `cancelled` stays; `sold` / `delivered` / `closed` (later phases) are never touched;
+2. the selected offer row is still valid (offer `active`, not past `valid_until`, row `available`) -> `selected`;
+3. any valid available offer row -> `has_offer`;
+4. any RFQ that is not cancelled, includes the item and has a recipient `sent` or `replied` -> `rfq_sent`;
+5. otherwise `uncovered`.
+
+A selection that is no longer valid is cleared in the same transaction with an event `selection_lost`
+(`old_offer_item_id`, `cause`: withdrawn / expired / superseded / deleted / unavailable, `old_status`,
+`new_status`); another offer is never picked automatically and reactivating an offer does not restore the
+selection. `no_coverage_confirmed` is a separate flag and is not changed. Deleting a selected offer is
+therefore allowed (it used to be a 409). The command center lists items with a `selection_lost` event in the
+last 14 days that are not selected again (`sourcing.selection_lost`); `/api/cases/{id}/coverage` marks them
+(`selection_lost: true`) for the badge on the case Items tab.
+
+**Reference-counter registry.** `parties/references.py` lets later modules tell the parties module which of
+their rows point at a party or contact without parties importing their tables:
+`register_reference_counter(name, party_fn, cleanup=..., contact_fn=..., non_blocking=(...))`. Registrations
+live in each module's `references.py` and are discovered with `load_module_parts("references")` (like
+`searchable.py`). `sourcing/references.py` counts `inquiries`, `cases`, `rfq_recipients`, `offers` and
+`capabilities` per party and `rfq_recipients`, `offers` per contact. The counts are merged into the 409
+`in_use` details of party and contact deletes. Capability tags do not block a delete; the registered cleanup
+removes them (event `capabilities_removed`). A cascade party delete removes only the party's own rows
+(interactions, follow-ups, document links); with any registered blocking count it is a 409 `in_use`.
+
+**Errors.** The flush helpers (`sourcing.common.flush`, `catalog.service._flush`, `parties.service._flush`) no
+longer copy the database message into the API error: FK violations map to stable codes (`unknown_unit`,
+`unknown_reference`, `in_use` when a row is still referenced, ...) with only the constraint name as detail.
+
+**Test-data cleanup.** `DELETE /api/cases/{id}?cascade=true` with `{"confirm_title": "<exact title>"}` deletes
+the case, its line items, RFQs (+ items, recipients), offers (+ rows) and document links; files, interactions
+(their follow-ups) and the source inquiry stay. `DELETE /api/inquiries/{id}?cascade=true` with
+`{"confirm_subject": "<subject or DELETE>"}` does the same for an inquiry without a case (items, decision,
+document links). Both record an event with a full snapshot; the audit trigger records the `D` rows.
+
+**Product duplicates.** Each given name (and alias) is compared separately with `core.normalize_fa(name_fa)`,
+`core.normalize_fa(name_en)` and every alias; the greatest similarity counts and exact normalized equality is
+always a duplicate (score 1). Used by create, create-from-item and update (`PATCH /api/products/{id}` returns
+409 `possible_duplicate` with the list unless `confirm_duplicate`).
+
+**Mark as sent.** The dialog shows the follow-up that will be created (action in the recipient's language,
+due date from `respond_by`, both editable) or takes an explicit no-follow-up reason; the `rfq` event `sent`
+records `followup_id` (the follow-up row also points at the interaction) or `no_followup_reason`.

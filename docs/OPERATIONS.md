@@ -108,6 +108,14 @@ and can reset the app password. Data is never touched.
 | "Host header not allowed" | open `http://127.0.0.1:8765` (not the PC name or IP) |
 | Forgot the app password | `install.bat` → Repair → reset password |
 
+## RFQ follow-up rule (mark as sent)
+
+BOMS sends nothing; *Mark as sent* records the outgoing message and, unless you say otherwise, a follow-up.
+The dialog shows that follow-up before you confirm: action "Chase RFQ response" (in the recipient's
+language) due on the RFQ's *respond-by* date. Both can be edited. If the RFQ has no respond-by date you must
+either pick a follow-up date or tick *No follow-up* and write the reason; without either the server answers
+`next_action_required`. The RFQ history (*sent* event) records which follow-up was created.
+
 ## Manual test checklist for Windows (not yet run)
 
 These steps could not be run in the Linux build environment and must be checked once on a real
@@ -221,3 +229,15 @@ Run once on the Windows PC after `update.bat` from 0.2.1 (not yet run there):
 - [ ] Ctrl+K finds the inquiry, case, item, RFQ, offer and product (also with Arabic ي/ك); a supplier is found by its capability tag.
 - [ ] Every new page in Persian and English, light and dark: no horizontal scrolling at 1280 px.
 
+## Manual checks for v0.3.1 (sourcing fixes)
+
+Run once on the Windows PC after `update.bat` from 0.3.0 (not yet run there):
+
+- [ ] Run the 0.3.1 `scripts\update.bat`: it prints `0.3.0 -> 0.3.1`, a `pre_update` backup appears, and *Run restore test* passes afterwards (36 tables, no migration in this release).
+- [ ] **Withdraw a selected offer:** select an offer for an item, then withdraw that offer → the item shows *Selection lost, choose again* on the case Items tab, its status falls back (*Has offer* if another valid offer exists, otherwise *RFQ sent*), the case gate lists it again and Command Center → *Sourcing* → *Selections lost* links to it. Reactivating the offer gives *Has offer*, not *Selected*.
+- [ ] **Type a reason in each dialog** (type, do not paste, a few words with spaces): mark no coverage, cancel item, reject inquiry, change selection, cancel follow-up, mark as sent (action and *No follow-up* reason), template editor, new product. The cursor stays in the field and the whole text arrives.
+- [ ] **Mark as sent** on an RFQ with a respond-by date shows "Will create the follow-up … due …"; on an RFQ without one the button stays disabled until a date is chosen or *No follow-up* has a reason.
+- [ ] **Delete a supplier that has RFQs:** *Delete* and the danger-zone cascade both show "Cannot delete, still in use" with RFQ recipients / offers counts — no technical database text, no error page. A supplier with only capability tags deletes and its tags are gone.
+- [ ] **Case danger zone** (case → History): the button stays disabled until the exact title is typed; afterwards the case, its RFQs and offers are gone, the documents still open from *Documents* and the supplier's sent/received interactions are still there.
+- [ ] **Duplicate product check:** with an existing product "پلی‌اتیلن سنگین / HDPE X", creating "پلي‌اتيلن سنگين" (Arabic ي/ك, Persian name only) warns; "hdpe x" alone warns; an unrelated name does not; *confirm* saves anyway.
+- [ ] **RFQ builder in Persian and English:** the language select shows "English"/"فارسی" in full next to the channel select; at a narrow window the two selects wrap instead of being cut.
