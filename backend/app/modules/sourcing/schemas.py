@@ -331,6 +331,14 @@ class NoteIn(InputModel):
     note: Text500 | None = None
 
 
+class ConfirmTitleIn(InputModel):
+    confirm_title: Text500 | None = None
+
+
+class ConfirmSubjectIn(InputModel):
+    confirm_subject: Text500 | None = None
+
+
 class TemplateIn(InputModel):
     language: Lang
     channel: TemplateChannel

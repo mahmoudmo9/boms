@@ -1,7 +1,7 @@
 """Supplier offers (responses to RFQs, or unsolicited).
 
 Recording an offer creates an INCOMING interaction for the supplier (parties public service, with the Phase 3
-next-action rule), moves the offered items to ``has_offer``, marks the RFQ recipient ``replied`` and updates the
+next-action rule), recomputes the offered items' status, marks the RFQ recipient ``replied`` and updates the
 RFQ status. A newer offer can supersede an older one of the same supplier; the old one stays visible.
 """
 
@@ -21,7 +21,7 @@ from app.modules.sourcing import items as items_service
 from app.modules.sourcing import rfq as rfq_service
 from app.modules.sourcing.common import diff, document_count, flush, jsonable, row_snapshot
 from app.modules.sourcing.inquiries import get_case
-from app.modules.sourcing.models import LineItem, OfferItem, Rfq, RfqRecipient, SupplierOffer
+from app.modules.sourcing.models import OfferItem, Rfq, RfqRecipient, SupplierOffer
 
 CHANNEL_TO_INTERACTION = {"email": "email", "whatsapp": "whatsapp", "wechat": "other", "phone": "call",
                           "letter": "other", "other": "other"}
@@ -124,10 +124,6 @@ def record_offer(db: Session, data: dict, source: str, actor: str | None = None)
     events.record(db, "case", case.id, "offer_add", jsonable({"offer_id": offer.id, "party_id": party.id}), source,
                   actor=actor)
 
-    for row in rows:
-        if row.get("available", True):
-            items_service.set_status(db, items_service.get_item(db, row["line_item_id"]), "has_offer", source, actor,
-                                     reason=f"offer {offer.id}")
     if recipient is not None and recipient.status in ("sent", "no_response", "draft"):
         rfq_service.set_recipient_status(db, recipient, "replied", source, actor, f"offer {offer.id}")
         rfq_service.refresh_status(db, rfq_service.get_rfq(db, recipient.rfq_id), source, actor)
@@ -136,6 +132,10 @@ def record_offer(db: Session, data: dict, source: str, actor: str | None = None)
         flush(db, "invalid_offer")
         events.record(db, "offer", previous.id, "superseded", jsonable({"superseded_by": offer.id}), source,
                       actor=actor)
+    affected = [row["line_item_id"] for row in rows]
+    if previous is not None:
+        affected += [r.line_item_id for r in offer_items(db, previous.id)]
+    items_service.recompute_items(db, affected, source, actor)
     for document_id in dict.fromkeys(data.get("document_ids") or []):
         parties.link_document(db, "offer", offer.id, document_id, source, actor)
     return offer
@@ -157,6 +157,8 @@ def update_offer(db: Session, offer_id: uuid.UUID, changes: dict, source: str, a
     if changed:
         flush(db, "invalid_offer")
         events.record(db, "offer", offer.id, "update", jsonable({"changes": changed}), source, actor=actor)
+        if "valid_until" in changed:
+            items_service.recompute_items(db, [r.line_item_id for r in offer_items(db, offer.id)], source, actor)
     return offer
 
 
@@ -175,6 +177,7 @@ def update_offer_item(db: Session, offer_item_id: uuid.UUID, changes: dict, sour
         events.record(db, "offer", row.offer_id, "item_update",
                       jsonable({"offer_item_id": row.id, "line_item_id": row.line_item_id, "changes": changed}),
                       source, actor=actor)
+        items_service.recompute_items(db, [row.line_item_id], source, actor)
     return row
 
 
@@ -187,16 +190,17 @@ def set_offer_status(db: Session, offer_id: uuid.UUID, status: str, note: str | 
         flush(db, "invalid_offer")
         events.record(db, "offer", offer.id, "status", {"old_status": old, "new_status": status, "note": note},
                       source, actor=actor)
+        # reactivation recomputes too; a lost selection is NOT restored
+        items_service.recompute_items(db, [r.line_item_id for r in offer_items(db, offer.id)], source, actor)
     return offer
 
 
 def delete_offer(db: Session, offer_id: uuid.UUID, source: str, actor: str | None = None) -> None:
-    """Only when none of its items is selected, nothing supersedes it and no document is attached."""
+    """Only when nothing supersedes it and no document is attached. A selection of one of its rows is cleared
+    (event ``selection_lost``, cause ``deleted``) and the items' status is recomputed."""
     offer = get_offer(db, offer_id)
     rows = offer_items(db, offer.id)
     counts = {
-        "selected_items": len(db.scalars(select(LineItem.id).where(
-            LineItem.selected_offer_item_id.in_([r.id for r in rows] or [uuid.uuid4()]))).all()),
         "superseded_offers": len(db.scalars(select(SupplierOffer.id).where(
             SupplierOffer.superseded_by_id == offer.id)).all()),
         "documents": document_count(db, "offer", [offer.id]),
@@ -205,6 +209,8 @@ def delete_offer(db: Session, offer_id: uuid.UUID, source: str, actor: str | Non
         raise Conflict("in_use", "The offer is selected, superseding another offer or has documents; withdraw it",
                        counts)
     snapshot = {"offer": row_snapshot(offer, skip=("raw_norm",)), "items": [row_snapshot(r) for r in rows]}
+    items_service.recompute_items(db, [r.line_item_id for r in rows], source, actor,
+                                  exclude_offer_items={r.id for r in rows}, cause="deleted")
     for row in rows:
         db.delete(row)
     db.flush()
@@ -218,11 +224,14 @@ def expire_offers(db: Session, today: date | None = None, source: str = "worker"
     today = today or clock.today()
     rows = db.scalars(select(SupplierOffer).where(SupplierOffer.status == "active",
                                                   SupplierOffer.valid_until < today)).all()
+    affected: list[uuid.UUID] = []
     for offer in rows:
         offer.status = "expired"
         db.flush()
         events.record(db, "offer", offer.id, "status", {"old_status": "active", "new_status": "expired",
                                                         "note": "valid_until passed"}, source)
+        affected += [r.line_item_id for r in offer_items(db, offer.id)]
+    items_service.recompute_items(db, affected, source, today=today)
     return [o.id for o in rows]
 
 

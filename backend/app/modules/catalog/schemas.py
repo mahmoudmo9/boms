@@ -30,6 +30,7 @@ class ProductPatch(InputModel):
     hs_code: HsCode | None = None
     category_id: uuid.UUID | None = None
     notes: Annotated[str, Field(max_length=20000)] | None = None
+    confirm_duplicate: bool = False
 
 
 class AliasIn(InputModel):

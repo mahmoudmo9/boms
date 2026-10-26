@@ -9,6 +9,7 @@ from app.modules.parties import clock
 from app.modules.sourcing.common import jsonable
 
 EXPIRING_DAYS = 7
+SELECTION_LOST_DAYS = 14
 
 
 def summary(db: Session, today: date | None = None) -> dict:
@@ -39,6 +40,18 @@ def summary(db: Session, today: date | None = None) -> dict:
         ORDER BY o.valid_until
         """
     ), {"today": today, "until": today + timedelta(days=EXPIRING_DAYS)}).mappings().all()
+    selection_lost = db.execute(text(
+        """
+        SELECT DISTINCT ON (li.id) li.id AS item_id, li.name, li.case_id, c.title AS case_title,
+               e.occurred_at AS lost_at, e.data->>'cause' AS cause
+        FROM core.event e
+        JOIN ops.line_item li ON e.entity_type = 'line_item' AND e.entity_id = li.id::text
+        JOIN ops."case" c ON c.id = li.case_id
+        WHERE e.action = 'selection_lost' AND e.occurred_at >= :since
+          AND li.selected_offer_item_id IS NULL AND li.status <> 'cancelled'
+        ORDER BY li.id, e.occurred_at DESC
+        """
+    ), {"since": today - timedelta(days=SELECTION_LOST_DAYS)}).mappings().all()
     open_items = db.execute(text(
         """
         SELECT li.case_id, c.title AS case_title, li.status, li.no_coverage_confirmed
@@ -61,6 +74,7 @@ def summary(db: Session, today: date | None = None) -> dict:
         "offers_expiring": [{**dict(r), "days_left": (r["valid_until"] - today).days} for r in expiring],
         "cases_not_covered": sorted((c for c in cases.values() if c["not_covered"]),
                                     key=lambda c: -c["not_covered"]),
+        "selection_lost": sorted((dict(r) for r in selection_lost), key=lambda r: r["lost_at"], reverse=True),
         "coverage_status_percent": percent,
         "open_items": len(open_items),
         "open_items_with_status": with_status,

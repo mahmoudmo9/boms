@@ -5,6 +5,7 @@
 
 import uuid
 from collections import Counter
+from datetime import date
 
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
@@ -13,7 +14,7 @@ from app.core.errors import AppError, Conflict, NotFound
 from app.core.text import normalize_fa
 from app.modules.events import service as events
 from app.modules.sourcing.common import diff, document_count, flush, jsonable, row_snapshot
-from app.modules.sourcing.models import Case, Inquiry, LineItem, OfferItem, RfqItem
+from app.modules.sourcing.models import Case, Inquiry, LineItem, OfferItem, Rfq, RfqItem, RfqRecipient, SupplierOffer
 
 OPEN_CASE = "open"
 ITEM_FIELDS = ("position", "name", "description", "product_id", "quantity", "unit_code", "unit_text",
@@ -194,19 +195,80 @@ def set_no_coverage(db: Session, item_id: uuid.UUID, reason: str | None, source:
     flush(db)
     events.record(db, "line_item", item.id, "no_coverage" if confirmed else "no_coverage_clear",
                   {"reason": item.no_coverage_reason}, source, actor=actor)
+    recompute_item_status(db, item, source, actor)
     return item
 
 
-def set_status(db: Session, item: LineItem, status: str, source: str, actor: str | None, reason: str) -> None:
-    """Status driven by RFQ/offer events. Never moves an item backwards or out of cancelled/selected."""
-    order = {"uncovered": 0, "rfq_sent": 1, "has_offer": 2, "selected": 3}
-    if item.status not in order or status not in order or order[status] <= order[item.status]:
-        return
-    old = item.status
-    item.status = status
+FROZEN_STATUSES = {"cancelled", "sold", "delivered", "closed"}
+
+
+def _offer_valid(offer: SupplierOffer, today: date) -> bool:
+    return offer.status == "active" and (offer.valid_until is None or offer.valid_until >= today)
+
+
+def _lost_cause(offer_item: OfferItem | None, offer: SupplierOffer | None, today: date) -> str:
+    if offer_item is None or offer is None:
+        return "deleted"
+    if not offer_item.available:
+        return "unavailable"
+    if offer.status != "active":
+        return offer.status  # withdrawn, superseded, expired
+    return "expired" if offer.valid_until and offer.valid_until < today else "invalid"
+
+
+def recompute_item_status(db: Session, item: LineItem, source: str, actor: str | None = None, *,
+                          today: date | None = None, cause: str | None = None,
+                          exclude_offer_items: set[uuid.UUID] | None = None) -> str:
+    """The ONLY place that derives an item's coverage status (v0.3.1), in this order:
+
+    cancelled / sold / delivered / closed are never touched; a still-valid selected offer row -> selected;
+    any valid available offer row -> has_offer; any RFQ (not cancelled) whose recipient is sent or replied and
+    that includes the item -> rfq_sent; otherwise uncovered. A selection that is no longer valid is cleared
+    (event ``selection_lost``). ``exclude_offer_items`` treats rows about to be deleted as gone.
+    ``no_coverage_confirmed`` is a separate flag and is not changed here.
+    """
+    if item.status in FROZEN_STATUSES:
+        return item.status
+    from app.modules.parties import clock
+
+    today = today or clock.today()
+    exclude = exclude_offer_items or set()
+    rows = db.execute(select(OfferItem, SupplierOffer).join(SupplierOffer, SupplierOffer.id == OfferItem.offer_id)
+                      .where(OfferItem.line_item_id == item.id)).all()
+    valid = {oi.id for oi, offer in rows if oi.id not in exclude and oi.available and _offer_valid(offer, today)}
+    old_status, lost = item.status, None
+    if item.selected_offer_item_id is not None and item.selected_offer_item_id not in valid:
+        match = next(((oi, o) for oi, o in rows if oi.id == item.selected_offer_item_id), (None, None))
+        lost = {"old_offer_item_id": item.selected_offer_item_id,
+                "cause": cause or ("deleted" if item.selected_offer_item_id in exclude else _lost_cause(*match, today))}
+        item.selected_offer_item_id = None
+    if item.selected_offer_item_id is not None:
+        new_status = "selected"
+    elif valid:
+        new_status = "has_offer"
+    elif db.scalar(select(RfqRecipient.id).join(Rfq, Rfq.id == RfqRecipient.rfq_id)
+                   .join(RfqItem, RfqItem.rfq_id == Rfq.id)
+                   .where(RfqItem.line_item_id == item.id, Rfq.status != "cancelled",
+                          RfqRecipient.status.in_(("sent", "replied"))).limit(1)) is not None:
+        new_status = "rfq_sent"
+    else:
+        new_status = "uncovered"
+    item.status = new_status
     db.flush()
-    events.record(db, "line_item", item.id, "status", {"old_status": old, "new_status": status, "reason": reason},
-                  source, actor=actor)
+    if lost:
+        events.record(db, "line_item", item.id, "selection_lost", jsonable({
+            **lost, "old_status": old_status, "new_status": new_status}), source, actor=actor)
+    elif new_status != old_status:
+        events.record(db, "line_item", item.id, "status", {"old_status": old_status, "new_status": new_status,
+                                                           "reason": cause}, source, actor=actor)
+    return new_status
+
+
+def recompute_items(db: Session, item_ids, source: str, actor: str | None = None, **kwargs) -> None:
+    for item_id in dict.fromkeys(item_ids):
+        item = db.get(LineItem, item_id)
+        if item is not None:
+            recompute_item_status(db, item, source, actor, **kwargs)
 
 
 def spec_key_suggestions(db: Session, q: str | None = None, limit: int = 20) -> list[str]:

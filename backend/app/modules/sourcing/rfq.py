@@ -2,7 +2,7 @@
 
 BOMS never sends anything. "Mark as sent" records the fact: the recipient becomes ``sent``, an OUTGOING interaction
 (parties public service) is created with the exact text and a follow-up (default "Chase RFQ response" on
-``respond_by``), and the RFQ's items move from ``uncovered`` to ``rfq_sent``.
+``respond_by``), and the RFQ's items' status is recomputed (``uncovered`` -> ``rfq_sent``).
 """
 
 import io
@@ -302,6 +302,11 @@ def remove_recipient(db: Session, recipient_id: uuid.UUID, source: str, actor: s
     db.delete(recipient)
     flush(db, "in_use")
     events.record(db, "rfq", recipient.rfq_id, "recipient_remove", {"deleted": snapshot}, source, actor=actor)
+    _recompute(db, recipient.rfq_id, source, actor)
+
+
+def _recompute(db: Session, rfq_id: uuid.UUID, source: str, actor: str | None, **kwargs) -> None:
+    items_service.recompute_items(db, [item.id for _, item in rfq_items(db, rfq_id)], source, actor, **kwargs)
 
 
 # ---- mark sent / decline / status -----------------------------------------------------------
@@ -334,17 +339,17 @@ def mark_sent(db: Session, recipient_id: uuid.UUID, data: dict, source: str, act
     subject = recipient.subject or rfq.title
     if recipient.channel == "letter" and not recipient.subject:
         subject = f"Letter: {rfq.title}"
-    interaction, _ = party_interactions.create_interaction(db, {
+    interaction, created_followup = party_interactions.create_interaction(db, {
         "party_id": recipient.party_id, "contact_id": recipient.contact_id, "channel": channel, "direction": "out",
         "occurred_at": sent_at, "subject": subject, "body": recipient.message_text, "followup": followup,
         "no_followup_reason": reason}, source, actor)
     recipient.status, recipient.sent_at, recipient.interaction_id = "sent", sent_at, interaction.id
     flush(db, "invalid_recipient")
-    for _, item in rfq_items(db, rfq.id):
-        items_service.set_status(db, item, "rfq_sent", source, actor, reason=f"rfq {rfq.id} sent")
     events.record(db, "rfq", rfq.id, "sent", jsonable({
         "recipient_id": recipient.id, "party_id": recipient.party_id, "channel": recipient.channel,
-        "interaction_id": interaction.id, "sent_at": sent_at}), source, actor=actor)
+        "interaction_id": interaction.id, "followup_id": created_followup.id if created_followup else None,
+        "no_followup_reason": reason, "sent_at": sent_at}), source, actor=actor)
+    _recompute(db, rfq.id, source, actor)
     refresh_status(db, rfq, source, actor)
     return recipient
 
@@ -359,6 +364,7 @@ def set_recipient_status(db: Session, recipient: RfqRecipient, status: str, sour
     events.record(db, "rfq", recipient.rfq_id, "recipient_status", jsonable({
         "recipient_id": recipient.id, "party_id": recipient.party_id, "old_status": old, "new_status": status,
         "reason": reason}), source, actor=actor)
+    _recompute(db, recipient.rfq_id, source, actor)
 
 
 def decline(db: Session, recipient_id: uuid.UUID, note: str | None, source: str, actor: str | None = None) -> RfqRecipient:
@@ -397,6 +403,7 @@ def cancel_rfq(db: Session, rfq_id: uuid.UUID, reason: str, source: str, actor: 
         rfq.status = "cancelled"
         flush(db)
         events.record(db, "rfq", rfq.id, "cancel", {"old_status": old, "reason": reason}, source, actor=actor)
+        _recompute(db, rfq.id, source, actor)
     return rfq
 
 
@@ -410,6 +417,7 @@ def delete_rfq(db: Session, rfq_id: uuid.UUID, source: str, actor: str | None = 
         raise Conflict("in_use", "The RFQ was sent or answered; cancel it instead", counts)
     snapshot = {"rfq": row_snapshot(rfq), "items": [row_snapshot(i) for i, _ in rfq_items(db, rfq.id)],
                 "recipients": [row_snapshot(r) for r in recipients]}
+    affected = [item.id for _, item in rfq_items(db, rfq.id)]
     for row, _ in rfq_items(db, rfq.id):
         db.delete(row)
     for row in recipients:
@@ -418,6 +426,7 @@ def delete_rfq(db: Session, rfq_id: uuid.UUID, source: str, actor: str | None = 
     db.delete(rfq)
     flush(db, "in_use")
     events.record(db, "rfq", rfq_id, "delete", {"deleted": snapshot}, source, actor=actor)
+    items_service.recompute_items(db, affected, source, actor)
 
 
 def expire_no_reply(db: Session, today: date | None = None, source: str = "worker") -> list[uuid.UUID]:

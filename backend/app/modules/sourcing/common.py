@@ -31,21 +31,31 @@ def diff(obj, changes: dict) -> dict:
 
 
 def flush(db: Session, code: str = "invalid_data") -> None:
-    """Flush; constraint errors become 422 (unknown reference / check) or 409 (unique)."""
+    """Flush; constraint errors become 422 (unknown reference / check) or 409 (unique / still referenced).
+
+    The database's own message is never copied into the API error; only stable codes and the constraint name.
+    """
     try:
         db.flush()
     except IntegrityError as exc:
         db.rollback()
-        detail = str(exc.orig).splitlines()[0] if exc.orig else str(exc)
+        diag = getattr(exc.orig, "diag", None)
+        detail = (getattr(diag, "message_detail", None) or "") if diag else ""
+        constraint = getattr(diag, "constraint_name", None) if diag else None
         sqlstate = getattr(exc.orig, "sqlstate", None)
+        info = {"constraint": constraint} if constraint else {}
         if sqlstate == "23503":  # foreign key
+            if "still referenced" in detail:
+                table = detail.rsplit("table", 1)[-1].strip(' ".')
+                raise Conflict("in_use", "The record is still referenced by other records",
+                               {**info, "referenced_by": table}) from None
             for key, (fk_code, message) in FK_MESSAGES.items():
-                if key in detail:
-                    raise AppError(fk_code, message, {"detail": detail}, status=422) from None
-            raise AppError("unknown_reference", detail, status=422) from None
+                if f'table "{key}"' in detail:
+                    raise AppError(fk_code, message, info, status=422) from None
+            raise AppError("unknown_reference", "A referenced record does not exist", info, status=422) from None
         if sqlstate == "23514":  # check
-            raise AppError(code, detail, status=422) from None
-        raise Conflict(code, detail) from None
+            raise AppError(code, "The data violates a rule", info, status=422) from None
+        raise Conflict(code, "The data conflicts with an existing record", info) from None
 
 
 def row_snapshot(obj, skip: tuple[str, ...] = ()) -> dict:

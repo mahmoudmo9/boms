@@ -194,11 +194,8 @@ def select_offer(db: Session, item_id: uuid.UUID, offer_item_id: uuid.UUID | Non
                            {"status": offer.status, "valid_until": str(offer.valid_until)})
     item.selected_offer_item_id = offer_item_id
     old_status = item.status
-    if offer_item_id is not None:
-        item.status = "selected"
-    elif item.status == "selected":
-        item.status = "has_offer"
     flush(db, "invalid_item")
+    items_service.recompute_item_status(db, item, source, actor, cause="select_offer" if offer_item_id else "unselect_offer")
     events.record(db, "line_item", item.id, "select_offer" if offer_item_id else "unselect_offer", jsonable({
         "old_offer_item_id": old, "new_offer_item_id": offer_item_id, "reason": reason,
         "old_status": old_status, "new_status": item.status}), source, actor=actor)

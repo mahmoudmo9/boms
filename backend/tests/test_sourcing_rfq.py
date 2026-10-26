@@ -391,8 +391,11 @@ def test_comparison_and_selection_via_api(client):
                   "old_status": "selected", "new_status": "selected"}
     sel = client.get(f"/api/cases/{case['id']}/comparison").json()["items"][0]
     assert [r["offer_item_id"] for g in sel["groups"] for u in g["unit_groups"] for r in u["rows"] if r["selected"]] == [ia]
-    r = client.delete(f"/api/offers/{oa['id']}")
-    assert r.status_code == 409 and r.json()["error"]["details"]["selected_items"] == 1
+    # v0.3.1: deleting the selected offer clears the selection (selection_lost) instead of blocking
+    assert client.delete(f"/api/offers/{oa['id']}").status_code == 204
+    lost = events(client, "line_item", item["id"], "selection_lost")[0]["data"]
+    assert lost["old_offer_item_id"] == ia and lost["cause"] == "deleted" and lost["new_status"] == "has_offer"
+    assert client.get(f"/api/line-items/{item['id']}").json()["selected_offer_item_id"] is None
     assert client.post(f"/api/offers/{oc['id']}/status", json={"status": "withdrawn"}).json()["status"] == "withdrawn"
     assert client.delete(f"/api/offers/{od['id']}").status_code == 204
 

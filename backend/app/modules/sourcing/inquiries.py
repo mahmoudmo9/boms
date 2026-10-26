@@ -19,7 +19,18 @@ from app.modules.parties import interactions as party_interactions
 from app.modules.parties import service as parties
 from app.modules.sourcing import items as items_service
 from app.modules.sourcing.common import diff, document_count, flush, jsonable, row_snapshot
-from app.modules.sourcing.models import Case, Decision, Inquiry, LineItem, PaymentTerm, Rfq, SupplierOffer
+from app.modules.sourcing.models import (
+    Case,
+    Decision,
+    Inquiry,
+    LineItem,
+    OfferItem,
+    PaymentTerm,
+    Rfq,
+    RfqItem,
+    RfqRecipient,
+    SupplierOffer,
+)
 
 HARD_CHECKS = ("feasible_sourcing", "exposure_acceptable", "requirements_ok")
 INTERACTION_TO_INQUIRY_CHANNEL = {"whatsapp": "whatsapp", "call": "phone", "email": "email",
@@ -166,6 +177,91 @@ def delete_inquiry(db: Session, inquiry_id: uuid.UUID, source: str, actor: str |
     db.delete(row)
     flush(db, "in_use")
     events.record(db, "inquiry", inquiry_id, "delete", {"deleted": snapshot}, source, actor=actor)
+
+
+def _unlink_all(db: Session, entity_type: str, ids: list, source: str, actor: str | None) -> list[dict]:
+    """Remove the document links of these rows (the files stay); return them for the snapshot."""
+    links = parties.linked_documents(db, entity_type, [str(i) for i in ids])
+    for link in links:
+        parties.unlink_document(db, entity_type, link["entity_id"], link["link_id"], source, actor)
+    return jsonable(links)
+
+
+def cascade_delete_inquiry(db: Session, inquiry_id: uuid.UUID, confirm_subject: str | None, source: str,
+                           actor: str | None = None) -> dict:
+    """Test-data cleanup: an inquiry WITHOUT a case, with its items, decision and document links (files stay).
+
+    Needs the exact subject (or the literal ``DELETE`` when it has none). The source interaction stays.
+    """
+    row = get_inquiry(db, inquiry_id)
+    if case_of(db, row.id) is not None:
+        raise Conflict("in_use", "The inquiry has a case; delete the case first", {"cases": 1})
+    expected = (row.subject or "").strip() or "DELETE"
+    if (confirm_subject or "").strip() != expected:
+        raise AppError("confirm_subject_mismatch", "Type the exact inquiry subject to confirm", status=422)
+    item_rows = items_service.items_of(db, inquiry_id=row.id)
+    decision = get_decision(db, row.id)
+    snapshot = {"inquiry": row_snapshot(row), "items": [row_snapshot(i) for i in item_rows],
+                "decision": row_snapshot(decision) if decision else None}
+    snapshot["document_links"] = (_unlink_all(db, "inquiry", [row.id], source, actor)
+                                  + _unlink_all(db, "line_item", [i.id for i in item_rows], source, actor))
+    for item in item_rows:
+        db.delete(item)
+    if decision:
+        db.delete(decision)
+    flush(db, "in_use")
+    db.delete(row)
+    flush(db, "in_use")
+    counts = {"items": len(item_rows), "documents": len(snapshot["document_links"])}
+    events.record(db, "inquiry", inquiry_id, "delete", {"cascade": True, "counts": counts, "deleted": snapshot},
+                  source, actor=actor)
+    return counts
+
+
+def cascade_delete_case(db: Session, case_id: uuid.UUID, confirm_title: str | None, source: str,
+                        actor: str | None = None) -> dict:
+    """Test-data cleanup: the case with its line items, RFQs, recipients, offers, offer items and document links.
+
+    Needs the exact title. Files and interactions (from sends/offers) stay; the inquiry, if any, stays.
+    """
+    case = get_case(db, case_id)
+    if (confirm_title or "").strip() != case.title.strip():
+        raise AppError("confirm_title_mismatch", "Type the exact case title to confirm", status=422)
+    item_rows = list(db.scalars(select(LineItem).where(LineItem.case_id == case.id)))
+    rfqs = list(db.scalars(select(Rfq).where(Rfq.case_id == case.id)))
+    rfq_ids = [r.id for r in rfqs]
+    rfq_item_rows = list(db.scalars(select(RfqItem).where(RfqItem.rfq_id.in_(rfq_ids)))) if rfq_ids else []
+    recipients = list(db.scalars(select(RfqRecipient).where(RfqRecipient.rfq_id.in_(rfq_ids)))) if rfq_ids else []
+    offer_rows = list(db.scalars(select(SupplierOffer).where(SupplierOffer.case_id == case.id)))
+    offer_ids = [o.id for o in offer_rows]
+    offer_item_rows = (list(db.scalars(select(OfferItem).where(OfferItem.offer_id.in_(offer_ids))))
+                       if offer_ids else [])
+    snapshot = {
+        "case": row_snapshot(case), "items": [row_snapshot(i) for i in item_rows],
+        "rfqs": [row_snapshot(r) for r in rfqs], "rfq_items": [row_snapshot(r) for r in rfq_item_rows],
+        "recipients": [row_snapshot(r) for r in recipients],
+        "offers": [row_snapshot(o, skip=("raw_norm",)) for o in offer_rows],
+        "offer_items": [row_snapshot(o) for o in offer_item_rows],
+    }
+    snapshot["document_links"] = (_unlink_all(db, "case", [case.id], source, actor)
+                                  + _unlink_all(db, "line_item", [i.id for i in item_rows], source, actor)
+                                  + _unlink_all(db, "offer", offer_ids, source, actor))
+    for item in item_rows:
+        item.selected_offer_item_id = None
+    for offer in offer_rows:
+        offer.superseded_by_id = None
+    flush(db, "in_use")
+    for group in (offer_item_rows, offer_rows, rfq_item_rows, recipients, rfqs, item_rows):
+        for row in group:
+            db.delete(row)
+        flush(db, "in_use")
+    db.delete(case)
+    flush(db, "in_use")
+    counts = {"items": len(item_rows), "rfqs": len(rfqs), "recipients": len(recipients), "offers": len(offer_rows),
+              "offer_items": len(offer_item_rows), "documents": len(snapshot["document_links"])}
+    events.record(db, "case", case_id, "delete", {"cascade": True, "counts": counts, "deleted": snapshot}, source,
+                  actor=actor)
+    return counts
 
 
 # ---- decision -----------------------------------------------------------------------------------

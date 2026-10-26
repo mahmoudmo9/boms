@@ -23,17 +23,26 @@ FIELDS = ("name_fa", "name_en", "kind_note", "default_unit_code", "hs_code", "ca
 
 
 def _flush(db: Session, code: str) -> None:
+    """Constraint errors -> stable codes; the database message is never copied into the API error."""
     try:
         db.flush()
     except IntegrityError as exc:
         db.rollback()
-        detail = str(exc.orig).splitlines()[0] if exc.orig else str(exc)
+        diag = getattr(exc.orig, "diag", None)
+        detail = (getattr(diag, "message_detail", None) or "") if diag else ""
+        constraint = getattr(diag, "constraint_name", None) if diag else None
+        info = {"constraint": constraint} if constraint else {}
         if getattr(exc.orig, "sqlstate", None) == "23503":
-            key = "unknown_unit" if "unit" in detail else "unknown_category" if "category" in detail else "unknown_reference"
-            raise AppError(key, detail, status=422) from None
+            if "still referenced" in detail:
+                raise Conflict("in_use", "The record is still referenced by other records", info) from None
+            if 'table "unit"' in detail:
+                raise AppError("unknown_unit", "Unknown unit", info, status=422) from None
+            if "category" in detail:
+                raise AppError("unknown_category", "Unknown category", info, status=422) from None
+            raise AppError("unknown_reference", "A referenced record does not exist", info, status=422) from None
         if getattr(exc.orig, "sqlstate", None) == "23514":
-            raise AppError(code, detail, status=422) from None
-        raise Conflict(code, detail) from None
+            raise AppError(code, "The data violates a rule", info, status=422) from None
+        raise Conflict(code, "The data conflicts with an existing record", info) from None
 
 
 def _diff(obj, changes: dict) -> dict:
@@ -77,7 +86,12 @@ def aliases_of(db: Session, product_ids: list[uuid.UUID]) -> dict[uuid.UUID, lis
 
 
 def find_duplicates(db: Session, names: list[str], exclude: uuid.UUID | None = None) -> list[dict]:
-    """Active products whose name or an alias is similar (pg_trgm) to any of ``names``."""
+    """Active products similar (pg_trgm) to any of ``names``.
+
+    Each provided name is compared SEPARATELY with the stored Persian name, the English name and every alias
+    (all through ``core.normalize_fa``); the greatest similarity counts. Exact normalized equality with any of
+    them is always a duplicate (score 1).
+    """
     found: dict[uuid.UUID, dict] = {}
     for name in names:
         needle = normalize_fa(name or "") or ""
@@ -85,14 +99,22 @@ def find_duplicates(db: Session, names: list[str], exclude: uuid.UUID | None = N
             continue
         rows = db.execute(text(
             """
-            SELECT p.id, p.name_fa, p.name_en, greatest(similarity(p.name_norm, :n), coalesce(a.score, 0)) AS score,
-                   CASE WHEN coalesce(a.score, 0) > similarity(p.name_norm, :n) THEN 'alias' ELSE 'name' END AS reason
-            FROM core.product p
-            LEFT JOIN LATERAL (SELECT max(similarity(alias_norm, :n)) AS score FROM core.product_alias
-                               WHERE product_id = p.id) a ON true
-            WHERE p.status = 'active' AND (CAST(:ex AS uuid) IS NULL OR p.id <> CAST(:ex AS uuid))
-              AND (similarity(p.name_norm, :n) >= :t OR coalesce(a.score, 0) >= :t
-                   OR p.name_norm = :n)
+            WITH c AS (
+                SELECT p.id, p.name_fa, p.name_en,
+                       coalesce(similarity(core.normalize_fa(p.name_fa), :n), 0) AS s_fa,
+                       coalesce(similarity(core.normalize_fa(p.name_en), :n), 0) AS s_en,
+                       coalesce(a.score, 0) AS s_alias,
+                       (core.normalize_fa(p.name_fa) = :n OR core.normalize_fa(p.name_en) = :n
+                        OR coalesce(a.exact, false)) AS exact
+                FROM core.product p
+                LEFT JOIN LATERAL (SELECT max(similarity(alias_norm, :n)) AS score, bool_or(alias_norm = :n) AS exact
+                                   FROM core.product_alias WHERE product_id = p.id) a ON true
+                WHERE p.status = 'active' AND (CAST(:ex AS uuid) IS NULL OR p.id <> CAST(:ex AS uuid))
+            )
+            SELECT id, name_fa, name_en,
+                   CASE WHEN exact THEN 1 ELSE greatest(s_fa, s_en, s_alias) END AS score,
+                   CASE WHEN s_alias > greatest(s_fa, s_en) THEN 'alias' ELSE 'name' END AS reason
+            FROM c WHERE exact OR greatest(s_fa, s_en, s_alias) >= :t
             ORDER BY score DESC LIMIT 10
             """
         ), {"n": needle, "t": DUPLICATE_SIMILARITY, "ex": str(exclude) if exclude else None}).all()
@@ -128,11 +150,18 @@ def create_product(db: Session, data: dict, source: str, actor: str | None = Non
 
 def update_product(db: Session, product_id: uuid.UUID, changes: dict, source: str, actor: str | None = None) -> Product:
     product = get_product(db, product_id)
+    confirm_duplicate = changes.pop("confirm_duplicate", False)
     changes = _clean({k: v for k, v in changes.items() if k in FIELDS})
     name_fa = changes.get("name_fa", product.name_fa) if "name_fa" in changes else product.name_fa
     name_en = changes.get("name_en", product.name_en) if "name_en" in changes else product.name_en
     if not (name_fa or name_en):
         raise AppError("name_required", "A Persian or English name is required", status=422)
+    renamed = [changes[k] for k in ("name_fa", "name_en") if k in changes and changes[k] != getattr(product, k)]
+    if renamed and not confirm_duplicate:
+        duplicates = find_duplicates(db, renamed, exclude=product.id)
+        if duplicates:
+            raise Conflict("possible_duplicate", "Similar products exist; confirm to save anyway",
+                           {"possible_duplicates": jsonable(duplicates)})
     changed = _diff(product, changes)
     if changed:
         _flush(db, "invalid_product")

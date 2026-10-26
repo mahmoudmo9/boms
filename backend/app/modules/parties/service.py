@@ -17,7 +17,7 @@ from app.core.text import WORD_SIMILARITY, normalize_fa
 from app.modules.documents import service as documents
 from app.modules.documents.models import Document, DocumentLink
 from app.modules.events import service as events
-from app.modules.parties import clock
+from app.modules.parties import clock, references
 from app.modules.parties.models import (
     Contact,
     ContactMethod,
@@ -129,14 +129,22 @@ def create_party(db: Session, data: dict, source: str, actor: str | None = None)
 
 
 def _flush(db: Session, code: str) -> None:
+    """Constraint errors -> stable codes; the database message is never copied into the API error."""
     try:
         db.flush()
     except IntegrityError as exc:
         db.rollback()
-        detail = str(exc.orig).splitlines()[0] if exc.orig else str(exc)
-        if "foreign key" in detail.lower() and "country" in detail.lower():
-            raise AppError("unknown_country", "Unknown country code", status=422) from None
-        raise Conflict(code, detail) from None
+        diag = getattr(exc.orig, "diag", None)
+        detail = (getattr(diag, "message_detail", None) or "") if diag else ""
+        constraint = getattr(diag, "constraint_name", None) if diag else None
+        info = {"constraint": constraint} if constraint else {}
+        if getattr(exc.orig, "sqlstate", None) == "23503":
+            if "still referenced" in detail:
+                raise Conflict("in_use", "The record is still referenced by other records", info) from None
+            if "country" in detail.lower():
+                raise AppError("unknown_country", "Unknown country code", status=422) from None
+            raise AppError("unknown_reference", "A referenced record does not exist", info, status=422) from None
+        raise Conflict(code, "The data conflicts with an existing record", info) from None
 
 
 def update_party(db: Session, party_id: uuid.UUID, changes: dict, source: str, actor: str | None = None) -> Party:
@@ -498,8 +506,9 @@ def delete_method(db: Session, method_id: uuid.UUID, source: str, actor: str | N
 def delete_contact(db: Session, contact_id: uuid.UUID, source: str, actor: str | None = None) -> None:
     contact = get_contact(db, contact_id)
     used = db.scalar(select(func.count()).select_from(Interaction).where(Interaction.contact_id == contact.id)) or 0
-    if used:
-        raise Conflict("in_use", "The contact is referenced by interactions", {"interactions": used})
+    counts = {"interactions": used, **references.contact_counts(db, contact.id)}
+    if any(counts.values()):
+        raise Conflict("in_use", "The contact is referenced by interactions, RFQs or offers", counts)
     methods = list(db.scalars(select(ContactMethod).where(ContactMethod.contact_id == contact.id)))
     snapshot = {**_row(contact), "methods": [_row(m) for m in methods]}
     for method in methods:
@@ -512,6 +521,9 @@ def delete_contact(db: Session, contact_id: uuid.UUID, source: str, actor: str |
                   actor=actor)
 
 
+OWN_COUNTS = ("interactions", "followups", "documents")  # a cascade delete removes these; registered counts block
+
+
 def dependency_counts(db: Session, party_id: uuid.UUID) -> dict[str, int]:
     interaction_ids = [str(i) for i in db.scalars(select(Interaction.id).where(Interaction.party_id == party_id))]
     docs = db.scalar(select(func.count()).select_from(DocumentLink).where(
@@ -521,6 +533,7 @@ def dependency_counts(db: Session, party_id: uuid.UUID) -> dict[str, int]:
         "interactions": len(interaction_ids),
         "followups": db.scalar(select(func.count()).select_from(Followup).where(Followup.party_id == party_id)) or 0,
         "documents": docs,
+        **references.party_counts(db, party_id),
     }
 
 
@@ -533,12 +546,16 @@ def delete_party(db: Session, party_id: uuid.UUID, source: str, actor: str | Non
     """
     party = get_party(db, party_id)
     counts = dependency_counts(db, party_id)
+    blocking = references.blocking(counts)
     if cascade:
         names = {(party.name_fa or "").strip(), (party.name_en or "").strip()} - {""}
         if (confirm_name or "").strip() not in names:
             raise AppError("confirm_name_mismatch", "Type the exact party name to confirm", status=422)
-    elif any(counts.values()):
-        raise Conflict("in_use", "The party has interactions, follow-ups or documents", counts)
+        if any(k not in OWN_COUNTS for k in blocking):
+            raise Conflict("in_use", "The party has inquiries, cases, RFQs or offers; remove those records first",
+                           counts)
+    elif blocking:
+        raise Conflict("in_use", "The party has interactions, follow-ups, documents or sourcing records", counts)
 
     contacts = list(db.scalars(select(Contact).where(Contact.party_id == party_id)))
     methods = list(db.scalars(select(ContactMethod).where(ContactMethod.contact_id.in_([c.id for c in contacts]))))
@@ -561,10 +578,11 @@ def delete_party(db: Session, party_id: uuid.UUID, source: str, actor: str | Non
             documents.unlink(db, link["document_id"], link["link_id"], source=source, actor=actor)
         for row in followups:
             db.delete(row)
-        db.flush()
+        _flush(db, "in_use")
         for row in interactions:
             db.delete(row)
-        db.flush()
+        _flush(db, "in_use")
+    references.cleanup_party(db, party_id, source, actor)
     for row in methods:
         db.delete(row)
     db.flush()

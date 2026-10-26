@@ -57,6 +57,10 @@ def test_delete_method_always_allowed_with_snapshot_and_audit(client, db):
     assert audit_ops(db, "core.contact_method", method["id"]) == ["I", "D"]
 
 
+# v0.3.1: sourcing registers its counts with parties.references
+NO_SOURCING = {"inquiries": 0, "cases": 0, "rfq_recipients": 0, "offers": 0, "capabilities": 0}
+
+
 def test_delete_contact_allowed_and_blocked(client, db):
     party = make_party(client)
     free = contact(client, party["id"], [{"type": "phone", "value": number()}])
@@ -72,7 +76,7 @@ def test_delete_contact_allowed_and_blocked(client, db):
     log(client, party["id"], contact_id=used["id"], no_followup_reason="fyi")
     r = delete(client, f"/api/contacts/{used['id']}")
     assert r.status_code == 409
-    assert r.json()["error"]["code"] == "in_use" and r.json()["error"]["details"] == {"interactions": 2}
+    assert r.json()["error"]["code"] == "in_use" and r.json()["error"]["details"] == {"interactions": 2, "rfq_recipients": 0, "offers": 0}
 
 
 def test_delete_party_allowed_with_contacts_roles_and_snapshot(client, db):
@@ -80,7 +84,7 @@ def test_delete_party_allowed_with_contacts_roles_and_snapshot(client, db):
     c = contact(client, party["id"], [{"type": "whatsapp", "value": number()}])
     r = delete(client, f"/api/parties/{party['id']}")
     assert r.status_code == 200, r.text
-    assert r.json()["counts"] == {"interactions": 0, "followups": 0, "documents": 0}
+    assert r.json()["counts"] == {"interactions": 0, "followups": 0, "documents": 0, **NO_SOURCING}
     assert client.get(f"/api/parties/{party['id']}").status_code == 404
     ev = events(client, "party", party["id"], "delete")[0]
     snap = ev["data"]["deleted"]
@@ -98,7 +102,7 @@ def test_delete_party_blocked_counts(client):
     r = delete(client, f"/api/parties/{party['id']}")
     assert r.status_code == 409
     assert r.json()["error"]["code"] == "in_use"
-    assert r.json()["error"]["details"] == {"interactions": 1, "followups": 1, "documents": 1}
+    assert r.json()["error"]["details"] == {"interactions": 1, "followups": 1, "documents": 1, **NO_SOURCING}
     assert client.get(f"/api/parties/{party['id']}").status_code == 200
 
 
@@ -116,7 +120,7 @@ def test_cascade_delete_needs_exact_name_and_snapshots_interactions(client, db):
     assert delete(client, url).status_code == 422
     r = delete(client, url, json={"confirm_name": name})
     assert r.status_code == 200, r.text
-    assert r.json()["counts"] == {"interactions": 1, "followups": 1, "documents": 1}
+    assert r.json()["counts"] == {"interactions": 1, "followups": 1, "documents": 1, **NO_SOURCING}
     snap = events(client, "party", party["id"], "delete")[0]["data"]["deleted"]
     (i,) = snap["interactions"]
     assert (i["subject"], i["body"], i["channel"], i["direction"]) == ("Quote", "pasted text", "email", "out")

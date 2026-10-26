@@ -3,7 +3,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Query, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -28,6 +28,8 @@ from app.modules.sourcing.schemas import (
     CancelIn,
     CapabilityIn,
     CapabilitySet,
+    ConfirmSubjectIn,
+    ConfirmTitleIn,
     CaseCreate,
     CaseOut,
     CasePatch,
@@ -167,10 +169,17 @@ def reject_inquiry(inquiry_id: uuid.UUID, body: RejectIn, request: Request, user
     return inquiry_detail(db, inquiry_id)
 
 
-@inquiries_router.delete("/{inquiry_id}", status_code=204)
-def delete_inquiry(inquiry_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+@inquiries_router.delete("/{inquiry_id}")
+def delete_inquiry(inquiry_id: uuid.UUID, request: Request, user: CurrentUser, db: Db, cascade: bool = False,
+                   body: Annotated[ConfirmSubjectIn | None, Body()] = None):
+    if cascade:
+        counts = inquiries.cascade_delete_inquiry(db, inquiry_id, body.confirm_subject if body else None,
+                                                  request_source(request), user.username)
+        db.commit()
+        return {"deleted": True, "counts": counts}
     inquiries.delete_inquiry(db, inquiry_id, request_source(request), user.username)
     db.commit()
+    return Response(status_code=204)
 
 
 @inquiries_router.put("/{inquiry_id}/decision")
@@ -242,10 +251,17 @@ def update_case(case_id: uuid.UUID, body: CasePatch, request: Request, user: Cur
     return case_detail(db, case_id)
 
 
-@cases_router.delete("/{case_id}", status_code=204)
-def delete_case(case_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+@cases_router.delete("/{case_id}")
+def delete_case(case_id: uuid.UUID, request: Request, user: CurrentUser, db: Db, cascade: bool = False,
+                body: Annotated[ConfirmTitleIn | None, Body()] = None):
+    if cascade:
+        counts = inquiries.cascade_delete_case(db, case_id, body.confirm_title if body else None,
+                                               request_source(request), user.username)
+        db.commit()
+        return {"deleted": True, "counts": counts}
     inquiries.delete_case(db, case_id, request_source(request), user.username)
     db.commit()
+    return Response(status_code=204)
 
 
 @cases_router.post("/{case_id}/documents", status_code=201)
