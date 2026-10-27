@@ -19,12 +19,15 @@ backend/app/
     sourcing/      inquiries, go/no-go decisions, cases, line items + import, RFQs, message templates,
                    supplier offers, coverage/comparison, capability tags (Phase 5)
     catalog/       products, aliases, categories, price and demand memory (Phase 5)
+    costing/       tax parameters, cost templates, cost sheets, FX entries, computation, quote gate (Phase 6)
+    quotes/        quotes (proforma invoices), numbering, approval, sending, outcomes, PDF/Word output (Phase 6)
   worker/          job runner, handler registry, scheduler  (python -m app.worker)
   cli.py           commands used by the Windows scripts
   launch.py        Task Scheduler entry point (reads C:\BOMS\config.json, runs backend or worker)
   main.py          FastAPI app (API + built frontend from app/static)
 backend/migrations/  Alembic, hand-written SQL (0001 core, 0002 system, 0003 documents/search, 0004 parties,
-                     0005 parties fixes, 0006 sourcing); data/ holds the HS 2022 and ISIC Rev.4 seed files
+                     0005 parties fixes, 0006 sourcing, 0007 costing, 0008 quotes); data/ holds the HS 2022
+                     and ISIC Rev.4 seed files
 frontend/          React + TypeScript + Vite + Tailwind (logical properties only), i18next
 scripts/           Windows install/update/backup/restore/start/stop (.ps1 + .bat), release builder
 wheelhouse/        Windows wheels (filled by scripts/build_release.py, not committed)
@@ -45,6 +48,13 @@ shared machinery **without editing other modules**:
 - **Documents**: link documents to its entities with `documents.service.link(db, doc_id, "party", id)`.
 - **Audit**: attach `core.audit_row('<pk>')` and `core.set_updated_at()` triggers to new mutable tables.
 - **Backups** cover every table in the app schemas automatically (row counts per table).
+- **Hooks into earlier modules** (v0.4.0): `modules/<name>/hooks.py` registers callbacks with registries that
+  earlier modules expose (`sourcing.items.register_sold_check`, `sourcing.inquiries.register_case_cleanup`,
+  `parties.command_center.register_sourcing_extension`, `costing.usage.register_sheet_usage`).
+  `app.core.modules.load_hooks()` imports every `hooks.py` once; the registries call it lazily, so the API
+  process and the worker see the same hooks.
+- **Reference counts** (v0.4.0): `modules/<name>/references.py` with `parties.references.register_reference_counter`
+  adds a module's rows to the "in use" counts shown before a party or contact is deleted.
 - **UI**: add the route in `frontend/src/App.tsx`, remove the workspace's `phase` in
   `frontend/src/lib/nav.ts`, add keys to both `fa.json` and `en.json` (a test enforces parity).
 
@@ -63,6 +73,8 @@ module's ORM models to write to them.
 | parties  | `core.funnel_stage`, `core.party`, `core.party_role`, `core.contact`, `core.contact_method`, `core.interaction`, `core.followup` (Phase 3) |
 | sourcing | `ops.payment_term`, `ops.item_status`, `ops.inquiry`, `ops.decision`, `ops."case"`, `ops.line_item`, `ops.rfq`, `ops.rfq_item`, `ops.rfq_recipient`, `ops.message_template`, `ops.supplier_offer`, `ops.offer_item`, `core.party_capability`; reads `ref.hs_code`, `ref.isic_code` (seeded by migration 0006) (Phase 5) |
 | catalog  | `core.product`, `core.product_alias`, `core.product_category` (Phase 5) |
+| costing  | `ops.tax_kind`, `ops.tax_parameter`, `ops.cost_template`, `ops.cost_template_line`, `ops.cost_sheet`, `ops.fx_rate_entry`, `ops.cost_line` (Phase 6) |
+| quotes   | `ops.outcome_reason`, `ops.quote_sequence`, `ops.quote`, `ops.quote_item`; quote terms templates are rows of `ops.message_template` (kind `quote_terms`), written through the sourcing templates functions (Phase 6) |
 
 ## Database conventions
 
@@ -453,3 +465,88 @@ records `followup_id` (the follow-up row also points at the interaction) or `no_
   owner-edited templates). Sent recipients' text is read-only in the UI; the API already answers 409
   `recipient_sent` to text edits of non-draft recipients.
 
+
+## Costing, pricing and quotes (Phase 6, v0.4.0, migrations `0007_costing`, `0008_quotes`)
+
+Modules `app/modules/costing/` (compute, service, usage, searchable, hooks, router) and `app/modules/quotes/`
+(numbering, service, output, references, handlers, searchable, hooks, router). Same conventions as Phase 5: UUIDv7
+keys, `updated_at` and audit triggers, an event in the same transaction for every change, `NUMERIC(18,4)` money
+with a currency column. Everything runs offline: exchange rates and tax rates are typed in by the owner; there is
+no FX download, no tariff database and no e-mail sending.
+
+**Tax parameters** (`ops.tax_kind`, `ops.tax_parameter`): kind (customs duty, levy, VAT, ...), name, rate %,
+deal type (`import`/`export`/`domestic`/`all`), `effective_from`/`effective_to`, `confirmed_by`/`confirmed_on`.
+The rate is never edited: the owner ends a parameter and adds a new one. A parameter in use cannot be deleted
+(409 `in_use`). A sheet line linked to a parameter takes the parameter in force on the sheet date.
+
+**Cost templates** (`ops.cost_template`, `ops.cost_template_line`): default import, export and domestic templates
+are seeded; lines carry kind, labels fa/en, basis, allocation, paid-before-receipt and the tax kind. Editing a
+template never changes existing sheets.
+
+**Cost sheets** (`ops.cost_sheet`, `ops.fx_rate_entry`, `ops.cost_line`): one or more versions per case, status
+`draft` -> `final` (at most one final sheet per case; finalizing supersedes the previous final) -> `superseded`.
+Only drafts change; "new version" copies a sheet. A new sheet starts from a template (or the deal type's default,
+or blank); purchase lines are filled from the items' selected offers (`source_offer_item_id`, unit converted).
+FX entries are per sheet: pair, rate, rate kind (free text with suggestions), source note, `as_of`.
+IRR amounts are whole rials (0 decimals, `DECIMALS_OVERRIDE`), with no automatic rial/toman conversion.
+
+**Computation** (`costing/compute.py`, pure `Decimal` functions):
+
+1. Every line amount is converted to the pricing currency (direct pair, or the reverse pair divided; missing pair:
+   422 `fx_missing`) and rounded once, at line level.
+2. Item lines belong to their item (`per_unit` x quantity); case lines are allocated by value, quantity, equally
+   or by manual shares; the rounding remainder goes to the largest share, so shares always sum to the line.
+3. CIF = purchase + international freight + insurance; `percent_of_cif` / `percent_of_purchase` lines per item.
+4. VAT never enters the cost: a percent VAT line applies to the selling price before VAT, shown separately.
+5. Exposure = supplier prepayment + lines paid before receipt - customer prepayment (not below 0).
+   Cost of money = exposure x annual rate x days / 365. Guarantee = guarantee % x total price x annual rate x
+   guarantee days / 365. Customer prepayment and guarantee depend on the price, so prices are solved by
+   fixed-point iteration; both amounts are allocated to items by cost.
+6. Unit price: markup `cost x (1 + p)` or margin `cost / (1 - p)` (p < 100 %, else 422 `invalid_margin`), then
+   rounding (`none`, `nearest`, `up` to a step); a manual unit price replaces it. Margin % = (price - cost) /
+   price and markup % = (price - cost) / cost are both always shown.
+
+**Warnings** (not blocking): the offer behind a purchase line is no longer valid, the item's selected offer
+changed, a linked tax parameter is unconfirmed, FX older than `costing.fx_max_age_days` (setting, default 3).
+
+**Quote gate** (`GET /api/cost-sheets/{id}/gate`), all failures returned together: sheet final, all FX present,
+lines complete, every item priced, total and per-item minimum prices, validity not later than the earliest
+selected offer validity and the newest FX date + max age, tax parameters confirmed, FX recent. FX age and
+unconfirmed parameters can be overridden with a reason (stored on the sheet, recorded as an event). The default
+validity (`quotes.default_validity_days`, 7) is shortened to the allowed date (`valid_until_capped`).
+
+**Quotes** (`ops.quote`, `ops.quote_item`, `ops.quote_sequence`, `ops.outcome_reason`):
+
+- Created from a sheet that passes the gate (409 `gate_failed` otherwise). Defaults: buyer = case party, its
+  primary contact, language `fa` for an Iranian buyer else `en`, payment terms from the case, terms text from the
+  default `quote_terms` template of that language (placeholders `buyer_name`, `valid_until`, `payment_terms`,
+  `incoterm`, `lead_time`, `bank_details`). Items copy the sheet's prices; a manual price is marked.
+- Number `PI-<year>-<seq:04d>`: the year in the user's calendar (Jalali for Jalali users), the sequence row locked
+  with `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`, so numbers are unique and gap-free under concurrency.
+  Every revision gets its own number and points to the quote it supersedes.
+- Status: `draft` -> `approved` (re-checks the gate, minimums and buyer; locks the quote: 409 `quote_locked`)
+  -> `sent` (records an interaction with the buyer, a "chase" follow-up due the day before validity ends unless a
+  reason is given, and optionally moves the buyer to the `quoted` funnel stage) -> `accepted` /
+  `partially_accepted` / `rejected` from per-row outcomes (`accepted`, `rejected` with a required reason,
+  `no_reply`, `negotiating`, optional competitor price + currency). `expired` (hourly `quotes.expire` job,
+  status + event only), `withdrawn` (cancels the chase follow-ups), `superseded` (revise). Drafts can be deleted.
+- Case result: when no quote of the case is still open (draft, approved, sent), "case won/lost" sets the case
+  status through `sourcing.cases.update_case` (409 `quotes_undecided` otherwise).
+- Output: `GET /api/quotes/{id}/print` (HTML, embedded Vazirmatn font, RTL for fa, DRAFT watermark before
+  approval); `POST /api/quotes/{id}/outputs` with `pdf` (headless Edge/Chrome `--print-to-pdf`, path from setting
+  `pdf.browser_path` or found automatically, proxy set to a dead local port; no browser: 424 `pdf_unavailable`)
+  or `docx` (python-docx; RTL paragraphs and Tahoma for fa, DRAFT in the header). Files are stored in Documents
+  and linked to the quote with role `output`. Letterhead data: settings `company.name_fa/en`, `address`,
+  `phone`, `email`, `website`, `registration`, `logo_document_id`, `footer`, `bank_details`.
+
+**Hooks into earlier modules** (no behaviour change for data without quotes):
+
+- `sourcing.items.register_sold_check(quotes.is_sold)`: an item accepted in an accepted or partially accepted
+  quote derives `sold`; `cancelled`, `delivered` and `closed` items are never changed.
+- `sourcing.inquiries.register_case_cleanup`: the cascade delete of a test case removes quotes (order 10) and
+  cost sheets (order 20) before the sourcing rows; files stay in Documents.
+- `parties.command_center.register_sourcing_extension(quotes.dashboard)`: *quotes awaiting approval* (drafts),
+  *expiring within 3 days*, *sheets with stale FX*, *won / lost in the last 30 days*.
+- `parties.references`: quotes count when a party or contact is deleted. Search providers `cost_sheet`, `quote`.
+- Product page: `GET /api/quotes/by-product/{id}` (sent quote rows with min/median/max per currency and unit
+  group); party page: `GET /api/quotes?party_id=`.

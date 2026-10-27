@@ -252,3 +252,31 @@ Run once on the Windows PC after `update.bat` from 0.3.1 (not yet run there):
 - [ ] **No-reply list:** an RFQ whose reply-by date passed without answers keeps its items at *RFQ sent* (not under "Items without RFQ"); after the hourly job the item appears under Command Center → *Sourcing* → *No reply to RFQ*; sending a new RFQ to another supplier removes it.
 - [ ] **Case cascade delete:** delete a test case that has a sent RFQ (case → History → Danger zone): the supplier's "Chase RFQ response" follow-up disappears from the Command Center (cancelled with "case deleted"); other follow-ups of that supplier stay; the sent message stays in the supplier's interactions.
 
+
+## Manual checks for v0.4.0 (costing, pricing and quotes)
+
+Run once on the Windows PC after `update.bat` from 0.3.2 (not yet run there):
+
+**Update**
+- [ ] Run the 0.4.0 `scripts\update.bat`: it prints `0.3.2 -> 0.4.0`, a `pre_update` backup appears, the migrations `0007` and `0008` run, and *Run restore test* passes afterwards (now 47 tables).
+- [ ] Settings shows *Costing & tax* and *Letterhead*; a case shows the *Costing* and *Quotes* tabs.
+
+**Letterhead**
+- [ ] Settings → *Letterhead*: enter the company name (Persian and English), address, phone, e-mail, registration / economic code, bank details and footer in both languages; upload the logo (PNG or JPEG). Save.
+- [ ] *Edit quote terms templates* opens Message templates → *Quote terms* with a Persian and an English default (channel Letter); the preview fills the buyer name, validity date and bank details.
+- [ ] Settings → *Costing & tax*: add a customs duty parameter (rate, from date), confirm it (who, when). The rate cannot be edited afterwards; *End* closes it.
+
+**A quote end to end**
+- [ ] On a case with two items whose selected offers are in two currencies (e.g. USD and EUR): *Costing* → *New cost sheet* (Import, IRR, default template). The purchase lines are filled from the offers; the red bar names the missing rate.
+- [ ] Enter both rates (rate kind, source, date). Type the freight, insurance, bank fee, clearance and other amounts with the keyboard (Enter moves down the column); choose the duty parameter on the customs duty line. Every line shows its computed amount in rials (no decimals).
+- [ ] Pricing: method *Margin*, target 20 %. The total shows margin 20 % and markup 25 %; clicking an item name shows its breakdown; the case header shows the computed exposure next to the entered estimate.
+- [ ] *Finalize*: the quote gate shows all conditions ticked (or explains each failing one); *Create quote*.
+- [ ] Quote: buyer, contact and language are filled in (Persian for an Iranian buyer). Edit payment terms, then *Rebuild from template*. *Approve*.
+- [ ] **PDF via Edge:** *PDF* downloads `PI-<year>-<nnnn>-v1.pdf` within a few seconds; it opens with the letterhead and logo, Persian text right-to-left and readable, amounts in Persian digits, no DRAFT mark. (If it fails, enter the path to `msedge.exe` under Letterhead → PDF; *Print view* + Ctrl+P is the fallback.)
+- [ ] **Word opens without repair:** *Word* downloads the `.docx`; Word opens it without a repair prompt; Persian paragraphs are right-to-left; the table has the items and totals. A draft quote has "DRAFT" in the header.
+- [ ] Both files are listed under *Files* on the quote and in *Documents*.
+- [ ] *Mark as sent*: the buyer's Interactions tab shows the sent quote, the Command Center shows a "Chase quote response" follow-up due the day before the validity date, and the buyer moves to *Quoted* in the funnel.
+- [ ] *Record outcome*: first row *Accepted*, second *Rejected* (Save stays disabled until a reason is chosen), reason *Price*, competitor price. The quote shows *Partially accepted*; the accepted item shows *Sold*; the chase follow-up is cancelled.
+- [ ] The product page of the rejected item shows the quote under *Quotes we sent*; the buyer's party page → *Quotes* lists it; Command Center → *Sales* shows it under won (30 days).
+- [ ] *Case won* closes the case.
+- [ ] Persian and English, light and dark: the Costing and Quotes tabs do not scroll sideways at 1280 px and 1024 px; selects show their full text.
