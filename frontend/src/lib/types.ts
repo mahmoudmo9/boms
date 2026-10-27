@@ -721,9 +721,288 @@ export interface SourcingSummary {
   offers_expiring: { offer_id: string; case_id: string; case_title: string; party_id: string; party_name_fa: string | null; party_name_en: string | null; valid_until: string; currency: string; days_left: number }[];
   cases_not_covered: { case_id: string; case_title: string; items: number; not_covered: number }[];
   no_response_resend: { item_id: string; name: string; case_id: string; case_title: string; recipients: number; respond_by: string | null }[];
+  quotes_awaiting_approval?: { quote_id: string; number: string; case_id: string; case_title: string; total: string; currency: string; created_at: string }[];
+  quotes_expiring?: { quote_id: string; number: string; case_id: string; case_title: string; valid_until: string; days_left: number; currency: string; total: string; party_name_fa: string | null; party_name_en: string | null }[];
+  sheets_stale_fx?: { cost_sheet_id: string; case_id: string; case_title: string; version: number; status: string; as_of: string; age_days: number }[];
+  quotes_won_30_days?: number;
+  quotes_lost_30_days?: number;
   selection_lost: { item_id: string; name: string; case_id: string; case_title: string; lost_at: string; cause: string }[];
   coverage_status_percent: number | null;
   open_items: number;
   open_items_with_status: number;
 }
 
+
+// ---- costing (v0.4.0) ------------------------------------------------------------------------------------
+
+export type DealType = "import" | "export" | "domestic";
+export type CostLineKind = "purchase" | "freight_international" | "insurance" | "bank_fees" | "customs_duty" | "levy"
+  | "customs_clearance" | "storage" | "inspection" | "freight_domestic" | "export_clearance" | "vat" | "other";
+export type CostBasis = "total" | "per_unit" | "percent_of_cif" | "percent_of_purchase";
+export type Allocation = "by_value" | "by_quantity" | "equal" | "manual";
+
+export interface TaxKind { code: string; label_fa: string; label_en: string; sort_order: number }
+
+export interface TaxParameter {
+  id: string;
+  kind: string;
+  name: string;
+  rate_percent: string;
+  deal_type: DealType | "all";
+  effective_from: string;
+  effective_to: string | null;
+  note: string | null;
+  confirmed_by: string | null;
+  confirmed_on: string | null;
+}
+
+export interface CostTemplateLine {
+  id?: string;
+  kind: CostLineKind;
+  label_fa: string | null;
+  label_en: string | null;
+  basis: CostBasis;
+  allocation: Allocation;
+  paid_before_receipt: boolean;
+  tax_kind: string | null;
+}
+
+export interface CostTemplate {
+  id: string;
+  name: string;
+  name_fa: string | null;
+  deal_type: DealType;
+  is_default: boolean;
+  status: "active" | "archived";
+  lines: CostTemplateLine[];
+}
+
+export interface CostLine {
+  id: string;
+  cost_sheet_id: string;
+  position: number;
+  kind: CostLineKind;
+  label: string;
+  scope: "case" | "item";
+  line_item_id: string | null;
+  amount: string | null;
+  currency: string | null;
+  basis: CostBasis;
+  percent: string | null;
+  allocation: Allocation;
+  manual_shares: Record<string, string> | null;
+  paid_before_receipt: boolean;
+  tax_parameter_id: string | null;
+  source_offer_item_id: string | null;
+  notes: string | null;
+}
+
+export interface FxEntry {
+  id: string;
+  from_currency: string;
+  to_currency: string;
+  rate: string;
+  rate_kind: string | null;
+  source_note: string | null;
+  as_of: string;
+}
+
+export interface ComputedItem {
+  item_id: string;
+  name: string;
+  quantity: string | null;
+  unit_code: string | null;
+  unit_text: string | null;
+  purchase: string;
+  cif: string;
+  lines: { line_id: string; kind: string; amount: string }[];
+  cost_of_money: string;
+  guarantee: string;
+  vat: string;
+  landed_cost: string;
+  unit_cost: string | null;
+  unit_price: string | null;
+  total_price: string | null;
+  manual: boolean;
+  profit: string | null;
+  margin_percent: string | null;
+  markup_percent: string | null;
+  min_unit_price: string | null;
+  below_minimum: boolean;
+}
+
+export interface ComputedLine {
+  line_id: string;
+  kind: string;
+  label: string;
+  total: string;
+  shares: Record<string, string>;
+  vat: boolean;
+  percent?: string;
+  base?: string;
+  fx: { from_currency: string; to_currency: string; rate: string; as_of: string; reverse: boolean } | null;
+}
+
+export interface Computation {
+  currency: string;
+  decimals: number;
+  items: ComputedItem[];
+  lines: ComputedLine[];
+  totals: {
+    purchase: string; cif: string; cost_before_vat: string; cost_of_money: string; guarantee: string; vat: string;
+    price_before_vat: string | null; price_with_vat: string | null; profit: string | null;
+    margin_percent: string | null; markup_percent: string | null;
+  };
+  below_minimum: boolean;
+  exposure: { supplier_prepayment: string; paid_before_receipt: string; customer_prepayment: string; exposure: string };
+  cost_of_money: { cash_tied_up: string; annual_percent: string; days: number; amount: string };
+  guarantee: { percent: string; days: number; annual_percent: string; amount: string };
+  fx_used: { from_currency: string; to_currency: string; rate: string; as_of: string }[];
+  newest_fx_as_of: string | null;
+  problems: { code: string; line_id?: string; item_id?: string; label?: string }[];
+}
+
+export interface GateFailure { code: string; [key: string]: unknown }
+
+export interface CostGate {
+  ok: boolean;
+  failures: GateFailure[];
+  valid_until: string;
+  max_valid_until: string | null;
+  valid_until_capped: boolean;
+  overrides: { fx_stale: string | null; unconfirmed_parameter: string | null };
+}
+
+export interface CostSheet {
+  id: string;
+  case_id: string;
+  version: number;
+  status: "draft" | "final" | "superseded";
+  deal_type: DealType;
+  pricing_currency: string;
+  template_id: string | null;
+  sheet_date: string;
+  notes: string | null;
+  supplier_prepay_percent: string;
+  customer_prepay_percent: string;
+  days_from_payment_to_receipt: number;
+  annual_cost_of_money_percent: string;
+  guarantee_percent: string;
+  guarantee_days: number;
+  pricing_method: "margin" | "markup";
+  target_percent: string | null;
+  min_acceptable_price: string | null;
+  item_min_prices: Record<string, string>;
+  price_overrides: Record<string, string>;
+  rounding: "none" | "nearest" | "up";
+  rounding_step: string | null;
+  validity_days: number | null;
+  fx_override_reason: string | null;
+  parameter_override_reason: string | null;
+  finalized_at: string | null;
+  decimals: number;
+  lines: CostLine[];
+  fx: FxEntry[];
+  items: { id: string; name: string; quantity: string | null; unit_code: string | null; unit_text: string | null; status: string; selected_offer_item_id: string | null }[];
+  computation: Computation | null;
+  compute_error: { code: string; message: string; details: Record<string, unknown> } | null;
+  warnings: { code: string; [key: string]: unknown }[];
+  gate: CostGate;
+}
+
+export interface CaseCosting {
+  sheets: { id: string; version: number; status: CostSheet["status"]; deal_type: DealType; pricing_currency: string; sheet_date: string; created_at: string; finalized_at: string | null }[];
+  current: { sheet_id: string; version: number; currency?: string; exposure?: string; cost?: string; price?: string | null;
+    margin_percent?: string | null; markup_percent?: string | null; error?: string } | null;
+}
+
+// ---- quotes (v0.4.0) -----------------------------------------------------------------------------------------
+
+export type QuoteStatus = "draft" | "approved" | "sent" | "accepted" | "partially_accepted" | "rejected" | "expired"
+  | "withdrawn" | "superseded";
+export type Outcome = "accepted" | "rejected" | "no_reply" | "negotiating";
+
+export interface QuoteItem {
+  id: string;
+  quote_id: string;
+  line_item_id: string;
+  name: string;
+  position: number;
+  description_override: string | null;
+  quantity: string;
+  unit_code: string | null;
+  unit_text: string | null;
+  unit_price: string;
+  total: string;
+  vat_amount: string;
+  unit_cost: string | null;
+  price_manual: boolean;
+  lead_time_days: number | null;
+  note: string | null;
+  outcome: Outcome | null;
+  outcome_reason: string | null;
+  outcome_note: string | null;
+  competitor_price: string | null;
+  competitor_currency: string | null;
+  decided_on: string | null;
+}
+
+export interface QuoteRow {
+  id: string;
+  case_id: string;
+  number: string;
+  version: number;
+  status: QuoteStatus;
+  currency: string;
+  subtotal: string;
+  total: string;
+  valid_until: string;
+  sent_at: string | null;
+  created_at: string;
+  price_basis: "before_vat" | "with_vat";
+  language: "fa" | "en";
+  buyer_party_id: string | null;
+  buyer_name_fa: string | null;
+  buyer_name_en: string | null;
+}
+
+export interface Quote extends QuoteRow {
+  cost_sheet_id: string;
+  incoterm: string | null;
+  incoterm_place: string | null;
+  payment_terms: string | null;
+  delivery_terms: string | null;
+  lead_time_days: number | null;
+  terms_text: string | null;
+  notes: string | null;
+  vat_amount: string;
+  contact_id: string | null;
+  contact_name_fa: string | null;
+  contact_name_en: string | null;
+  supersedes_id: string | null;
+  interaction_id: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  decimals: number;
+  cost_sheet: { id: string; version: number; status: string };
+  items: QuoteItem[];
+  outputs: LinkedDocument[];
+  approval: { ok: boolean; failures: GateFailure[]; max_valid_until: string | null } | null;
+  default_followup: { action: string; due_on: string } | null;
+}
+
+export interface CaseQuotes {
+  summary: { count: number; won: number; lost: number; open: number; all_decided: boolean;
+    latest: { id: string; number: string; status: QuoteStatus; valid_until: string } | null };
+  items: QuoteRow[];
+}
+
+export interface OutcomeReason { code: string; label_fa: string; label_en: string }
+
+export interface ProductQuotes {
+  quotes: { id: string; quote_id: string; number: string; case_id: string; sent_at: string; currency: string; incoterm: string | null;
+    incoterm_place: string | null; status: string; quantity: string; unit_code: string | null; unit_text: string | null;
+    unit_price: string; outcome: Outcome | null; outcome_reason: string | null; party_id: string | null;
+    party_fa: string | null; party_en: string | null; unit_group: string; normalized_price: string | null }[];
+  summary: { currency: string; unit_group: string; count: number; min: string; median: string; max: string }[];
+}

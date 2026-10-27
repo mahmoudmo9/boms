@@ -6,6 +6,10 @@ import type { ComparisonItem, ComparisonRow, Rfq } from "./types";
 // ---- message templates ---------------------------------------------------------------------------
 
 export const PLACEHOLDERS = ["supplier_name", "contact_name", "case_title", "items_table", "respond_by", "signature"] as const;
+/** Placeholders of quote terms templates (Phase 6); the server checks the same list per template kind. */
+export const QUOTE_PLACEHOLDERS = ["buyer_name", "valid_until", "payment_terms", "incoterm", "lead_time", "bank_details"] as const;
+export type TemplateKind = "rfq" | "quote_terms";
+export const PLACEHOLDERS_BY_KIND: Record<TemplateKind, readonly string[]> = { rfq: PLACEHOLDERS, quote_terms: QUOTE_PLACEHOLDERS };
 const TOKEN = /\{\{|\}\}|\{([^{}]*)\}|[{}]/g;
 
 /** Placeholder names used in a template; "unbalanced" when a single brace has no partner. */
@@ -21,7 +25,11 @@ export function placeholdersIn(template: string): { names: string[]; unbalanced:
 }
 
 export function unknownPlaceholders(...templates: string[]): string[] {
-  const known = new Set<string>(PLACEHOLDERS);
+  return unknownPlaceholdersOf("rfq", ...templates);
+}
+
+export function unknownPlaceholdersOf(kind: TemplateKind, ...templates: string[]): string[] {
+  const known = new Set<string>(PLACEHOLDERS_BY_KIND[kind]);
   return [...new Set(templates.flatMap((t) => placeholdersIn(t).names).filter((n) => !known.has(n)))].sort();
 }
 

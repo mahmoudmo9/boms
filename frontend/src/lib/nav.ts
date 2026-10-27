@@ -42,6 +42,8 @@ export const WORKSPACES: Workspace[] = [
     icon: "settings",
     children: [
       { key: "general", path: "/settings" },
+      { key: "costing", path: "/settings/costing" },
+      { key: "letterhead", path: "/settings/letterhead" },
       { key: "basedata", path: "/settings/basedata/countries" },
       { key: "events", path: "/settings/events" },
       { key: "system", path: "/settings/system" },

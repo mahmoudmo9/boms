@@ -10,9 +10,9 @@ import { Icon } from "../../components/Icon";
 import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, IconButton, Input, Loading, Modal, PageHeader, Select, Textarea } from "../../components/ui";
 import { api, ApiError, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
-import type { Product, ProductPage as ProductPageData } from "../../lib/types";
+import type { Product, ProductPage as ProductPageData, ProductQuotes } from "../../lib/types";
 import { PartyName, stageLabel } from "../parties/shared";
-import { ContactName, Money, productName, UnitInput, useInvalidateSourcing, useUnitLabel } from "./shared";
+import { ContactName, Money, productName, StatusBadge, UnitInput, useInvalidateSourcing, useUnitLabel } from "./shared";
 
 const PAGE_SIZE = 50;
 
@@ -320,6 +320,7 @@ export function ProductPage() {
               </div>
             )}
           </Card>
+          <QuotesWeSent productId={id} groupLabel={groupLabel} perBase={perBase} />
           <Card title={t("sourcing.catalog.demand")}>
             <div className="mb-3 flex flex-wrap gap-4 text-sm">
               <span>{t("sourcing.catalog.inquiries")}: <b className="tabular-nums">{f.num(p.demand.inquiries)}</b></span>
@@ -379,5 +380,55 @@ export function ProductPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Phase 6: every sent quote row for this product, with min / median / max per currency and unit group. */
+function QuotesWeSent({ productId, groupLabel, perBase }: { productId: string; groupLabel: (g: string) => string; perBase: (g: string) => string }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const unitLabel = useUnitLabel();
+  const quotes = useQuery({ queryKey: ["quotes", "by-product", productId], queryFn: () => api<ProductQuotes>(`/api/quotes/by-product/${productId}`) });
+  const data = quotes.data;
+  return (
+    <Card padded={false} title={t("quotes.product.title")}>
+      <ErrorNote error={quotes.error} />
+      {!data ? null : data.quotes.length === 0 ? <EmptyState>{t("quotes.product.none")}</EmptyState> : (
+        <div className="overflow-x-auto" data-testid="product-quotes">
+          {data.summary.length > 0 && (
+            <div className="flex flex-wrap gap-2 border-b border-line px-4 py-2 text-xs">
+              {data.summary.map((s) => (
+                <span key={s.currency + s.unit_group} className="rounded border border-line px-2 py-0.5">
+                  <Bdi ltr>{s.currency}</Bdi> · {groupLabel(s.unit_group)} · {t("sourcing.catalog.count")} {f.num(s.count)}:{" "}
+                  <Bdi ltr className="tabular-nums">{f.num(s.min, 6)} / {f.num(s.median, 6)} / {f.num(s.max, 6)} {perBase(s.unit_group)}</Bdi>
+                </span>
+              ))}
+            </div>
+          )}
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-line bg-surface-2 text-xs text-muted">
+              <th className="p-2 text-start">{t("quotes.product.sent")}</th><th className="p-2 text-start">{t("quotes.number")}</th>
+              <th className="p-2 text-start">{t("quotes.buyer")}</th><th className="p-2 text-start">{t("sourcing.offer.unitPrice")}</th>
+              <th className="p-2 text-start">{t("sourcing.item.quantity")}</th><th className="p-2 text-start">{t("sourcing.incoterm")}</th>
+              <th className="p-2 text-start">{t("quotes.status")}</th><th className="p-2 text-start">{t("quotes.outcome")}</th>
+            </tr></thead>
+            <tbody>
+              {data.quotes.map((q) => (
+                <tr key={q.id} className="border-b border-line">
+                  <td className="p-2 tabular-nums text-muted">{f.date(q.sent_at)}</td>
+                  <td className="p-2"><Link to={`/cases/${q.case_id}?tab=quotes&quote=${q.quote_id}`} className="text-accent hover:underline"><Bdi ltr>{q.number}</Bdi></Link></td>
+                  <td className="p-2">{q.party_id ? <PartyName fa={q.party_fa} en={q.party_en} id={q.party_id} className="max-w-48" /> : "—"}</td>
+                  <td className="p-2"><Money amount={q.unit_price} currency={q.currency} unit={unitLabel(q.unit_code, q.unit_text)} /></td>
+                  <td className="p-2 tabular-nums">{f.num(q.quantity)}</td>
+                  <td className="p-2"><Bdi ltr>{[q.incoterm, q.incoterm_place].filter(Boolean).join(" ")}</Bdi></td>
+                  <td className="p-2"><StatusBadge group="quote" status={q.status} /></td>
+                  <td className="p-2 text-xs">{q.outcome ? t(`quotes.outcomes.${q.outcome}`) : "—"}{q.outcome_reason ? ` · ${t(`quotes.reasons.${q.outcome_reason}`, { defaultValue: q.outcome_reason })}` : ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }

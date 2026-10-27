@@ -26,6 +26,7 @@ const TONES: Record<string, "neutral" | "success" | "danger" | "warning" | "acce
   converted: "success", open: "accent", won: "success", lost: "danger", closed: "neutral",
   draft: "neutral", sent: "accent", answered: "success", no_response: "warning", expired: "neutral",
   replied: "success", declined: "neutral", active: "success", superseded: "neutral", withdrawn: "neutral",
+  final: "success", approved: "accent", accepted: "success", partially_accepted: "warning", negotiating: "accent",
 };
 
 /** Status badge; ``group`` picks the i18n vocabulary (item, inquiry, case, rfq, recipient, offer). */
@@ -268,7 +269,8 @@ export function useSpecKeys() {
 export function useInvalidateSourcing() {
   const queryClient = useQueryClient();
   return () => {
-    for (const key of ["inquiry", "inquiries", "case", "cases", "rfqs", "offers", "coverage", "comparison", "products", "command-center", "events", "interactions", "party"]) {
+    for (const key of ["inquiry", "inquiries", "case", "cases", "rfqs", "offers", "coverage", "comparison", "products", "command-center",
+      "events", "interactions", "party", "costing", "cost-sheet", "case-quotes", "quote", "quotes"]) {
       void queryClient.invalidateQueries({ queryKey: [key] });
     }
   };

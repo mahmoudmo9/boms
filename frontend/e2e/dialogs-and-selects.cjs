@@ -15,7 +15,9 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   page.setDefaultTimeout(8000);
   const problems = [];
-  const expected = new Set(['409 DELETE /api/parties/:id', '404 GET /api/inquiries/:id', '404 GET /api/cases/:id']);
+  const expected = new Set(['409 DELETE /api/parties/:id', '404 GET /api/inquiries/:id', '404 GET /api/cases/:id',
+    // v0.4.0: the case header also reads the costing and quote summaries of the case that was just deleted
+    '404 GET /api/cases/:id/costing', '404 GET /api/cases/:id/quotes']);
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
   page.on('response', (r) => {
     const key = `${r.status()} ${r.request().method()} ${r.url().replace(BASE, '').split('?')[0].replace(/[0-9a-f-]{36}/g, ':id')}`;

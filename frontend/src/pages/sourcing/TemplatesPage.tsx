@@ -1,30 +1,30 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 
 import { Bdi } from "../../components/Bdi";
-import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, Input, Modal, PageHeader, Select, Textarea } from "../../components/ui";
+import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, Input, Modal, PageHeader, Segmented, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
-import { PLACEHOLDERS, placeholdersIn, unknownPlaceholders } from "../../lib/sourcing";
+import { PLACEHOLDERS_BY_KIND, placeholdersIn, type TemplateKind, unknownPlaceholdersOf } from "../../lib/sourcing";
 import type { MessageTemplate } from "../../lib/types";
 
 type Draft = Pick<MessageTemplate, "language" | "channel" | "name" | "subject_template" | "body_template" | "is_default">;
 
-function TemplateDialog({ template, onClose, onSaved }: { template: MessageTemplate | null; onClose: () => void; onSaved: () => void }) {
+function TemplateDialog({ kind, template, onClose, onSaved }: { kind: TemplateKind; template: MessageTemplate | null; onClose: () => void; onSaved: () => void }) {
   const { t } = useTranslation();
-  const [form, setForm] = useState<Draft>(template ?? { language: "en", channel: "email", name: "", subject_template: "", body_template: "", is_default: false });
-  const unknown = unknownPlaceholders(form.subject_template, form.body_template);
+  const [form, setForm] = useState<Draft>(template ?? { language: "en", channel: kind === "quote_terms" ? "letter" : "email", name: "", subject_template: "", body_template: "", is_default: false });
+  const unknown = unknownPlaceholdersOf(kind, form.subject_template, form.body_template);
   const unbalanced = placeholdersIn(form.subject_template).unbalanced || placeholdersIn(form.body_template).unbalanced;
   const preview = useQuery({
-    queryKey: ["templates", "preview", form.subject_template, form.body_template, form.language],
-    queryFn: () => api<{ subject: string; body: string }>("/api/message-templates/preview", { method: "POST", body: { subject_template: form.subject_template, body_template: form.body_template, language: form.language } }),
+    queryKey: ["templates", "preview", kind, form.subject_template, form.body_template, form.language],
+    queryFn: () => api<{ subject: string; body: string }>("/api/message-templates/preview", { method: "POST", body: { kind, subject_template: form.subject_template, body_template: form.body_template, language: form.language } }),
     enabled: !unknown.length && !unbalanced && !!form.body_template.trim(),
   });
   const save = useMutation({
     mutationFn: () => (template
       ? api(`/api/message-templates/${template.id}`, { method: "PATCH", body: form })
-      : api("/api/message-templates", { method: "POST", body: form })),
+      : api("/api/message-templates", { method: "POST", body: { ...form, kind } })),
     onSuccess: () => { onSaved(); onClose(); },
   });
   const dir = form.language === "fa" ? "rtl" : "ltr";
@@ -53,7 +53,7 @@ function TemplateDialog({ template, onClose, onSaved }: { template: MessageTempl
         <div className="flex flex-col gap-3">
           <Card title={t("sourcing.templates.placeholders")}>
             <ul className="flex flex-col gap-1 text-sm">
-              {PLACEHOLDERS.map((p) => <li key={p}><Bdi ltr className="font-mono text-xs">{`{${p}}`}</Bdi> — {t(`sourcing.templates.ph.${p}`)}</li>)}
+              {PLACEHOLDERS_BY_KIND[kind].map((p) => <li key={p}><Bdi ltr className="font-mono text-xs">{`{${p}}`}</Bdi> — {t(`sourcing.templates.ph.${p}`)}</li>)}
             </ul>
             <p className="mt-2 text-xs text-muted">{t("sourcing.templates.braces")}</p>
           </Card>
@@ -71,8 +71,10 @@ function TemplateDialog({ template, onClose, onSaved }: { template: MessageTempl
 
 export function TemplatesPage() {
   const { t } = useTranslation();
+  const [params, setParams] = useSearchParams();
+  const kind: TemplateKind = params.get("kind") === "quote_terms" ? "quote_terms" : "rfq";
   const [editing, setEditing] = useState<MessageTemplate | "new" | null>(null);
-  const list = useQuery({ queryKey: ["templates"], queryFn: () => api<{ items: MessageTemplate[] }>("/api/message-templates", { query: { include_archived: true } }) });
+  const list = useQuery({ queryKey: ["templates", kind], queryFn: () => api<{ items: MessageTemplate[] }>("/api/message-templates", { query: { include_archived: true, kind } }) });
   const archive = useMutation({
     mutationFn: (tpl: MessageTemplate) => api(`/api/message-templates/${tpl.id}`, { method: "PATCH", body: { status: tpl.status === "active" ? "archived" : "active" } }),
     onSuccess: () => void list.refetch(),
@@ -82,6 +84,10 @@ export function TemplatesPage() {
     <div>
       <PageHeader title={t("sourcing.templates.title")} subtitle={<>{t("sourcing.templates.subtitle")} <Link to="/settings" className="text-accent hover:underline">{t("sourcing.templates.signatureLink")}</Link></>}
         actions={<Button variant="primary" icon="plus" onClick={() => setEditing("new")}>{t("sourcing.templates.new")}</Button>} />
+      <div className="mb-3">
+        <Segmented value={kind} onChange={(v) => setParams(v === "rfq" ? {} : { kind: v }, { replace: true })}
+          options={(["rfq", "quote_terms"] as const).map((k) => ({ value: k, label: t(`sourcing.templates.kinds.${k}`) }))} />
+      </div>
       <Card padded={false}>
         <ErrorNote error={list.error || archive.error || remove.error} />
         <ul className="divide-y divide-line">
@@ -100,7 +106,7 @@ export function TemplatesPage() {
           ))}
         </ul>
       </Card>
-      {editing && <TemplateDialog template={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={() => void list.refetch()} />}
+      {editing && <TemplateDialog key={kind} kind={kind} template={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={() => void list.refetch()} />}
     </div>
   );
 }

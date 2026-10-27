@@ -17,6 +17,8 @@ import { CaseDetailPage } from "./pages/cases/CaseDetailPage";
 import { CasesPage } from "./pages/cases/CasesPage";
 import { NotFoundPage, PlaceholderPage } from "./pages/PlaceholderPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
+import { CostingSettingsPage } from "./pages/settings/CostingSettingsPage";
+import { LetterheadPage } from "./pages/settings/LetterheadPage";
 import { CatalogPage, ProductPage } from "./pages/sourcing/CatalogPage";
 import { InquiriesPage } from "./pages/sourcing/InquiriesPage";
 import { InquiryDetailPage } from "./pages/sourcing/InquiryDetailPage";
@@ -57,6 +59,8 @@ export function App() {
         <Route path="settings/basedata/:kind" element={<BaseDataPage />} />
         <Route path="settings/events" element={<EventLogPage />} />
         <Route path="settings/system" element={<SystemPage />} />
+        <Route path="settings/costing" element={<CostingSettingsPage />} />
+        <Route path="settings/letterhead" element={<LetterheadPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

@@ -3,19 +3,22 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
+import { Bdi } from "../../components/Bdi";
 import { Icon } from "../../components/Icon";
 import { Button, ErrorNote, Field, Input, Loading, Modal, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
-import type { CaseDetail } from "../../lib/types";
+import type { CaseCosting, CaseDetail, CaseQuotes } from "../../lib/types";
 import { PartyName } from "../parties/shared";
 import { ItemsCard } from "../sourcing/ItemsEditor";
 import { AttachedDocuments, CascadeDeleteCard, CurrencySelect, HistoryCard, Money, StatusBadge, useInvalidateSourcing, usePaymentTerms } from "../sourcing/shared";
 import { CASE_STATUSES } from "./CasesPage";
+import { CostingTab } from "./Costing";
 import { ComparisonTab, CoverageCard, OffersTab } from "./Offers";
+import { QuotesTab } from "./Quotes";
 import { RfqsTab } from "./Rfqs";
 
-const TABS = ["items", "rfqs", "offers", "comparison", "documents", "history"] as const;
+const TABS = ["items", "rfqs", "offers", "comparison", "costing", "quotes", "documents", "history"] as const;
 type Tab = (typeof TABS)[number];
 
 function EditCaseDialog({ c, onClose, onSaved }: { c: CaseDetail; onClose: () => void; onSaved: () => void }) {
@@ -59,6 +62,8 @@ export function CaseDetailPage() {
   const [editing, setEditing] = useState(false);
   const tab = (TABS.includes(params.get("tab") as Tab) ? params.get("tab") : "items") as Tab;
   const caseQuery = useQuery({ queryKey: ["case", id], queryFn: () => api<CaseDetail>(`/api/cases/${id}`) });
+  const costing = useQuery({ queryKey: ["costing", id], queryFn: () => api<CaseCosting>(`/api/cases/${id}/costing`) });
+  const quotes = useQuery({ queryKey: ["case-quotes", id], queryFn: () => api<CaseQuotes>(`/api/cases/${id}/quotes`) });
   const refresh = () => { void caseQuery.refetch(); invalidate(); };
   const setStatus = useMutation({ mutationFn: (status: string) => api(`/api/cases/${id}`, { method: "PATCH", body: { status } }), onSuccess: refresh });
   const highlightItem = params.get("item");
@@ -78,6 +83,9 @@ export function CaseDetailPage() {
           {c.inquiry_id && <Link to={`/sourcing/inquiries/${c.inquiry_id}`} className="text-accent hover:underline">{t("sourcing.case.fromInquiry")}</Link>}
           {c.payment_term && <span>{t(`sourcing.paymentTerms.${c.payment_term}`)}</span>}
           {c.exposure_estimate && <span>{t("sourcing.decision.exposure")}: <Money amount={c.exposure_estimate} currency={c.exposure_currency} /></span>}
+          {costing.data?.current?.exposure !== undefined && <span data-testid="computed-exposure">{t("costing.computedExposure")}: <Money amount={costing.data.current.exposure} currency={costing.data.current.currency} /></span>}
+          {costing.data?.current?.margin_percent && <span>{t("costing.pricing.margin")} <span className="tabular-nums">{f.num(costing.data.current.margin_percent)} %</span> · {t("costing.pricing.markup")} <span className="tabular-nums">{f.num(costing.data.current.markup_percent ?? "")} %</span></span>}
+          {quotes.data?.summary.latest && <span className="inline-flex items-center gap-1">{t("quotes.latest")}: <Bdi ltr>{quotes.data.summary.latest.number}</Bdi> <StatusBadge group="quote" status={quotes.data.summary.latest.status} /></span>}
           <span className="tabular-nums">{f.date(c.created_at)}</span>
         </span>}
         actions={<>
@@ -105,6 +113,8 @@ export function CaseDetailPage() {
       {tab === "rfqs" && <RfqsTab caseData={c} highlight={params.get("rfq")} />}
       {tab === "offers" && <OffersTab caseData={c} highlight={params.get("offer")} recordFor={params.get("record")} />}
       {tab === "comparison" && <ComparisonTab caseData={c} />}
+      {tab === "costing" && <CostingTab caseData={c} />}
+      {tab === "quotes" && <QuotesTab caseData={c} />}
       {tab === "documents" && <AttachedDocuments documents={c.documents} linkPath={`/api/cases/${c.id}/documents`} onChanged={refresh} />}
       {tab === "history" && <>
         <HistoryCard entityType="case" entityId={c.id} />

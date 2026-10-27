@@ -12,14 +12,15 @@ import { useToast } from "../../components/toast";
 import { api, ApiError, type Page } from "../../lib/api";
 import { defaultPhoneRegion, isPhoneType } from "../../lib/phone";
 import { useFormat } from "../../lib/prefs";
-import type { Contact, ContactMethod, DocumentDetail, EventItem, Followup, Interaction, Party, PartyDetail, SharedResult, SharedWith } from "../../lib/types";
+import type { Contact, ContactMethod, DocumentDetail, EventItem, Followup, Interaction, Party, PartyDetail, QuoteRow, SharedResult, SharedWith } from "../../lib/types";
 import { EventList } from "../events/EventLogPage";
 import { CapabilitiesCard } from "../sourcing/Capabilities";
+import { Money, StatusBadge } from "../sourcing/shared";
 import { CountrySelect } from "./PartiesPage";
 import { PartyPicker, useQuickLog } from "./QuickLog";
 import { CancelFollowupButton, CHANNELS, DeleteButton, FollowupActions, InUseNote, METHOD_TYPES, PartyName, ROLES, SharedNumberPrompt, StageSelect, stageLabel } from "./shared";
 
-const TABS = ["overview", "contacts", "interactions", "documents", "history"] as const;
+const TABS = ["overview", "contacts", "interactions", "documents", "quotes", "history"] as const;
 type Tab = (typeof TABS)[number];
 
 function useParty(id: string) {
@@ -605,6 +606,38 @@ function Documents({ party }: { party: PartyDetail }) {
   );
 }
 
+/** Phase 6: quotes sent to this buyer, read-only; each row opens the quote in its case. */
+function Quotes({ partyId }: { partyId: string }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const list = useQuery({ queryKey: ["quotes", "party", partyId], queryFn: () => api<QuoteRow[]>(`/api/quotes?party_id=${partyId}`) });
+  if (list.isLoading) return <Loading />;
+  if (list.error || !list.data) return <ErrorNote error={list.error} />;
+  return (
+    <Card padded={false}>
+      {list.data.length === 0 ? <EmptyState>{t("quotes.none")}</EmptyState> : (
+        <div className="overflow-x-auto" data-testid="party-quotes">
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-line bg-surface-2 text-xs text-muted">
+              <th className="p-2 text-start">{t("quotes.number")}</th><th className="p-2 text-start">{t("quotes.status")}</th>
+              <th className="p-2 text-start">{t("quotes.total")}</th><th className="p-2 text-start">{t("quotes.validUntil")}</th><th className="p-2 text-start">{t("quotes.product.sent")}</th>
+            </tr></thead>
+            <tbody>{list.data.map((q) => (
+              <tr key={q.id} className="border-b border-line">
+                <td className="p-2"><Link to={`/cases/${q.case_id}?tab=quotes&quote=${q.id}`} className="text-accent hover:underline"><Bdi ltr>{q.number}</Bdi></Link></td>
+                <td className="p-2"><StatusBadge group="quote" status={q.status} /></td>
+                <td className="p-2"><Money amount={q.total} currency={q.currency} /></td>
+                <td className="p-2 tabular-nums">{f.day(q.valid_until)}</td>
+                <td className="p-2 tabular-nums text-muted">{q.sent_at ? f.date(q.sent_at) : "—"}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function History({ partyId }: { partyId: string }) {
   const events = useQuery({
     queryKey: ["events", "party", partyId],
@@ -642,7 +675,7 @@ export function PartyDetailPage() {
         <Button variant="primary" icon="plus" onClick={() => quickLog.open(p.id)}>{t("quicklog.button")}</Button>
       </div>
       <div className="flex gap-1 overflow-x-auto border-b border-line">
-        {TABS.map((key) => (
+        {TABS.filter((key) => key !== "quotes" || p.roles.some((r) => r.role === "buyer")).map((key) => (
           <button key={key} type="button" onClick={() => setParams({ tab: key }, { replace: true })}
             className={`-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap ${key === tab ? "border-accent font-medium text-accent" : "border-transparent text-muted hover:text-fg"}`}>
             {t(`parties.tabs.${key}`)}
@@ -654,6 +687,7 @@ export function PartyDetailPage() {
       {tab === "contacts" && <Contacts party={p} />}
       {tab === "interactions" && <Interactions party={p} highlight={params.get("interaction")} />}
       {tab === "documents" && <Documents party={p} />}
+      {tab === "quotes" && <Quotes partyId={p.id} />}
       {tab === "history" && <History partyId={p.id} />}
     </div>
   );

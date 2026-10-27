@@ -53,7 +53,9 @@
       "funnels": "Funnels",
       "inquiries": "Inquiries",
       "catalog": "Catalog",
-      "templates": "Message templates"
+      "templates": "Message templates",
+      "costing": "Costing & tax",
+      "letterhead": "Letterhead"
     }
   },
   "placeholder": {
@@ -91,7 +93,9 @@
       "line_item": "Line items",
       "rfq": "RFQs",
       "offer": "Offers",
-      "product": "Products"
+      "product": "Products",
+      "cost_sheet": "Cost sheets",
+      "quote": "Quotes"
     }
   },
   "date": {
@@ -495,7 +499,32 @@
     "confirm_subject_mismatch": "Type the exact inquiry subject (or DELETE when it has none) to confirm.",
     "possible_duplicate": "Similar products exist. Check them, then confirm to save anyway.",
     "recipient_not_sent": "Mark the RFQ as sent to this supplier first, or record the offer without an RFQ.",
-    "duplicate_active_method": "An active copy of this number or address already exists."
+    "duplicate_active_method": "An active copy of this number or address already exists.",
+    "gate_failed": "The cost sheet does not pass the quote gate yet. Check the gate list.",
+    "quote_locked": "This quote is approved or sent and can no longer be edited. Revise it instead.",
+    "fx_missing": "An exchange rate is missing for this sheet.",
+    "sheet_not_draft": "Only a draft cost sheet can be changed.",
+    "invalid_margin": "Margin must be below 100 %.",
+    "pdf_unavailable": "PDF could not be made: no Edge or Chrome was found. Use the print view, or set the browser path under Letterhead.",
+    "quote_not_approved": "Approve the quote first.",
+    "quote_not_sent": "The quote has not been sent yet.",
+    "quotes_undecided": "Some sent quotes have no outcome yet.",
+    "buyer_required": "Choose a buyer first.",
+    "validity_too_long": "The validity date is later than the FX rates allow.",
+    "rounding_step_required": "Enter a rounding step.",
+    "amount_not_allowed": "This basis takes a percent, not an amount.",
+    "percent_not_allowed": "This basis takes an amount, not a percent.",
+    "template_deal_type": "The template belongs to another deal type.",
+    "unknown_reason": "Unknown reason.",
+    "item_not_of_quote": "The row is not part of this quote.",
+    "sheet_not_of_case": "The cost sheet belongs to another case.",
+    "item_not_allowed": "An item line is not allowed here.",
+    "item_required": "Choose an item.",
+    "confirmation_incomplete": "Enter who confirmed the rate and when.",
+    "invalid_period": "The period is not valid.",
+    "invalid_percent": "The percent is not valid.",
+    "invalid_method": "Unknown pricing method.",
+    "no_followup_reason": "Enter why no follow-up is set."
   },
   "cc": {
     "subtitle": "Follow-ups and leads for {{date}}.",
@@ -518,6 +547,15 @@
       "selectionLost": "Selections lost (last 14 days)",
       "noResponseResend": "No reply to RFQ",
       "resendHint": "no reply, send again"
+    },
+    "sales": {
+      "title": "Sales",
+      "won30": "Won (30 days)",
+      "lost30": "Lost (30 days)",
+      "awaitingApproval": "Quotes awaiting approval",
+      "expiring": "Quotes expiring (3 days)",
+      "staleFx": "Cost sheets with old FX rates",
+      "fxAge": "rates {{n}} days old"
     }
   },
   "funnel": {
@@ -636,7 +674,8 @@
       "contacts": "Contacts",
       "interactions": "Interactions",
       "documents": "Documents",
-      "history": "History"
+      "history": "History",
+      "quotes": "Quotes"
     },
     "archiveTitle": "Archive party",
     "archiveOpenFollowups": "This party has {{count}} open follow-up(s).",
@@ -824,6 +863,28 @@
         "superseded": "Superseded",
         "withdrawn": "Withdrawn",
         "expired": "Expired"
+      },
+      "costSheet": {
+        "draft": "Draft",
+        "final": "Final",
+        "superseded": "Superseded"
+      },
+      "quote": {
+        "draft": "Draft",
+        "approved": "Approved",
+        "sent": "Sent",
+        "accepted": "Accepted",
+        "partially_accepted": "Partially accepted",
+        "rejected": "Rejected",
+        "expired": "Expired",
+        "withdrawn": "Withdrawn",
+        "superseded": "Superseded"
+      },
+      "outcome": {
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "no_reply": "No reply",
+        "negotiating": "Negotiating"
       }
     },
     "channels": {
@@ -928,7 +989,9 @@
         "offers": "Offers",
         "comparison": "Comparison",
         "documents": "Documents",
-        "history": "History"
+        "history": "History",
+        "costing": "Costing",
+        "quotes": "Quotes"
       },
       "cascadeHint": "For test data only: deletes this case with its items, RFQs, recipients, offers and document links. Files stay in Documents and interactions stay in the parties' history. The deletion is recorded in the event log.",
       "typeTitle": "Type the case title to confirm",
@@ -1225,7 +1288,17 @@
         "case_title": "case title",
         "items_table": "item table: no, name, quantity + unit, key specs, packaging, destination, Incoterm, required by",
         "respond_by": "reply-by date",
-        "signature": "your signature (Settings)"
+        "signature": "your signature (Settings)",
+        "buyer_name": "buyer's name",
+        "valid_until": "quote valid until",
+        "payment_terms": "payment terms",
+        "incoterm": "Incoterm and place",
+        "lead_time": "lead time",
+        "bank_details": "bank details (Letterhead)"
+      },
+      "kinds": {
+        "rfq": "RFQ messages",
+        "quote_terms": "Quote terms"
       }
     },
     "capabilities": {
@@ -1257,5 +1330,346 @@
       "unavailable": "marked unavailable",
       "invalid": "offer no longer valid"
     }
+  },
+  "costing": {
+    "settingsSubtitle": "Tax and duty parameters, and the cost templates new sheets start from.",
+    "newSheet": "New cost sheet",
+    "create": "Create",
+    "dealType": "Deal type",
+    "pricingCurrency": "Pricing currency",
+    "pricingCurrencyHint": "Prices and totals are in this currency; every other currency needs a rate.",
+    "template": "Template",
+    "defaultTemplate": "Default template of the deal type",
+    "blankSheet": "Blank sheet",
+    "prefillHint": "Purchase lines are filled from the selected offers.",
+    "sheet": "Cost sheet v{{version}}",
+    "version": "v{{version}}",
+    "finalize": "Finalize",
+    "newVersion": "New version",
+    "readOnly": "Only a draft sheet can be edited. Make a new version to change it.",
+    "sheetDate": "Sheet date",
+    "sheetDateHint": "Tax parameters in force on this date are used.",
+    "empty": "No cost sheet yet.",
+    "computedExposure": "Computed exposure",
+    "dealTypes": {
+      "all": "All",
+      "import": "Import",
+      "export": "Export",
+      "domestic": "Domestic"
+    },
+    "kinds": {
+      "purchase": "Purchase",
+      "freight_international": "International freight",
+      "insurance": "Insurance",
+      "bank_fees": "Bank fees",
+      "customs_duty": "Customs duty",
+      "levy": "Levy",
+      "customs_clearance": "Customs clearance",
+      "storage": "Storage",
+      "inspection": "Inspection",
+      "freight_domestic": "Domestic freight",
+      "export_clearance": "Export clearance",
+      "vat": "VAT",
+      "other": "Other"
+    },
+    "bases": {
+      "total": "Total amount",
+      "per_unit": "Per unit",
+      "percent_of_cif": "% of CIF",
+      "percent_of_purchase": "% of purchase"
+    },
+    "allocations": {
+      "by_value": "By value",
+      "by_quantity": "By quantity",
+      "equal": "Equal",
+      "manual": "Manual"
+    },
+    "fx": {
+      "title": "Exchange rates",
+      "missing": "Missing rate: {{pair}}",
+      "none": "No rates entered.",
+      "used": "used",
+      "from": "From currency",
+      "rate": "Rate (1 unit = ? {{to}})",
+      "kind": "Rate kind",
+      "kindPlaceholder": "e.g. market, NIMA",
+      "source": "Source",
+      "asOf": "As of",
+      "save": "Save rate"
+    },
+    "lines": {
+      "title": "Cost lines",
+      "add": "Add line",
+      "kind": "Kind",
+      "label": "Label",
+      "basis": "Basis",
+      "percent": "Percent",
+      "amount": "Amount",
+      "parameter": "Tax parameter",
+      "noParameter": "No parameter (manual)",
+      "allocation": "Allocation",
+      "paidBefore": "Paid before receipt",
+      "scope": "Scope",
+      "wholeCase": "Whole case",
+      "itemLine": "item line",
+      "perItem": "per item",
+      "fromOffer": "from offer",
+      "vatSeparate": "VAT, kept separate",
+      "gridHint": "Enter or ↓ moves down, ↑ moves up; a value is saved when you leave the field.",
+      "columns": {
+        "kind": "Kind",
+        "label": "Label",
+        "basis": "Basis",
+        "value": "Value",
+        "allocation": "Allocation",
+        "paidBefore": "Paid before",
+        "computed": "Computed"
+      }
+    },
+    "money": {
+      "title": "Cost of money",
+      "supplierPrepay": "Supplier prepayment %",
+      "customerPrepay": "Customer prepayment %",
+      "days": "Days until paid",
+      "annualRate": "Annual rate %",
+      "guarantee": "Guarantee %",
+      "guaranteeDays": "Guarantee days",
+      "exposure": "Exposure",
+      "supplierPrepayment": "Supplier prepayment",
+      "paidBefore": "Paid before receipt",
+      "customerPrepayment": "Customer prepayment",
+      "costOfMoney": "Cost of money",
+      "guaranteeCost": "Guarantee cost",
+      "hint": "Exposure = supplier prepayment + costs paid before receipt − customer prepayment (not below 0)."
+    },
+    "pricing": {
+      "title": "Pricing",
+      "method": "Method",
+      "margin": "Margin",
+      "markup": "Markup",
+      "target": "Target %",
+      "rounding": "Rounding",
+      "step": "Rounding step",
+      "minPrice": "Minimum price ({{currency}})",
+      "validity": "Validity (days)",
+      "manual": "manual",
+      "vat": "VAT",
+      "noQuantity": "no quantity",
+      "cost": "Cost",
+      "priceBeforeVat": "Price before VAT",
+      "priceWithVat": "Price with VAT",
+      "marginTotal": "Margin",
+      "markupTotal": "Markup",
+      "profit": "Profit",
+      "roundings": {
+        "none": "None",
+        "nearest": "Nearest",
+        "up": "Up"
+      },
+      "columns": {
+        "item": "Item",
+        "quantity": "Quantity",
+        "landed": "Landed cost",
+        "unitCost": "Unit cost",
+        "unitPrice": "Unit price",
+        "total": "Total",
+        "margin": "Margin",
+        "markup": "Markup",
+        "minUnit": "Min. unit price"
+      }
+    },
+    "gate": {
+      "title": "Quote gate",
+      "ok": "Passes",
+      "blocked": "Blocked",
+      "maxValid": "latest allowed",
+      "overridden": "Overridden",
+      "override": "Override",
+      "validUntil": "Quote valid until",
+      "capped": "shortened to match the FX rates",
+      "createQuote": "Create quote",
+      "conditions": {
+        "sheet_not_final": "Sheet is final",
+        "fx_missing": "All exchange rates entered",
+        "lines_incomplete": "All cost lines complete",
+        "item_not_priced": "Every item has a price",
+        "below_minimum": "Total is above the minimum price",
+        "item_below_minimum": "Every item is above its minimum",
+        "validity_too_long": "Validity within the FX age limit",
+        "unconfirmed_parameter": "Tax parameters confirmed",
+        "fx_stale": "Exchange rates are recent",
+        "buyer_required": "A buyer is chosen"
+      }
+    },
+    "warnings": {
+      "offer_invalid": "The offer behind this line is no longer valid.",
+      "selection_changed": "The selected offer of this item has changed.",
+      "unconfirmed_parameter": "The tax parameter is not confirmed.",
+      "fx_stale": "Exchange rates are from {{as_of}}, older than {{max_age_days}} days."
+    },
+    "params": {
+      "title": "Tax and duty parameters",
+      "new": "New parameter",
+      "kind": "Kind",
+      "dealType": "Deal type",
+      "name": "Name",
+      "rate": "Rate %",
+      "from": "In force from",
+      "confirm": "Confirm",
+      "confirmedBy": "Confirmed by",
+      "confirmedOn": "Confirmed on",
+      "end": "End",
+      "none": "No parameters yet.",
+      "unconfirmed": "Not confirmed",
+      "hint": "A rate never changes: to change it, end the parameter and add a new one.",
+      "newRowHint": "The previous parameter of the same kind is not ended automatically.",
+      "columns": {
+        "kind": "Kind",
+        "name": "Name",
+        "rate": "Rate",
+        "dealType": "Deal type",
+        "period": "Period",
+        "confirmed": "Confirmed"
+      }
+    },
+    "templates": {
+      "title": "Cost templates",
+      "new": "New template",
+      "edit": "Edit template",
+      "name": "Name (English)",
+      "nameFa": "Name (Persian)",
+      "default": "Default for the deal type",
+      "isDefault": "Default",
+      "labelEn": "Label (English)",
+      "labelFa": "Label (Persian)",
+      "up": "Move up",
+      "down": "Move down",
+      "lines": "{{n}} lines",
+      "lines_one": "{{n}} line"
+    }
+  },
+  "quotes": {
+    "empty": "No quote yet. Create one from a final cost sheet.",
+    "none": "No quotes.",
+    "number": "Number",
+    "status": "Status",
+    "total": "Total",
+    "validUntil": "Valid until",
+    "buyer": "Buyer",
+    "noBuyer": "No buyer",
+    "language": "Language",
+    "priceBasis": "Prices",
+    "leadTime": "Lead time",
+    "paymentTerms": "Payment terms",
+    "deliveryTerms": "Delivery terms",
+    "costSheet": "Cost sheet",
+    "items": "Items",
+    "terms": "Terms",
+    "termsHint": "Made from the quote terms template; you can edit the text.",
+    "regenerateTerms": "Rebuild from template",
+    "version": "version {{version}}",
+    "latest": "Latest quote",
+    "approve": "Approve",
+    "approvalTitle": "Approval",
+    "approveHint": "Approving locks prices and terms; the PDF loses the DRAFT mark.",
+    "markSent": "Mark as sent",
+    "markSentHint": "Records an interaction with the buyer and a follow-up before the quote expires.",
+    "dueBeforeValidity": "Default: one day before the validity date.",
+    "moveToQuoted": "Move the buyer to “Quoted” in the funnel",
+    "recordOutcome": "Record outcome",
+    "revise": "Revise",
+    "withdraw": "Withdraw",
+    "outcome": "Outcome",
+    "reason": "Reason",
+    "reasonRequired": "Reason (required)",
+    "reasonRequiredHint": "Every rejected row needs a reason.",
+    "outcomeNote": "Note",
+    "competitorPrice": "Competitor price",
+    "printView": "Print view",
+    "draftWatermark": "Draft: PDF and Word carry a DRAFT mark",
+    "pdfUnavailable": "PDF could not be made on this computer. Use the print view (Ctrl+P), or set the browser path under Letterhead.",
+    "outputs": "Files",
+    "outputReady": "{{name}} saved to Documents",
+    "maxValid": "latest allowed: {{date}}",
+    "summary": "{{n}} quotes · won {{won}} · lost {{lost}}",
+    "markWon": "Case won",
+    "markLost": "Case lost",
+    "basis": {
+      "before_vat": "Before VAT",
+      "with_vat": "With VAT"
+    },
+    "basisNote": {
+      "before_vat": "Prices are before VAT; VAT is shown separately.",
+      "with_vat": "Prices include VAT."
+    },
+    "channels": {
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "phone": "Phone",
+      "in_person": "In person",
+      "letter": "Letter",
+      "other": "Other"
+    },
+    "outcomes": {
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "no_reply": "No reply",
+      "negotiating": "Negotiating"
+    },
+    "outcomeColumns": {
+      "item": "Item",
+      "outcome": "Outcome",
+      "reason": "Reason",
+      "competitor": "Competitor price"
+    },
+    "columns": {
+      "description": "Description",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price",
+      "total": "Total",
+      "leadTime": "Lead time (days)",
+      "note": "Note",
+      "outcome": "Outcome"
+    },
+    "reasons": {
+      "price": "Price",
+      "lead_time": "Lead time",
+      "payment_terms": "Payment terms",
+      "specification": "Specification",
+      "competitor": "Competitor",
+      "project_cancelled": "Project cancelled",
+      "no_budget": "No budget",
+      "other": "Other"
+    },
+    "product": {
+      "title": "Quotes we sent",
+      "none": "No quote sent for this product yet.",
+      "sent": "Sent"
+    },
+    "summary_one": "{{n}} quote · won {{won}} · lost {{lost}}"
+  },
+  "letterhead": {
+    "subtitle": "Company details printed on quotes, in Persian and English.",
+    "company": "Company",
+    "fields": {
+      "name_fa": "Name (Persian)",
+      "name_en": "Name (English)",
+      "phone": "Phone",
+      "email": "Email",
+      "website": "Website",
+      "browser_path": "Browser path (optional)",
+      "address": "Address",
+      "registration": "Registration / economic code",
+      "bank_details": "Bank details",
+      "footer": "Footer",
+      "logo": "Logo"
+    },
+    "logoHint": "PNG or JPEG; stored in Documents.",
+    "logoSet": "Logo set",
+    "pdf": "PDF",
+    "pdfHint": "Empty: Edge or Chrome is found automatically. Set a path only if PDF fails.",
+    "terms": "Quote terms",
+    "termsHint": "Payment, delivery and validity text comes from the quote terms templates.",
+    "termsLink": "Edit quote terms templates"
   }
 }

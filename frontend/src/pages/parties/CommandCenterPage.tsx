@@ -87,6 +87,33 @@ function SourcingSection({ s }: { s: SourcingSummary }) {
             extra: <span className="text-xs text-muted">{t("cc.sourcing.itemsMissing", { n: f.num(c.not_covered), total: f.num(c.items) })}</span> })))}
         </Card>
       </div>
+      {s.quotes_awaiting_approval !== undefined && (
+        <>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-base font-semibold">{t("cc.sales.title")}</h2>
+            <span className="rounded-md border border-line px-3 py-1 text-sm" data-testid="won-lost">
+              {t("cc.sales.won30")}: <b className="tabular-nums text-success">{f.num(s.quotes_won_30_days ?? 0)}</b>
+              <span className="mx-2 text-muted">·</span>
+              {t("cc.sales.lost30")}: <b className="tabular-nums text-danger">{f.num(s.quotes_lost_30_days ?? 0)}</b>
+            </span>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sales.awaitingApproval")} <Badge tone={s.quotes_awaiting_approval.length ? "warning" : "neutral"}>{f.num(s.quotes_awaiting_approval.length)}</Badge></span>}>
+              {list(s.quotes_awaiting_approval.map((q) => ({ key: q.quote_id, to: `/cases/${q.case_id}?tab=quotes&quote=${q.quote_id}`, label: <bdi dir="ltr">{q.number}</bdi>,
+                extra: <span className="text-xs text-muted"><Bdi>{q.case_title}</Bdi></span> })))}
+            </Card>
+            <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sales.expiring")} <Badge tone={s.quotes_expiring?.length ? "warning" : "neutral"}>{f.num(s.quotes_expiring?.length ?? 0)}</Badge></span>}>
+              {list((s.quotes_expiring ?? []).map((q) => ({ key: q.quote_id, to: `/cases/${q.case_id}?tab=quotes&quote=${q.quote_id}`, label: <bdi dir="ltr">{q.number}</bdi>,
+                extra: <span className="text-xs text-muted"><Bdi>{(f.lang === "fa" ? q.party_name_fa || q.party_name_en : q.party_name_en || q.party_name_fa) ?? q.case_title}</Bdi> · <span className="text-danger">{t("sourcing.compare.daysLeft", { n: f.num(q.days_left) })}</span></span> })))}
+            </Card>
+            <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sales.staleFx")} <Badge tone={s.sheets_stale_fx?.length ? "warning" : "neutral"}>{f.num(s.sheets_stale_fx?.length ?? 0)}</Badge></span>}>
+              {list((s.sheets_stale_fx ?? []).map((r) => ({ key: r.cost_sheet_id, to: `/cases/${r.case_id}?tab=costing&sheet=${r.cost_sheet_id}`,
+                label: <span><Bdi>{r.case_title}</Bdi> · {t("costing.version", { version: f.num(r.version) })}</span>,
+                extra: <span className="text-xs text-muted">{t("cc.sales.fxAge", { n: f.num(r.age_days) })}</span> })))}
+            </Card>
+          </div>
+        </>
+      )}
     </section>
   );
 }
