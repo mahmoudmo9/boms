@@ -72,6 +72,15 @@ def _signature(value: Any) -> dict[str, str]:
     return clean
 
 
+def _choice(*options: str) -> Callable[[Any], str]:
+    def check(value: Any) -> str:
+        if value not in options:
+            raise ValueError(f"expected one of {', '.join(options)}")
+        return value
+
+    return check
+
+
 # key -> (default, validator)
 DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "backup.time": ("02:00", _time),
@@ -82,6 +91,9 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "parties.stale_lead_days": (14, _int_range(1, 365)),
     "company.name": ("", _short_text),
     "company.signature": ({"fa": "", "en": ""}, _signature),
+    "costing.fx_max_age_days": (3, _int_range(0, 365)),
+    "costing.default_pricing_method": ("margin", _choice("margin", "markup")),
+    "quotes.default_validity_days": (7, _int_range(1, 365)),
 }
 
 

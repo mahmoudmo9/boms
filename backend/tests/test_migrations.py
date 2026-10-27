@@ -16,7 +16,7 @@ def _tables(url: str) -> set[str]:
     with engine.connect() as conn:
         rows = conn.execute(text(
             "SELECT table_schema || '.' || table_name FROM information_schema.tables "
-            "WHERE table_schema IN ('sys', 'core')"
+            "WHERE table_schema IN ('sys', 'core', 'ops', 'ref')"
         )).scalars().all()
     engine.dispose()
     return set(rows)
@@ -27,9 +27,9 @@ def _schema(url: str) -> set[str]:
     engine = create_engine(url)
     with engine.connect() as conn:
         rows = conn.execute(text(
-            "SELECT schemaname || '.' || indexname FROM pg_indexes WHERE schemaname IN ('sys', 'core') "
+            "SELECT schemaname || '.' || indexname FROM pg_indexes WHERE schemaname IN ('sys', 'core', 'ops', 'ref') "
             "UNION SELECT 'constraint ' || conname FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace "
-            "WHERE n.nspname IN ('sys', 'core')"
+            "WHERE n.nspname IN ('sys', 'core', 'ops', 'ref')"
         )).scalars().all()
     engine.dispose()
     return _tables(url) | set(rows)

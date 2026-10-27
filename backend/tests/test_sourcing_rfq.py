@@ -771,6 +771,11 @@ def test_backup_and_restore_test_include_sourcing_tables(client):
     run_id = backup.run_backup("manual", source="script")
     result = backup.restore_test(run_id, source="script")
     assert result["status"] == "passed", result
-    # 18 tables up to v0.2.1 + 18 new ones (ops."case" included: the count query quotes reserved names)
-    assert result["details"]["tables_checked"] == 36 and result["details"]["row_count_mismatches"] == {}
+    # every table of the app schemas (36 at v0.3.x; ops."case" included: the count query quotes reserved names)
+    from app.core.db import get_engine
+
+    with get_engine().connect() as conn:
+        expected = len(backup.table_counts(conn))
+    assert expected >= 36
+    assert result["details"]["tables_checked"] == expected and result["details"]["row_count_mismatches"] == {}
     assert doc["id"]

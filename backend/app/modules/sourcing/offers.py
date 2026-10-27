@@ -38,6 +38,10 @@ def get_offer(db: Session, offer_id: uuid.UUID) -> SupplierOffer:
     return row
 
 
+def get_offer_item(db: Session, offer_item_id: uuid.UUID) -> OfferItem | None:
+    return db.get(OfferItem, offer_item_id)
+
+
 def offer_items(db: Session, offer_id: uuid.UUID) -> list[OfferItem]:
     return list(db.scalars(select(OfferItem).where(OfferItem.offer_id == offer_id).order_by(OfferItem.created_at)))
 
