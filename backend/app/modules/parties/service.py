@@ -480,10 +480,20 @@ def set_method_status(db: Session, method_id: uuid.UUID, status: str, source: st
                       actor: str | None = None) -> ContactMethod:
     method = get_method(db, method_id)
     if method.status != status:
+        if status == "active":  # restoring may collide with an active copy on the same contact (v0.4.0: stable code)
+            twin = db.scalar(select(ContactMethod).where(
+                ContactMethod.contact_id == method.contact_id, ContactMethod.type == method.type,
+                ContactMethod.value_norm == method.value_norm, ContactMethod.status == "active",
+                ContactMethod.id != method.id))
+            if twin is not None:
+                contact = get_contact(db, twin.contact_id)
+                raise Conflict("duplicate_active_method", "An active copy of this number/address already exists",
+                               {"method_id": str(twin.id), "contact_id": str(contact.id),
+                                "party_id": str(contact.party_id), "value": twin.value})
         method.status = status
         if status == "archived":
             method.is_primary = False
-        _flush(db, "duplicate_contact_method")  # restoring may collide with an active copy on the same contact
+        _flush(db, "duplicate_contact_method")
         events.record(db, "contact", method.contact_id, f"method_{'archive' if status == 'archived' else 'unarchive'}",
                       jsonable({"method_id": method.id}), source, actor=actor)
     return method

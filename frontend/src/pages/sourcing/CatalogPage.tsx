@@ -8,7 +8,7 @@ import { Bdi } from "../../components/Bdi";
 import { DataTable, Pagination } from "../../components/DataTable";
 import { Icon } from "../../components/Icon";
 import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, IconButton, Input, Loading, Modal, PageHeader, Select, Textarea } from "../../components/ui";
-import { api, type Page } from "../../lib/api";
+import { api, ApiError, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Product, ProductPage as ProductPageData } from "../../lib/types";
 import { PartyName, stageLabel } from "../parties/shared";
@@ -180,6 +180,59 @@ export function CatalogPage() {
   );
 }
 
+/** v0.4.0: edit a product (names, unit, HS, category, kind, notes); aliases stay as they are (own card).
+ * A rename that looks like another product answers 409 possible_duplicate: list them and ask to confirm. */
+function EditProductDialog({ product, onClose, onSaved }: { product: Product; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const categories = useCategories();
+  const [form, setForm] = useState({ name_fa: product.name_fa ?? "", name_en: product.name_en ?? "", hs_code: product.hs_code ?? "",
+    kind_note: product.kind_note ?? "", default_unit_code: product.default_unit_code, category_id: product.category_id ?? "", notes: product.notes ?? "" });
+  const [confirmed, setConfirmed] = useState(false);
+  const save = useMutation({
+    mutationFn: () => api(`/api/products/${product.id}`, {
+      method: "PATCH",
+      body: { name_fa: form.name_fa || null, name_en: form.name_en || null, hs_code: form.hs_code || null, kind_note: form.kind_note || null,
+        default_unit_code: form.default_unit_code, category_id: form.category_id || null, notes: form.notes || null, confirm_duplicate: confirmed },
+    }),
+    onSuccess: () => { onSaved(); onClose(); },
+  });
+  const duplicates = save.error instanceof ApiError && save.error.code === "possible_duplicate"
+    ? (save.error.details.possible_duplicates as Duplicate[]) : null;
+  const change = (patch: Partial<typeof form>) => { setForm({ ...form, ...patch }); setConfirmed(false); save.reset(); };
+  return (
+    <Modal open wide title={t("sourcing.catalog.edit")} onClose={onClose}
+      footer={<><Button onClick={onClose}>{t("common.cancel")}</Button>
+        <Button variant="primary" busy={save.isPending} disabled={(!form.name_fa.trim() && !form.name_en.trim()) || (!!duplicates && !confirmed)} onClick={() => save.mutate()}>{t("common.save")}</Button></>}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label={t("parties.nameFa")} htmlFor="ep-fa"><Input id="ep-fa" value={form.name_fa} onChange={(e) => change({ name_fa: e.target.value })} /></Field>
+        <Field label={t("parties.nameEn")} htmlFor="ep-en"><Input id="ep-en" dir="ltr" value={form.name_en} onChange={(e) => change({ name_en: e.target.value })} /></Field>
+        {duplicates && (
+          <div className="rounded-md bg-warning-soft p-2.5 text-sm sm:col-span-2">
+            <p className="mb-1.5 font-medium text-warning">{t("sourcing.catalog.possibleDuplicates")}</p>
+            <ul className="mb-2 flex flex-col gap-1">{duplicates.map((d) => (
+              <li key={d.id}><Link className="text-accent hover:underline" to={`/sourcing/catalog/${d.id}`}><Bdi>{productName(d, f.lang)}</Bdi></Link> <span className="text-xs text-muted">({t(`sourcing.catalog.matchBy.${d.reason}`)})</span></li>
+            ))}</ul>
+            <Checkbox label={t("parties.confirmDuplicate")} checked={confirmed} onChange={setConfirmed} />
+          </div>
+        )}
+        <Field label={t("sourcing.item.hsCode")} htmlFor="ep-hs"><Input id="ep-hs" dir="ltr" inputMode="numeric" value={form.hs_code} onChange={(e) => change({ hs_code: e.target.value.replace(/\D/g, "") })} /></Field>
+        <Field label={t("sourcing.catalog.defaultUnit")} htmlFor="ep-unit"><UnitInput id="ep-unit" code={form.default_unit_code} text={null} onChange={(u) => change({ default_unit_code: u.unit_code })} /></Field>
+        <Field label={t("sourcing.catalog.kindNote")} htmlFor="ep-kind"><Input id="ep-kind" dir="auto" value={form.kind_note} onChange={(e) => change({ kind_note: e.target.value })} /></Field>
+        <Field label={t("sourcing.catalog.category")} htmlFor="ep-cat">
+          <Select id="ep-cat" value={form.category_id} onChange={(e) => change({ category_id: e.target.value })}>
+            <option value="">—</option>
+            {(categories.data ?? []).map((c) => <option key={c.id} value={c.id}>{productName(c, f.lang)}</option>)}
+          </Select>
+        </Field>
+        <div className="sm:col-span-2"><Field label={t("parties.notes")} htmlFor="ep-notes"><Textarea id="ep-notes" dir="auto" rows={3} value={form.notes} onChange={(e) => change({ notes: e.target.value })} /></Field></div>
+        <p className="text-xs text-muted sm:col-span-2">{t("sourcing.catalog.aliasesSeparate")}</p>
+        {!duplicates && <div className="sm:col-span-2"><ErrorNote error={save.error} /></div>}
+      </div>
+    </Modal>
+  );
+}
+
 export function ProductPage() {
   const { id = "" } = useParams();
   const { t } = useTranslation();
@@ -188,6 +241,7 @@ export function ProductPage() {
   const invalidate = useInvalidateSourcing();
   const navigate = useNavigate();
   const [alias, setAlias] = useState("");
+  const [editing, setEditing] = useState(false);
   const product = useQuery({ queryKey: ["products", "page", id], queryFn: () => api<ProductPageData>(`/api/products/${id}`) });
   const refresh = () => { void product.refetch(); invalidate(); };
   const addAlias = useMutation({ mutationFn: () => api(`/api/products/${id}/aliases`, { method: "POST", body: { alias } }), onSuccess: () => { setAlias(""); refresh(); } });
@@ -210,10 +264,12 @@ export function ProductPage() {
           {p.status === "archived" && <Badge>{t("parties.archived")}</Badge>}
         </span>}
         actions={<>
+          <Button icon="edit" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
           <Button onClick={() => archive.mutate(p.status === "archived")}>{p.status === "archived" ? t("parties.unarchive") : t("parties.archive")}</Button>
           <Button variant="ghost" onClick={() => remove.mutate()}>{t("delete.button")}</Button>
         </>} />
       <ErrorNote error={archive.error || remove.error} />
+      {editing && <EditProductDialog product={p} onClose={() => setEditing(false)} onSaved={refresh} />}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           <Card padded={false} title={t("sourcing.catalog.priceMemory")}>

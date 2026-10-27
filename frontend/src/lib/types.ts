@@ -565,6 +565,7 @@ export interface Offer {
   raw_text: string | null;
   status: "active" | "superseded" | "withdrawn" | "expired";
   superseded_by_id: string | null;
+  status_note: string | null;
   valid: boolean;
   items: OfferItem[];
   documents: LinkedDocument[];

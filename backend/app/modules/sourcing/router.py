@@ -11,6 +11,7 @@ from app.core.errors import AppError
 from app.core.schemas import page_params
 from app.core.web import request_source
 from app.modules.documents import service as documents
+from app.modules.events import service as events
 from app.modules.parties import service as parties
 from app.modules.sourcing import (
     capabilities,
@@ -621,7 +622,12 @@ def offer_detail(db: Session, offer_id: uuid.UUID) -> dict:
     row = offers.get_offer(db, offer_id)
     party = parties.get_party(db, row.party_id)
     contact = parties.get_contact(db, row.contact_id) if row.contact_id else None
+    status_note = None
+    if row.status == "withdrawn":  # the note given when withdrawing (v0.4.0), from the offer history
+        last, _ = events.list_events(db, entity_type="offer", entity_id=str(row.id), action="status", page_size=1)
+        status_note = (last[0].data or {}).get("note") if last else None
     return {**jsonable(row_snapshot(row)), "party_name_fa": party.name_fa, "party_name_en": party.name_en,
+            "status_note": status_note,
             "contact_name_fa": contact.name_fa if contact else None,
             "contact_name_en": contact.name_en if contact else None,
             "valid": offers.is_valid(row),

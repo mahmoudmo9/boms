@@ -54,6 +54,9 @@ def _match_recipient(db: Session, case_id: uuid.UUID, party_id: uuid.UUID, recip
         rfq = rfq_service.get_rfq(db, recipient.rfq_id)
         if rfq.case_id != case_id or recipient.party_id != party_id:
             raise AppError("recipient_mismatch", "The RFQ recipient is another supplier or case", status=422)
+        if recipient.status == "draft":  # v0.4.0: was a 500 (a sent date is required before "replied")
+            raise AppError("recipient_not_sent", "Mark the RFQ as sent to this supplier first, or record the offer "
+                           "without an RFQ", {"recipient_id": str(recipient.id)}, status=422)
         return recipient
     candidates = db.scalars(select(RfqRecipient).join(Rfq, Rfq.id == RfqRecipient.rfq_id).where(
         Rfq.case_id == case_id, RfqRecipient.party_id == party_id,
@@ -124,7 +127,7 @@ def record_offer(db: Session, data: dict, source: str, actor: str | None = None)
     events.record(db, "case", case.id, "offer_add", jsonable({"offer_id": offer.id, "party_id": party.id}), source,
                   actor=actor)
 
-    if recipient is not None and recipient.status in ("sent", "no_response", "draft"):
+    if recipient is not None and recipient.status in ("sent", "no_response"):
         rfq_service.set_recipient_status(db, recipient, "replied", source, actor, f"offer {offer.id}")
         rfq_service.refresh_status(db, rfq_service.get_rfq(db, recipient.rfq_id), source, actor)
     if previous is not None:

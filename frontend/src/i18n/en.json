@@ -493,7 +493,9 @@
     "unknown_category": "Unknown category.",
     "confirm_title_mismatch": "Type the exact case title to confirm.",
     "confirm_subject_mismatch": "Type the exact inquiry subject (or DELETE when it has none) to confirm.",
-    "possible_duplicate": "Similar products exist. Check them, then confirm to save anyway."
+    "possible_duplicate": "Similar products exist. Check them, then confirm to save anyway.",
+    "recipient_not_sent": "Mark the RFQ as sent to this supplier first, or record the offer without an RFQ.",
+    "duplicate_active_method": "An active copy of this number or address already exists."
   },
   "cc": {
     "subtitle": "Follow-ups and leads for {{date}}.",
@@ -1099,7 +1101,10 @@
       "pastValidity": "Past validity",
       "contact": "Contact person",
       "noContact": "— no contact —",
-      "contactFromRfq": "Pre-selected: the person the RFQ was sent to."
+      "contactFromRfq": "Pre-selected: the person the RFQ was sent to.",
+      "withdrawNote": "Note (optional)",
+      "withdrawNoteHint": "Why the offer is withdrawn; shown in the offer history.",
+      "draftRecipient": "Greyed suppliers have not been sent the RFQ yet: mark it as sent first, or pick the supplier above to record an offer without an RFQ."
     },
     "coverage": {
       "title": "Coverage",
@@ -1196,7 +1201,9 @@
       "suppliersByOffers": "Suppliers by offers",
       "suppliersByCapability": "Suppliers by capability",
       "noSuppliers": "None yet",
-      "noHs": "Set an HS code to see suppliers by capability."
+      "noHs": "Set an HS code to see suppliers by capability.",
+      "edit": "Edit product",
+      "aliasesSeparate": "Aliases are edited in the Aliases card of the product page."
     },
     "templates": {
       "title": "Message templates",

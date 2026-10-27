@@ -122,12 +122,15 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
         )}
         {recipients.length > 0 && !party && (
           <div className="flex flex-wrap gap-1.5">
-            {recipients.filter((r) => r.status !== "draft").map((r) => (
-              <button key={r.id} type="button" className="rounded-md border border-line px-2 py-1 text-sm hover:bg-surface-2"
+            {recipients.map((r) => (
+              // a draft recipient was never sent the RFQ: an offer cannot answer it (422 recipient_not_sent)
+              <button key={r.id} type="button" disabled={r.status === "draft"} title={r.status === "draft" ? t("sourcing.offer.draftRecipient") : undefined}
+                className="rounded-md border border-line px-2 py-1 text-sm hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => void api<Party>(`/api/parties/${r.party_id}`).then(setParty)}>
                 <Bdi>{r.party_name_fa || r.party_name_en}</Bdi> <StatusBadge group="recipient" status={r.status} />
               </button>
             ))}
+            {recipients.some((r) => r.status === "draft") && <p className="w-full text-xs text-muted">{t("sourcing.offer.draftRecipient")}</p>}
           </div>
         )}
         {previous.length > 0 && (
@@ -219,7 +222,12 @@ export function OffersTab({ caseData, highlight, recordFor }: { caseData: CaseDe
   const [recording, setRecording] = useState(!!recordFor);
   const offers = useQuery({ queryKey: ["offers", caseData.id], queryFn: () => api<Offer[]>("/api/offers", { query: { case_id: caseData.id } }) });
   const refresh = () => { void offers.refetch(); invalidate(); };
-  const withdraw = useMutation({ mutationFn: (id: string) => api(`/api/offers/${id}/status`, { method: "POST", body: { status: "withdrawn" } }), onSuccess: refresh });
+  const [withdrawing, setWithdrawing] = useState<Offer | null>(null);
+  const [withdrawNote, setWithdrawNote] = useState("");
+  const withdraw = useMutation({
+    mutationFn: (id: string) => api(`/api/offers/${id}/status`, { method: "POST", body: { status: "withdrawn", note: withdrawNote.trim() || null } }),
+    onSuccess: () => { setWithdrawing(null); setWithdrawNote(""); refresh(); },
+  });
   const remove = useMutation({ mutationFn: (id: string) => api(`/api/offers/${id}`, { method: "DELETE" }), onSuccess: refresh });
   const names = Object.fromEntries(caseData.items.map((i) => [i.id, i.name]));
   return (
@@ -233,9 +241,10 @@ export function OffersTab({ caseData, highlight, recordFor }: { caseData: CaseDe
             <ContactName fa={o.contact_name_fa} en={o.contact_name_en} />
             <StatusBadge group="offer" status={o.status} />{!o.valid && o.status === "active" && <Badge tone="danger">{t("sourcing.offer.pastValidity")}</Badge>}</span>}
           actions={<>
-            {o.status === "active" && <Button variant="ghost" onClick={() => withdraw.mutate(o.id)}>{t("sourcing.offer.withdraw")}</Button>}
+            {o.status === "active" && <Button variant="ghost" onClick={() => setWithdrawing(o)}>{t("sourcing.offer.withdraw")}</Button>}
             <Button variant="ghost" onClick={() => remove.mutate(o.id)}>{t("delete.button")}</Button>
           </>}>
+          {o.status === "withdrawn" && o.status_note && <p className="mb-2 text-sm text-muted">{t("sourcing.offer.withdrawNote")}: <Bdi>{o.status_note}</Bdi></p>}
           <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
             <span>{t(`sourcing.channels.${o.channel}`)} · <span className="tabular-nums">{f.date(o.received_at)}</span></span>
             <span><Bdi ltr>{o.currency}</Bdi>{o.incoterm && <> · <Bdi ltr>{o.incoterm} {o.incoterm_place ?? ""}</Bdi></>}</span>
@@ -260,6 +269,16 @@ export function OffersTab({ caseData, highlight, recordFor }: { caseData: CaseDe
           )}
         </Card>
       ))}
+      {withdrawing && (
+        <Modal open title={t("sourcing.offer.withdraw")} onClose={() => setWithdrawing(null)}
+          footer={<><Button onClick={() => setWithdrawing(null)}>{t("common.cancel")}</Button>
+            <Button variant="danger" busy={withdraw.isPending} onClick={() => withdraw.mutate(withdrawing.id)}>{t("sourcing.offer.withdraw")}</Button></>}>
+          <Field label={t("sourcing.offer.withdrawNote")} htmlFor="ow-note" hint={t("sourcing.offer.withdrawNoteHint")}>
+            <Input id="ow-note" dir="auto" value={withdrawNote} onChange={(e) => setWithdrawNote(e.target.value)} />
+          </Field>
+          <ErrorNote error={withdraw.error} />
+        </Modal>
+      )}
       {recording && <OfferForm caseData={caseData} initialPartyId={recordFor ?? undefined} onClose={() => setRecording(false)} onSaved={refresh} />}
     </div>
   );
