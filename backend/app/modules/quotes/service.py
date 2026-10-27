@@ -575,7 +575,7 @@ def dashboard(db: Session, today: date) -> dict:
         SELECT q.id AS quote_id, q.number, q.case_id, c.title AS case_title, q.valid_until, q.currency, q.total,
                p.name_fa AS party_name_fa, p.name_en AS party_name_en
         FROM ops.quote q JOIN ops."case" c ON c.id = q.case_id LEFT JOIN core.party p ON p.id = q.buyer_party_id
-        WHERE q.status = 'sent' AND q.valid_until <= :until
+        WHERE q.status IN ('sent', 'expired') AND q.valid_until <= :until
           AND NOT EXISTS (SELECT 1 FROM ops.quote_item qi WHERE qi.quote_id = q.id AND qi.outcome IS NOT NULL)
         ORDER BY q.valid_until
         """

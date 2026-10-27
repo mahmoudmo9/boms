@@ -553,9 +553,10 @@
       "won30": "Won (30 days)",
       "lost30": "Lost (30 days)",
       "awaitingApproval": "Quotes awaiting approval",
-      "expiring": "Quotes expiring (3 days)",
+      "expiring": "Quotes expiring (3 days) or expired, no outcome",
       "staleFx": "Cost sheets with old FX rates",
-      "fxAge": "rates {{n}} days old"
+      "fxAge": "rates {{n}} days old",
+      "passed": "validity passed"
     }
   },
   "funnel": {

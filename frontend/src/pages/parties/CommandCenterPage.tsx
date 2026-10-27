@@ -104,7 +104,7 @@ function SourcingSection({ s }: { s: SourcingSummary }) {
             </Card>
             <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sales.expiring")} <Badge tone={s.quotes_expiring?.length ? "warning" : "neutral"}>{f.num(s.quotes_expiring?.length ?? 0)}</Badge></span>}>
               {list((s.quotes_expiring ?? []).map((q) => ({ key: q.quote_id, to: `/cases/${q.case_id}?tab=quotes&quote=${q.quote_id}`, label: <bdi dir="ltr">{q.number}</bdi>,
-                extra: <span className="text-xs text-muted"><Bdi>{(f.lang === "fa" ? q.party_name_fa || q.party_name_en : q.party_name_en || q.party_name_fa) ?? q.case_title}</Bdi> · <span className="text-danger">{t("sourcing.compare.daysLeft", { n: f.num(q.days_left) })}</span></span> })))}
+                extra: <span className="text-xs text-muted"><Bdi>{(f.lang === "fa" ? q.party_name_fa || q.party_name_en : q.party_name_en || q.party_name_fa) ?? q.case_title}</Bdi> · <span className="text-danger">{q.days_left < 0 ? t("cc.sales.passed") : t("sourcing.compare.daysLeft", { n: f.num(q.days_left) })}</span></span> })))}
             </Card>
             <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.sales.staleFx")} <Badge tone={s.sheets_stale_fx?.length ? "warning" : "neutral"}>{f.num(s.sheets_stale_fx?.length ?? 0)}</Badge></span>}>
               {list((s.sheets_stale_fx ?? []).map((r) => ({ key: r.cost_sheet_id, to: `/cases/${r.case_id}?tab=costing&sheet=${r.cost_sheet_id}`,

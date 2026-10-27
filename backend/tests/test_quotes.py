@@ -582,6 +582,8 @@ def test_command_center_sales_numbers_on_a_fixed_dataset():
                 quotes.mark_sent(db, q.id, {"no_followup_reason": "x"}, "script", "owner")
                 return q
 
+            passed = sent("Passed", 1)
+            quotes.expire_quotes(db, today + timedelta(days=2))  # past its validity, no outcome: still listed
             expiring = sent("Expiring", 2)
             sent("Later", 20)
             won = sent("Won", 20)
@@ -594,8 +596,8 @@ def test_command_center_sales_numbers_on_a_fixed_dataset():
             db.commit()
             section = command_center.summary(db)["sourcing"]
             assert [q["case_title"] for q in section["quotes_awaiting_approval"]] == ["Draft"]
-            assert [q["quote_id"] for q in section["quotes_expiring"]] == [str(expiring.id)]
-            assert section["quotes_expiring"][0]["days_left"] == 2
+            assert [q["quote_id"] for q in section["quotes_expiring"]] == [str(passed.id), str(expiring.id)]
+            assert [q["days_left"] for q in section["quotes_expiring"]] == [1, 2]
             assert [s["case_title"] for s in section["sheets_stale_fx"]] == ["Stale FX"]
             assert (section["quotes_won_30_days"], section["quotes_lost_30_days"]) == (1, 1)
             assert str(stale.id)

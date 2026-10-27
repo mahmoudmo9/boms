@@ -546,7 +546,7 @@ validity (`quotes.default_validity_days`, 7) is shortened to the allowed date (`
 - `sourcing.inquiries.register_case_cleanup`: the cascade delete of a test case removes quotes (order 10) and
   cost sheets (order 20) before the sourcing rows; files stay in Documents.
 - `parties.command_center.register_sourcing_extension(quotes.dashboard)`: *quotes awaiting approval* (drafts),
-  *expiring within 3 days*, *sheets with stale FX*, *won / lost in the last 30 days*.
+  *sent or expired without an outcome, validity ending within 3 days or passed*, *sheets with stale FX*, *won / lost in the last 30 days*.
 - `parties.references`: quotes count when a party or contact is deleted. Search providers `cost_sheet`, `quote`.
 - Product page: `GET /api/quotes/by-product/{id}` (sent quote rows with min/median/max per currency and unit
   group); party page: `GET /api/quotes?party_id=`.
