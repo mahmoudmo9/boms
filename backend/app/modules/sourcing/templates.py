@@ -1,4 +1,5 @@
-"""RFQ message templates (``ops.message_template``) and rendering.
+"""Message templates (``ops.message_template``) and rendering: RFQ texts and, since v0.4.0, quote terms
+(kind ``quote_terms``, used by the quotes module through these functions).
 
 Placeholders are a fixed set; any other ``{name}`` is rejected when a template is saved. Literal braces are
 written ``{{`` and ``}}``.
@@ -18,6 +19,8 @@ from app.modules.sourcing.common import diff, flush, jsonable, row_snapshot
 from app.modules.sourcing.models import MessageTemplate, RfqRecipient
 
 PLACEHOLDERS = ("supplier_name", "contact_name", "case_title", "items_table", "respond_by", "signature")
+QUOTE_PLACEHOLDERS = ("buyer_name", "valid_until", "payment_terms", "incoterm", "lead_time", "bank_details")
+PLACEHOLDERS_BY_KIND = {"rfq": PLACEHOLDERS, "quote_terms": QUOTE_PLACEHOLDERS}
 _TOKEN = re.compile(r"\{\{|\}\}|\{([^{}]*)\}|[{}]")
 
 LABELS = {
@@ -43,11 +46,12 @@ def placeholders_in(template: str) -> list[str]:
     return names
 
 
-def validate_template(subject: str, body: str) -> None:
-    unknown = sorted({n for n in placeholders_in(subject) + placeholders_in(body) if n not in PLACEHOLDERS})
+def validate_template(subject: str, body: str, kind: str = "rfq") -> None:
+    allowed = PLACEHOLDERS_BY_KIND[kind]
+    unknown = sorted({n for n in placeholders_in(subject) + placeholders_in(body) if n not in allowed})
     if unknown:
         raise AppError("unknown_placeholder", f"Unknown placeholder(s): {', '.join(unknown)}",
-                       {"unknown": unknown, "allowed": list(PLACEHOLDERS)}, status=422)
+                       {"unknown": unknown, "allowed": list(allowed)}, status=422)
 
 
 _SENTENCE_END = re.compile(r"(?<=[.!?؟])\s+")
@@ -134,8 +138,9 @@ def get_template(db: Session, template_id: uuid.UUID) -> MessageTemplate:
     return row
 
 
-def list_templates(db: Session, include_archived: bool = False) -> list[MessageTemplate]:
-    query = select(MessageTemplate).order_by(MessageTemplate.language, MessageTemplate.channel, MessageTemplate.name)
+def list_templates(db: Session, include_archived: bool = False, kind: str = "rfq") -> list[MessageTemplate]:
+    query = select(MessageTemplate).where(MessageTemplate.kind == kind).order_by(
+        MessageTemplate.language, MessageTemplate.channel, MessageTemplate.name)
     if not include_archived:
         query = query.where(MessageTemplate.status == "active")
     return list(db.scalars(query))
@@ -156,6 +161,17 @@ def default_template(db: Session, language: str, channel: str) -> MessageTemplat
     return None
 
 
+def default_of_kind(db: Session, kind: str, language: str) -> MessageTemplate | None:
+    """The active default of ``kind`` in ``language`` (English as fallback), e.g. the quote terms."""
+    for lang in dict.fromkeys([language, "en"]):
+        row = db.scalar(select(MessageTemplate).where(
+            MessageTemplate.kind == kind, MessageTemplate.language == lang, MessageTemplate.status == "active")
+            .order_by(MessageTemplate.is_default.desc(), MessageTemplate.created_at))
+        if row is not None:
+            return row
+    return None
+
+
 def _clear_default(db: Session, row: MessageTemplate, language: str | None = None, channel: str | None = None) -> None:
     """Only one default per (kind, language, channel): clear the others before this one becomes default."""
     query = update(MessageTemplate).where(
@@ -167,8 +183,9 @@ def _clear_default(db: Session, row: MessageTemplate, language: str | None = Non
 
 
 def create_template(db: Session, data: dict, source: str, actor: str | None = None) -> MessageTemplate:
-    validate_template(data.get("subject_template") or "", data["body_template"])
-    row = MessageTemplate(kind="rfq", **data)
+    kind = data.pop("kind", None) or "rfq"
+    validate_template(data.get("subject_template") or "", data["body_template"], kind)
+    row = MessageTemplate(kind=kind, **data)
     if row.is_default:
         _clear_default(db, row)
     db.add(row)
@@ -184,7 +201,7 @@ def update_template(db: Session, template_id: uuid.UUID, changes: dict, source: 
     if changes.get("subject_template") is None and "subject_template" in changes:
         changes["subject_template"] = ""
     validate_template(changes.get("subject_template", row.subject_template),
-                      changes.get("body_template", row.body_template))
+                      changes.get("body_template", row.body_template), row.kind)
     if changes.get("is_default") or (row.is_default and ("language" in changes or "channel" in changes)):
         _clear_default(db, row, changes.get("language"), changes.get("channel"))
     changed = diff(row, changes)

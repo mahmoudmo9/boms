@@ -679,3 +679,18 @@ def case_summary(db: Session, case_id: uuid.UUID) -> dict:
         except AppError as exc:
             out["current"] = jsonable({"sheet_id": sheet.id, "version": sheet.version, "error": exc.code})
     return out
+
+
+def cleanup_case(db: Session, case_id: uuid.UUID, note: str, source: str, actor: str | None) -> dict:
+    """Cost sheets of a case being deleted (test-data cleanup): lines, FX entries and the sheets go."""
+    sheets = sheets_of(db, case_id)
+    snapshots = [{"sheet": row_snapshot(s), "lines": [row_snapshot(r) for r in lines_of(db, s.id)],
+                  "fx": [row_snapshot(r) for r in fx_of(db, s.id)]} for s in sheets]
+    for sheet in sheets:
+        for row in lines_of(db, sheet.id) + fx_of(db, sheet.id):
+            db.delete(row)
+    db.flush()
+    for sheet in sheets:
+        db.delete(sheet)
+    flush(db, "in_use")
+    return jsonable({"cost_sheets": snapshots, "counts": {"cost_sheets": len(sheets)}})

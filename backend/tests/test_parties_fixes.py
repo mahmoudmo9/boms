@@ -58,7 +58,7 @@ def test_delete_method_always_allowed_with_snapshot_and_audit(client, db):
 
 
 # v0.3.1: sourcing registers its counts with parties.references
-NO_SOURCING = {"inquiries": 0, "cases": 0, "rfq_recipients": 0, "offers": 0, "capabilities": 0}
+NO_SOURCING = {"inquiries": 0, "cases": 0, "rfq_recipients": 0, "offers": 0, "capabilities": 0, "quotes": 0}
 
 
 def test_delete_contact_allowed_and_blocked(client, db):
@@ -76,7 +76,7 @@ def test_delete_contact_allowed_and_blocked(client, db):
     log(client, party["id"], contact_id=used["id"], no_followup_reason="fyi")
     r = delete(client, f"/api/contacts/{used['id']}")
     assert r.status_code == 409
-    assert r.json()["error"]["code"] == "in_use" and r.json()["error"]["details"] == {"interactions": 2, "rfq_recipients": 0, "offers": 0}
+    assert r.json()["error"]["code"] == "in_use" and r.json()["error"]["details"] == {"interactions": 2, "rfq_recipients": 0, "offers": 0, "quotes": 0}
 
 
 def test_delete_party_allowed_with_contacts_roles_and_snapshot(client, db):

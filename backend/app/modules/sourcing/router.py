@@ -574,9 +574,10 @@ templates_router = APIRouter(prefix="/api/message-templates", tags=["sourcing"])
 
 
 @templates_router.get("")
-def list_templates(_: CurrentUser, db: Db, include_archived: bool = False):
-    return {"placeholders": list(templates.PLACEHOLDERS),
-            "items": [jsonable(row_snapshot(t)) for t in templates.list_templates(db, include_archived)]}
+def list_templates(_: CurrentUser, db: Db, include_archived: bool = False,
+                   kind: Literal["rfq", "quote_terms"] = "rfq"):
+    return {"placeholders": list(templates.PLACEHOLDERS_BY_KIND[kind]),
+            "items": [jsonable(row_snapshot(t)) for t in templates.list_templates(db, include_archived, kind)]}
 
 
 @templates_router.post("", status_code=201)
@@ -588,7 +589,13 @@ def create_template(body: TemplateIn, request: Request, user: CurrentUser, db: D
 
 @templates_router.post("/preview")
 def preview_template(body: TemplatePreviewIn, _: CurrentUser, db: Db):
-    templates.validate_template(body.subject_template, body.body_template)
+    templates.validate_template(body.subject_template, body.body_template, body.kind)
+    if body.kind == "quote_terms":
+        values = {"buyer_name": "ACME Trading", "valid_until": templates.format_date(date.today(), body.language),
+                  "payment_terms": "30% advance, 70% before shipment", "incoterm": "CIF Bandar Abbas",
+                  "lead_time": "45 days", "bank_details": "Bank / account / IBAN"}
+        return {"subject": templates.render(body.subject_template, values),
+                "body": templates.render(body.body_template, values)}
     sample = templates.items_table([{"name": "Polyethylene HD", "quantity": Decimal("20"), "unit": "t",
                                      "specs": [{"key": "Grade", "value": "PE100"}], "incoterm": "CIF Bandar Abbas"}],
                                    body.language)

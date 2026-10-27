@@ -60,6 +60,8 @@ SCHEDULES = [
     Schedule("restore_test_monthly", "backup.restore_test", {}, monthly_due),
     # sourcing: RFQ recipients past respond_by -> no_response, offers past valid_until -> expired (status only)
     Schedule("sourcing_expiry_hourly", "sourcing.expire", {}, hourly_due),
+    # quotes: sent quotes past valid_until -> expired (status only; v0.4.0)
+    Schedule("quotes_expiry_hourly", "quotes.expire", {}, hourly_due),
 ]
 
 

@@ -14,4 +14,7 @@ def register_sheet_usage(fn: Callable[[Session, uuid.UUID], int]) -> None:
 
 
 def quotes_using_sheet(db: Session, sheet_id: uuid.UUID) -> int:
+    from app.core.modules import load_hooks
+
+    load_hooks()
     return sum(fn(db, sheet_id) for fn in _counters)

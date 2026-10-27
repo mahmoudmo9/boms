@@ -51,8 +51,9 @@ def priced_sheet(client, case, fx_age=0):
     for line in sheet["lines"]:
         if line["kind"] != "purchase" and line["basis"] == "total":
             client.patch(f"/api/cost-sheets/lines/{line['id']}", json={"amount": "10000000", "currency": "IRR"})
-        elif line["basis"].startswith("percent") and line["percent"] is None:
-            client.patch(f"/api/cost-sheets/lines/{line['id']}", json={"percent": "4"})
+        elif line["basis"].startswith("percent"):
+            # a fixed 4 %, independent of tax parameters other tests may have entered
+            client.patch(f"/api/cost-sheets/lines/{line['id']}", json={"percent": "4", "tax_parameter_id": None})
     r = client.patch(f"/api/cost-sheets/{sid}", json={"pricing_method": "margin", "target_percent": "20"})
     assert r.status_code == 200, r.text
     return r.json()
@@ -158,8 +159,9 @@ def test_tax_parameter_selected_by_effective_date_and_unconfirmed_warning(client
                                                                 "confirmed_on": day()})
     assert r.status_code == 200
     assert "unconfirmed_parameter" not in [w["code"] for w in client.get(f"/api/cost-sheets/{sheet['id']}").json()["warnings"]]
-    # in use -> cannot be deleted
+    # in use -> cannot be deleted; an end date retires it (also keeps it out of later tests' sheets)
     assert client.delete(f"/api/tax-parameters/{new['id']}").json()["error"]["code"] == "in_use"
+    assert client.patch(f"/api/tax-parameters/{new['id']}", json={"effective_to": day(-30)}).status_code == 200
 
 
 def test_stale_fx_warns_fails_gate_and_override_is_an_event(client, monkeypatch):
@@ -214,6 +216,7 @@ def test_gate_reports_every_failure_together_then_passes(client):
     client.post(f"/api/cost-sheets/{sid}/finalize")
     gate = client.get(f"/api/cost-sheets/{sid}/gate").json()
     assert gate["ok"] is True, gate
+    client.patch(f"/api/tax-parameters/{param['id']}", json={"effective_to": "2020-01-01"})
     # validity can never exceed the earliest offer validity (5 days) nor the FX limit (3 days)
     gate = client.get(f"/api/cost-sheets/{sid}/gate", params={"valid_until": day(4)}).json()
     assert [f["code"] for f in gate["failures"]] == ["validity_too_long"]

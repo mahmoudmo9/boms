@@ -81,6 +81,14 @@ def _choice(*options: str) -> Callable[[Any], str]:
     return check
 
 
+def _optional_uuid(value: Any) -> str | None:
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9a-fA-F-]{36}", value):
+        raise ValueError("expected a document id")
+    return value.lower()
+
+
 # key -> (default, validator)
 DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "backup.time": ("02:00", _time),
@@ -94,6 +102,18 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "costing.fx_max_age_days": (3, _int_range(0, 365)),
     "costing.default_pricing_method": ("margin", _choice("margin", "markup")),
     "quotes.default_validity_days": (7, _int_range(1, 365)),
+    # letterhead of quotes / proforma invoices (v0.4.0); {fa, en} values are multi-line texts per language
+    "company.name_fa": ("", _short_text),
+    "company.name_en": ("", _short_text),
+    "company.address": ({"fa": "", "en": ""}, _signature),
+    "company.phone": ("", _short_text),
+    "company.email": ("", _short_text),
+    "company.website": ("", _short_text),
+    "company.registration": ({"fa": "", "en": ""}, _signature),
+    "company.logo_document_id": (None, _optional_uuid),
+    "company.footer": ({"fa": "", "en": ""}, _signature),
+    "company.bank_details": ({"fa": "", "en": ""}, _signature),
+    "pdf.browser_path": (None, _optional_path),
 }
 
 

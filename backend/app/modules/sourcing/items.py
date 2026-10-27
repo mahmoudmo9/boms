@@ -199,7 +199,22 @@ def set_no_coverage(db: Session, item_id: uuid.UUID, reason: str | None, source:
     return item
 
 
-FROZEN_STATUSES = {"cancelled", "sold", "delivered", "closed"}
+FROZEN_STATUSES = {"cancelled", "delivered", "closed"}
+# "sold" is decided by later modules (quotes, v0.4.0) through these checks; nothing else sets or clears it
+_sold_checks: list = []
+
+
+def register_sold_check(fn) -> None:
+    """``fn(db, line_item_id) -> bool``: True while the item is sold (e.g. accepted in a quote)."""
+    if fn not in _sold_checks:
+        _sold_checks.append(fn)
+
+
+def _is_sold(db: Session, item_id: uuid.UUID) -> bool:
+    from app.core.modules import load_hooks
+
+    load_hooks()
+    return any(check(db, item_id) for check in _sold_checks)
 
 
 def _offer_valid(offer: SupplierOffer, today: date) -> bool:
@@ -230,6 +245,13 @@ def recompute_item_status(db: Session, item: LineItem, source: str, actor: str |
     """
     if item.status in FROZEN_STATUSES:
         return item.status
+    if _is_sold(db, item.id):  # sold (quote accepted): nothing else touches the item, not even its selection
+        if item.status != "sold":
+            old_status, item.status = item.status, "sold"
+            db.flush()
+            events.record(db, "line_item", item.id, "status", {"old_status": old_status, "new_status": "sold",
+                                                               "reason": cause or "quote_accepted"}, source, actor=actor)
+        return "sold"
     from app.modules.parties import clock
 
     today = today or clock.today()

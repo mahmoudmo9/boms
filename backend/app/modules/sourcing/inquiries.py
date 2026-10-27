@@ -219,6 +219,16 @@ def cascade_delete_inquiry(db: Session, inquiry_id: uuid.UUID, confirm_subject: 
 
 
 CASE_DELETED_NOTE = "case deleted"
+# later modules (quotes, costing; v0.4.0) remove their rows of a case before it is deleted: (order, fn)
+_case_cleanups: list = []
+
+
+def register_case_cleanup(order: int, fn) -> None:
+    """``fn(db, case_id, note, source, actor) -> dict`` deletes the module's rows of the case (lowest order
+    first) and returns a snapshot with ``counts``."""
+    if all(f is not fn for _, f in _case_cleanups):
+        _case_cleanups.append((order, fn))
+        _case_cleanups.sort(key=lambda pair: pair[0])
 
 
 def cascade_delete_case(db: Session, case_id: uuid.UUID, confirm_title: str | None, source: str,
@@ -256,6 +266,16 @@ def cascade_delete_case(db: Session, case_id: uuid.UUID, confirm_title: str | No
     cancelled = [party_interactions.cancel_followup(db, f.id, CASE_DELETED_NOTE, source, actor).id
                  for f in party_interactions.open_followups_of_interactions(db, list(dict.fromkeys(interaction_ids)))]
     snapshot["cancelled_followups"] = jsonable(cancelled)
+    from app.core.modules import load_hooks
+
+    load_hooks()
+    later_counts: dict = {}
+    for _, cleanup in _case_cleanups:  # quotes, cost sheets (v0.4.0): their rows go before the items
+        out = cleanup(db, case.id, CASE_DELETED_NOTE, source, actor)
+        later_counts.update(out.pop("counts", {}))
+        cancelled += out.pop("cancelled_followups", [])
+        snapshot.update(out)
+    snapshot["cancelled_followups"] = jsonable(cancelled)
     for item in item_rows:
         item.selected_offer_item_id = None
     for offer in offer_rows:
@@ -269,7 +289,7 @@ def cascade_delete_case(db: Session, case_id: uuid.UUID, confirm_title: str | No
     flush(db, "in_use")
     counts = {"items": len(item_rows), "rfqs": len(rfqs), "recipients": len(recipients), "offers": len(offer_rows),
               "offer_items": len(offer_item_rows), "documents": len(snapshot["document_links"]),
-              "followups_cancelled": len(cancelled)}
+              "followups_cancelled": len(cancelled), **later_counts}
     events.record(db, "case", case_id, "delete", {"cascade": True, "counts": counts, "deleted": snapshot}, source,
                   actor=actor)
     return counts

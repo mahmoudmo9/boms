@@ -72,7 +72,7 @@ def test_migration_0006_up_down_up():
         with engine.connect() as conn:
             counts = dict(conn.execute(text("SELECT level::text, count(*) FROM ref.hs_code GROUP BY 1")).all())
             assert counts == {"2": 96, "4": 1228}
-            assert conn.execute(text("SELECT count(*) FROM ops.message_template WHERE is_default")).scalar() == 4
+            assert conn.execute(text("SELECT count(*) FROM ops.message_template WHERE is_default AND kind = 'rfq'")).scalar() == 4
     finally:
         engine.dispose()
         dbadmin.drop_database(superuser_conninfo(), db_name)

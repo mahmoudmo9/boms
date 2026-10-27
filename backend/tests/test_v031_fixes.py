@@ -263,7 +263,7 @@ def test_party_delete_with_sourcing_records_is_409_with_counts(client):
 
     r = client.delete(f"/api/contacts/{c['id']}")
     assert r.status_code == 409
-    assert r.json()["error"]["details"] == {"interactions": 2, "rfq_recipients": 1, "offers": 1}
+    assert r.json()["error"]["details"] == {"interactions": 2, "rfq_recipients": 1, "offers": 1, "quotes": 0}
 
 
 def test_party_with_only_capability_tags_deletes_them(client, db):
@@ -291,7 +291,8 @@ def test_case_cascade_delete(client, db):
     r = client.request("DELETE", url, json={"confirm_title": case["title"]})
     assert r.status_code == 200, r.text
     assert r.json()["counts"] == {"items": 2, "rfqs": 1, "recipients": 1, "offers": 1, "offer_items": 1,
-                                  "documents": 2, "followups_cancelled": 1}
+                                  "documents": 2, "followups_cancelled": 1,
+                                  "quotes": 0, "quote_outputs": 0, "cost_sheets": 0}
     assert client.get(f"/api/cases/{case['id']}").status_code == 404
     assert client.get(f"/api/rfqs/{body['id']}").status_code == 404
     assert client.get(f"/api/offers/{off['id']}").status_code == 404

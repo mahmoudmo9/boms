@@ -86,11 +86,25 @@ def summary(db: Session) -> dict:
     }
 
 
+# later modules (quotes, v0.4.0) add keys to the sourcing/sales section: fn(db, today) -> dict
+_sourcing_extensions: list = []
+
+
+def register_sourcing_extension(fn) -> None:
+    if fn not in _sourcing_extensions:
+        _sourcing_extensions.append(fn)
+
+
 def _sourcing(db: Session, today) -> dict:
-    """Sourcing section (Phase 5), provided by the sourcing module's public dashboard."""
+    """Sourcing section (Phase 5), provided by the sourcing module's public dashboard, extended by later modules."""
+    from app.core.modules import load_hooks
     from app.modules.sourcing import dashboard
 
-    return dashboard.summary(db, today)
+    load_hooks()
+    section = dashboard.summary(db, today)
+    for extend in _sourcing_extensions:
+        section.update(extend(db, today))
+    return section
 
 
 def funnel_board(db: Session, role: str) -> dict:
