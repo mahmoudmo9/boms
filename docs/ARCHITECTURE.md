@@ -550,3 +550,24 @@ validity (`quotes.default_validity_days`, 7) is shortened to the allowed date (`
 - `parties.references`: quotes count when a party or contact is deleted. Search providers `cost_sheet`, `quote`.
 - Product page: `GET /api/quotes/by-product/{id}` (sent quote rows with min/median/max per currency and unit
   group); party page: `GET /api/quotes?party_id=`.
+
+### Costing and quote fixes (v0.5.0 section 0, migration `0009_quote_fixes`)
+
+- **Approval re-checks the current prices.** Besides the gate and the per-item / total minimums, a unit price below
+  the unit landed cost gives 409 `below_cost` (items listed) unless the request has `confirm_below_cost: true`
+  with a `reason` (event `approve_below_cost`). The quote editor warns in red while a price is typed below cost
+  or below the item minimum.
+- **Finalize** returns 409 `gate_failing` with the failures (other than "not final") unless `confirm: true`; the
+  UI shows the checklist first. Unfilled lines (no amount, no percent) can be saved as 0 with the note "N/A" in
+  one step (`POST /api/cost-sheets/{id}/lines/not-applicable`) or removed (`.../lines/remove-unused`; purchase
+  lines stay, an empty one means an unpriced item).
+- **Terms text:** template lines whose values are all empty are omitted, and so are "Label:" lines left without a
+  value (also in the HTML/PDF/Word of stored texts). A draft's terms rebuild automatically when payment terms,
+  delivery terms, lead time, Incoterm, validity, buyer or language change, unless the owner edited the text by
+  hand (`ops.quote.terms_manual`); then the UI offers "rebuild from template".
+- **Persian digits:** in Persian texts made from templates (RFQ messages, quote terms), dates and numbers follow the
+  user's digit setting (Persian by default); names, codes and e-mails are never converted. The RFQ Excel export
+  keeps Latin digits.
+- **Revision numbers:** a revision keeps the base number with a version suffix (`PI-1405-0001-v2`); the gap-free
+  base sequence counts first versions only; output file names are the number (plus `-DRAFT` before approval).
+- **Persian terms:** exposure «نقدینگی درگیر», margin «حاشیهٔ سود», markup «مارک‌آپ» on every screen.

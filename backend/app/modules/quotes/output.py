@@ -32,6 +32,7 @@ from app.modules.quotes import service
 from app.modules.quotes.models import Quote
 from app.modules.sourcing import coverage as sourcing_coverage
 from app.modules.sourcing import items as sourcing_items
+from app.modules.sourcing import templates as sourcing_templates
 from app.modules.sourcing.jalali import to_jalali
 from app.modules.system import settings
 
@@ -143,7 +144,7 @@ def build_context(db: Session, quote: Quote, calendar: str = "gregorian", digits
         "incoterm": " ".join(x for x in (quote.incoterm, quote.incoterm_place) if x),
         "payment_terms": quote.payment_terms or "", "delivery_terms": quote.delivery_terms or "",
         "lead_time": f"{quote.lead_time_days} {LABELS[lang]['days']}" if quote.lead_time_days is not None else "",
-        "terms_text": quote.terms_text or "",
+        "terms_text": sourcing_templates.drop_empty_labels(quote.terms_text or ""),
     }
 
 
@@ -456,7 +457,7 @@ def generate(db: Session, quote_id, fmt: str, calendar: str, digits: str, source
     else:
         data, mime_ext = render_docx(ctx), "docx"
     suffix = "-DRAFT" if ctx["draft"] else ""
-    filename = f"{quote.number}-v{quote.version}{suffix}.{mime_ext}"
+    filename = f"{quote.number}{suffix}.{mime_ext}"  # the number carries the revision (-v2, v0.5.0)
     try:
         doc = documents.upload(db, io.BytesIO(data), filename, title=filename.rsplit(".", 1)[0],
                                language=quote.language, source=source, actor=actor)

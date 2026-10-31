@@ -70,7 +70,7 @@ def _name(lang: str, fa: str | None, en: str | None) -> str:
     return ((fa or en) if lang == "fa" else (en or fa)) or ""
 
 
-def table_rows(db: Session, rfq_id: uuid.UUID, language: str) -> list[dict]:
+def table_rows(db: Session, rfq_id: uuid.UUID, language: str, digits: str | None = None) -> list[dict]:
     units = {u.code: u for u in db.scalars(select(Unit))}
     countries = {}
     rows = []
@@ -88,7 +88,7 @@ def table_rows(db: Session, rfq_id: uuid.UUID, language: str) -> list[dict]:
         incoterm = " ".join(x for x in (item.incoterm, item.incoterm_place) if x) or None
         rows.append({"name": item.name, "quantity": rfq_item.quantity or item.quantity, "unit": unit_label,
                      "specs": item.specs, "packaging": item.packaging, "destination": destination,
-                     "incoterm": incoterm, "required_by": templates.format_date(item.required_by, language) or None,
+                     "incoterm": incoterm, "required_by": templates.format_date(item.required_by, language, digits) or None,
                      "note": rfq_item.note})
     return rows
 
@@ -101,6 +101,7 @@ def signature(db: Session, language: str) -> str:
 
 def render_values(db: Session, rfq: Rfq, recipient: RfqRecipient) -> dict[str, str]:
     lang = recipient.language
+    digits = templates.owner_digits(db)
     party = parties.get_party(db, recipient.party_id)
     supplier = _name(lang, party.name_fa, party.name_en)
     contact_name = supplier
@@ -111,8 +112,8 @@ def render_values(db: Session, rfq: Rfq, recipient: RfqRecipient) -> dict[str, s
         "supplier_name": supplier,
         "contact_name": contact_name,
         "case_title": get_case(db, rfq.case_id).title,
-        "items_table": templates.items_table(table_rows(db, rfq.id, lang), lang),
-        "respond_by": templates.format_date(rfq.respond_by, lang),
+        "items_table": templates.items_table(table_rows(db, rfq.id, lang, digits), lang, digits),
+        "respond_by": templates.format_date(rfq.respond_by, lang, digits),
         "signature": signature(db, lang),
     }
 
@@ -477,7 +478,7 @@ def export_xlsx(db: Session, rfq_id: uuid.UUID, language: str = "en") -> bytes:
 
     rfq = get_rfq(db, rfq_id)
     language = language if language in XLSX_HEADERS else "en"
-    rows = table_rows(db, rfq.id, language)
+    rows = table_rows(db, rfq.id, language, "latin")  # spreadsheet cells keep Latin digits
     descriptions = [(item.description, item.hs_code) for _, item in rfq_items(db, rfq.id)]
     wb = Workbook()
     ws = wb.active

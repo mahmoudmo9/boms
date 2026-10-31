@@ -143,6 +143,10 @@ class FxIn(InputModel):
     as_of: date
 
 
+class FinalizeIn(InputModel):
+    confirm: bool = False  # finalize although the gate still fails (v0.5.0)
+
+
 class OverrideIn(InputModel):
     kind: Literal["fx_stale", "unconfirmed_parameter"]
     reason: Annotated[str, Field(min_length=1, max_length=500)]

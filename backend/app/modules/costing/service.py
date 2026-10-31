@@ -642,11 +642,55 @@ def override(db: Session, sheet_id: uuid.UUID, kind: str, reason: str, source: s
     return sheet
 
 
-def finalize(db: Session, sheet_id: uuid.UUID, source: str, actor: str | None = None) -> CostSheet:
-    """draft -> final (read-only); the previous final sheet of the case becomes superseded."""
+def unfilled_lines(db: Session, sheet: CostSheet) -> list[CostLine]:
+    """Lines with neither an amount nor a percent (typically template lines that do not apply to this deal)."""
+    return [ln for ln in lines_of(db, sheet.id)
+            if (ln.amount is None if not ln.basis.startswith("percent") else (ln.percent is None and ln.tax_parameter_id is None))]
+
+
+def mark_not_applicable(db: Session, sheet_id: uuid.UUID, source: str, actor: str | None = None) -> list[CostLine]:
+    """"Treat as not applicable": every unfilled line gets 0 (amount in the pricing currency, or 0 %) and the note
+    "N/A", in one step (v0.5.0)."""
+    sheet = get_sheet(db, sheet_id)
+    _draft(sheet)
+    rows = unfilled_lines(db, sheet)
+    for row in rows:
+        if row.basis.startswith("percent"):
+            row.percent = Decimal(0)
+        else:
+            row.amount, row.currency = Decimal(0), row.currency or sheet.pricing_currency
+        row.notes = "N/A" if not row.notes else f"{row.notes} (N/A)"
+    if rows:
+        flush(db, "invalid_line")
+        events.record(db, "cost_sheet", sheet.id, "lines_not_applicable",
+                      jsonable({"line_ids": [r.id for r in rows], "labels": [r.label for r in rows]}), source, actor=actor)
+    return rows
+
+
+def remove_unused_lines(db: Session, sheet_id: uuid.UUID, source: str, actor: str | None = None) -> int:
+    """Delete the unfilled lines of a draft sheet, except purchase lines (an empty purchase line is an unpriced item)."""
+    sheet = get_sheet(db, sheet_id)
+    _draft(sheet)
+    rows = [r for r in unfilled_lines(db, sheet) if r.kind != "purchase"]
+    snapshots = [jsonable(row_snapshot(r)) for r in rows]
+    for row in rows:
+        db.delete(row)
+    if rows:
+        flush(db, "in_use")
+        events.record(db, "cost_sheet", sheet.id, "lines_remove_unused", {"deleted": snapshots}, source, actor=actor)
+    return len(rows)
+
+
+def finalize(db: Session, sheet_id: uuid.UUID, source: str, actor: str | None = None, confirm: bool = False) -> CostSheet:
+    """draft -> final (read-only); the previous final sheet of the case becomes superseded.
+    While the gate fails (other than "not final"), 409 ``gate_failing`` with the list unless ``confirm`` (v0.5.0):
+    some failures belong to the quote (validity, minimums), so finalizing stays possible after confirmation."""
     sheet = get_sheet(db, sheet_id)
     _draft(sheet)
     computation = compute_sheet(db, sheet)  # 422 fx_missing etc. before anything changes
+    failing = [f for f in gate(db, sheet)["failures"] if f["code"] != "sheet_not_final"]
+    if failing and not confirm:
+        raise Conflict("gate_failing", "The sheet does not pass the quote gate yet", {"failures": failing})
     previous = current_sheet(db, sheet.case_id)
     if previous is not None:
         previous.status = "superseded"
@@ -656,8 +700,8 @@ def finalize(db: Session, sheet_id: uuid.UUID, source: str, actor: str | None = 
     sheet.status, sheet.finalized_at = "final", clock.now()
     flush(db, "invalid_sheet")
     events.record(db, "cost_sheet", sheet.id, "finalize", jsonable({
-        "version": sheet.version, "totals": computation["totals"], "exposure": computation["exposure"]}),
-        source, actor=actor)
+        "version": sheet.version, "totals": computation["totals"], "exposure": computation["exposure"],
+        "confirmed_failures": [f["code"] for f in failing]}), source, actor=actor)
     return sheet
 
 

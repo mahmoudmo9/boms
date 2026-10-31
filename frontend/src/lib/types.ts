@@ -908,6 +908,7 @@ export interface CostSheet {
   compute_error: { code: string; message: string; details: Record<string, unknown> } | null;
   warnings: { code: string; [key: string]: unknown }[];
   gate: CostGate;
+  unfilled_line_ids: string[];
 }
 
 export interface CaseCosting {
@@ -945,6 +946,7 @@ export interface QuoteItem {
   competitor_price: string | null;
   competitor_currency: string | null;
   decided_on: string | null;
+  min_unit_price?: string | null;
 }
 
 export interface QuoteRow {
@@ -974,6 +976,7 @@ export interface Quote extends QuoteRow {
   delivery_terms: string | null;
   lead_time_days: number | null;
   terms_text: string | null;
+  terms_manual: boolean;
   notes: string | null;
   vat_amount: string;
   contact_id: string | null;

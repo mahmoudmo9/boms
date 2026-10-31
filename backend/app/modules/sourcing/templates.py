@@ -71,12 +71,47 @@ def _drop_sentences_with(template: str, name: str) -> str:
     return "\n".join(lines)
 
 
-def render(template: str, values: dict[str, str]) -> str:
+_LABEL_ONLY = re.compile(r"^\s*[^\n:{}]{1,60}[:：]\s*$")
+
+
+def drop_empty_labels(text: str) -> str:
+    """Omit "Label:" lines whose value is empty (v0.5.0): a line that is only a label, followed by an empty line
+    or the end. Runs of blank lines collapse to one; trailing blank lines go."""
+    lines = (text or "").split("\n")
+    out: list[str] = []
+    for i, line in enumerate(lines):
+        nxt = lines[i + 1] if i + 1 < len(lines) else ""
+        if _LABEL_ONLY.match(line) and not nxt.strip():
+            continue
+        if not line.strip() and out and not out[-1].strip():
+            continue
+        out.append(line)
+    while out and not out[-1].strip():
+        out.pop()
+    return "\n".join(out)
+
+
+def _drop_empty_value_lines(template: str, values: dict[str, str]) -> str:
+    """Template lines whose placeholders all render empty are left out, so "Payment terms: {payment_terms}"
+    disappears when there are no payment terms (v0.5.0)."""
+    kept = []
+    for line in template.split("\n"):
+        names = [n.strip() for n in placeholders_in(line)]
+        if names and all(n in values and not values[n] for n in names):
+            continue
+        kept.append(line)
+    return "\n".join(kept)
+
+
+def render(template: str, values: dict[str, str], drop_empty_lines: bool = False) -> str:
     """Fill the placeholders. Without a reply-by date the sentence asking for a reply by that date is omitted
-    (v0.3.2) instead of rendering "reply by ." with an empty date."""
+    (v0.3.2) instead of rendering "reply by ." with an empty date. With ``drop_empty_lines`` (quote terms,
+    v0.5.0) lines whose values are all empty, and labels left without a value, are omitted."""
     template = template or ""
     if "respond_by" in values and not values["respond_by"]:
         template = _drop_sentences_with(template, "respond_by")
+    if drop_empty_lines:
+        template = _drop_empty_value_lines(template, values)
 
     def replace(match: re.Match) -> str:
         token = match.group(0)
@@ -86,7 +121,8 @@ def render(template: str, values: dict[str, str]) -> str:
             return "}"
         return values.get((match.group(1) or "").strip(), token)
 
-    return _TOKEN.sub(replace, template or "")
+    text = _TOKEN.sub(replace, template or "")
+    return drop_empty_labels(text) if drop_empty_lines else text
 
 
 def _num(value: Decimal | None) -> str:
@@ -96,14 +132,15 @@ def _num(value: Decimal | None) -> str:
     return text
 
 
-def items_table(rows: list[dict], language: str) -> str:
+def items_table(rows: list[dict], language: str, digits: str | None = None) -> str:
     """Plain-text table: one block per item (no, name, quantity + unit, key specs, packaging, destination,
     Incoterm, required by). Blocks read well in e-mail, WhatsApp and letters, in both directions."""
     labels = LABELS.get(language, LABELS["en"])
     lines = []
     for index, row in enumerate(rows, start=1):
-        head = f"{index}. {row['name']}"
-        quantity = " ".join(x for x in (_num(row.get("quantity")), row.get("unit") or "") if x)
+        head = f"{localize_digits(str(index), language, digits)}. {row['name']}"
+        number = localize_digits(_num(row.get("quantity")), language, digits)
+        quantity = " ".join(x for x in (number, row.get("unit") or "") if x)
         if quantity:
             head += f" — {labels['qty']}: {quantity}"
         lines.append(head)
@@ -118,14 +155,33 @@ def items_table(rows: list[dict], language: str) -> str:
     return "\n".join(lines)
 
 
-def format_date(value: date | None, language: str) -> str:
+_FA_DIGITS = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+
+
+def owner_digits(db) -> str:
+    """The digit setting of the (single) user: "fa" or "latin"; Persian digits when nobody is set up yet."""
+    from app.modules.system import users
+
+    user = users.get_user(db)
+    return (user.digits if user is not None and user.digits else None) or "fa"
+
+
+def localize_digits(text: str, language: str, digits: str | None = None) -> str:
+    """Persian digits in Persian texts unless the user chose Latin digits (v0.5.0). Only dates and numbers are
+    passed through here; codes, e-mails and part numbers are never converted."""
+    if language == "fa" and digits != "latin":
+        return text.translate(_FA_DIGITS)
+    return text
+
+
+def format_date(value: date | None, language: str, digits: str | None = None) -> str:
     if value is None:
         return ""
     if language == "fa":
         from app.modules.sourcing.jalali import to_jalali
 
         y, m, d = to_jalali(value)
-        return f"{y:04d}/{m:02d}/{d:02d}"
+        return localize_digits(f"{y:04d}/{m:02d}/{d:02d}", language, digits)
     return value.isoformat()
 
 

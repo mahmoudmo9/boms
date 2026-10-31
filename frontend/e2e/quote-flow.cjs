@@ -22,6 +22,8 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const problems = [];
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
   page.on('response', (r) => {
+    // the one expected refusal: approving a price below cost without a reason (v0.5.0)
+    if (r.status() === 409 && r.url().endsWith('/approve') && !r.request().postData()) return;
     if (r.url().includes('/api/') && r.status() >= 400) problems.push(`${r.status()} ${r.request().method()} ${r.url().replace(BASE, '')}`);
   });
   page.on('request', (r) => { const u = r.url(); if (!u.startsWith(BASE) && !u.startsWith('data:') && !u.startsWith('blob:')) problems.push(`external: ${u}`); });
@@ -172,7 +174,11 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       await checkSelects(r, 'costing');
 
       // finalize, gate, create quote
+      // v0.5.0: finalize shows the checklist first (this sheet passes, no unfilled lines)
       await page.getByRole('button', { name: t('costing.finalize'), exact: true }).click();
+      const fin = page.getByRole('dialog');
+      check(r, 'finalize dialog shows the gate result', await fin.getByText(t('costing.finalizeDialog.passes')).isVisible());
+      await fin.getByRole('button', { name: t('costing.finalize'), exact: true }).click();
       await page.getByText(t('costing.readOnly')).waitFor();
       const gate = page.locator('[data-testid="gate-checklist"]');
       const failing = await gate.locator('li[data-ok="false"]').allInnerTexts();
@@ -189,6 +195,27 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       await typeCheck(r, 'quote payment terms', '#q-pay', lang === 'fa' ? '۳۰٪ پیش‌پرداخت' : '30% advance, rest before shipment');
       await page.locator('#q-pay').press('Tab');
       await settle();
+      const rebuilt = await page.waitForFunction((w) => document.querySelector('#q-terms')?.value.includes(w),
+        lang === 'fa' ? '۳۰٪ پیش‌پرداخت' : '30% advance', { timeout: 8000 }).then(() => true, () => false);
+      check(r, 'terms rebuilt from payment terms', rebuilt);
+      // v0.5.0: a price below cost warns while typing, and approval asks for a reason
+      const price = page.getByLabel(t('quotes.columns.unitPrice'), { exact: true }).first();
+      const original = await price.inputValue();
+      await price.fill('');
+      await price.pressSequentially('1', { delay: 20 });
+      check(r, 'below-cost warning while typing', await page.locator('[data-testid="price-warning"]').first().isVisible());
+      await price.press('Tab');
+      await settle();
+      await page.getByRole('button', { name: t('quotes.approve'), exact: true }).click();
+      const bc = page.getByRole('dialog');
+      await bc.locator('[data-testid="below-cost-items"]').waitFor();
+      check(r, 'approve below cost asks for a reason', await bc.getByRole('button', { name: t('quotes.belowCost.confirm') }).isDisabled());
+      await bc.getByRole('button', { name: t('quotes.belowCost.back') }).click();
+      await bc.waitFor({ state: 'detached' });
+      await price.fill(original);
+      await price.press('Tab');
+      await settle();
+      check(r, 'price restored, no warning', (await page.locator('[data-testid="price-warning"]').count()) === 0);
       await checkSelects(r, 'quote draft');
       await shot(`${lang}-1280-quote-draft`);
 

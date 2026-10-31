@@ -42,6 +42,7 @@ class Quote(Timestamps, Base):
     delivery_terms: Mapped[str | None] = mapped_column(Text)
     lead_time_days: Mapped[int | None] = mapped_column(Integer)
     terms_text: Mapped[str | None] = mapped_column(Text)
+    terms_manual: Mapped[bool] = mapped_column(Boolean, default=False)  # edited by hand (v0.5.0)
     notes: Mapped[str | None] = mapped_column(Text)
     subtotal: Mapped[Decimal] = mapped_column(AMOUNT, default=Decimal(0))
     vat_amount: Mapped[Decimal] = mapped_column(AMOUNT, default=Decimal(0))

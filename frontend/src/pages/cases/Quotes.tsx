@@ -9,7 +9,7 @@ import { DateInput } from "../../components/DateInput";
 import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../components/ui";
 import { useToast } from "../../components/toast";
 import { api, ApiError } from "../../lib/api";
-import { gateChecklist } from "../../lib/costing";
+import { gateChecklist, priceWarning } from "../../lib/costing";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
 import { personName } from "../../lib/sourcing";
@@ -33,6 +33,44 @@ function BlurInput({ value, onSave, disabled, multiline, ...rest }: {
       onChange={(e) => setText(e.target.value)} onBlur={save} className="[unicode-bidi:plaintext]" />;
   }
   return <Input {...rest} disabled={disabled} value={text} onChange={(e) => setText(e.target.value)} onBlur={save} />;
+}
+
+/** Unit price of a draft row: saved on blur; warns while typing when below cost or the item minimum (v0.5.0). */
+function PriceCell({ item, onSave }: { item: QuoteItem; onSave: (v: string | null) => void }) {
+  const { t } = useTranslation();
+  const [text, setText] = useState(item.unit_price);
+  useEffect(() => { setText(item.unit_price); }, [item.unit_price]);
+  const warning = priceWarning(text, item.unit_cost, item.min_unit_price);
+  return (
+    <div>
+      <Input dir="ltr" inputMode="decimal" className={`w-32 ${warning ? "border-danger" : ""}`} aria-label={t("quotes.columns.unitPrice")}
+        aria-invalid={warning ? true : undefined} value={text} onChange={(e) => setText(e.target.value)}
+        onBlur={() => { const v = text.trim() === "" ? null : text.trim(); if (v !== item.unit_price) onSave(v); }} />
+      {warning && <p className="mt-0.5 text-xs text-danger" role="alert" data-testid="price-warning">{t(`quotes.priceWarning.${warning}`)}</p>}
+    </div>
+  );
+}
+
+function BelowCostDialog({ rows, currency, busy, error, onClose, onConfirm }: {
+  rows: { quote_item_id: string; name: string | null; unit_price: string; unit_cost: string }[]; currency: string;
+  busy: boolean; error: unknown; onClose: () => void; onConfirm: (reason: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [reason, setReason] = useState("");
+  return (
+    <Modal open title={t("quotes.belowCost.title")} onClose={onClose}
+      footer={<><Button onClick={onClose}>{t("quotes.belowCost.back")}</Button>
+        <Button variant="danger" disabled={!reason.trim()} busy={busy} onClick={() => onConfirm(reason.trim())}>{t("quotes.belowCost.confirm")}</Button></>}>
+      <p className="mb-2 text-sm">{t("quotes.belowCost.text")}</p>
+      <ul className="mb-3 flex flex-col gap-1 text-sm" data-testid="below-cost-items">
+        {rows.map((r) => <li key={r.quote_item_id} className="flex flex-wrap gap-2"><Bdi>{r.name ?? ""}</Bdi>
+          <span className="text-danger"><Money amount={r.unit_price} currency={currency} /></span>
+          <span className="text-muted">{t("quotes.belowCost.cost")}: <Money amount={r.unit_cost} currency={currency} /></span></li>)}
+      </ul>
+      <Field label={t("sourcing.reason")} htmlFor="bc-reason"><Input id="bc-reason" dir="auto" value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
+      <ErrorNote error={error} />
+    </Modal>
+  );
 }
 
 function MarkSentDialog({ quote, onClose, onDone }: { quote: Quote; onClose: () => void; onDone: () => void }) {
@@ -158,6 +196,13 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
   const quote = useQuery({ queryKey: ["quote", quoteId], queryFn: () => api<Quote>(`/api/quotes/${quoteId}`) });
   const refresh = () => { void quote.refetch(); onChanged(); };
   const [dialog, setDialog] = useState<null | "sent" | "outcome" | "withdraw">(null);
+  const approve = useMutation({
+    mutationFn: (reason?: string) => api<Quote>(`/api/quotes/${quoteId}/approve`, { method: "POST",
+      body: reason ? { confirm_below_cost: true, reason } : undefined }),
+    onSuccess: refresh,
+  });
+  const belowCost = approve.error instanceof ApiError && approve.error.code === "below_cost"
+    ? (approve.error.details.items as { quote_item_id: string; name: string | null; unit_price: string; unit_cost: string }[]) : null;
   const patch = useMutation({ mutationFn: (body: Body) => api(`/api/quotes/${quoteId}`, { method: "PATCH", body }), onSuccess: refresh });
   const patchItem = useMutation({ mutationFn: ({ id, body }: { id: string; body: Body }) => api(`/api/quotes/items/${id}`, { method: "PATCH", body }), onSuccess: refresh });
   const action = useMutation({ mutationFn: (path: string) => api<Quote>(`/api/quotes/${quoteId}/${path}`, { method: "POST", body: path === "revise" ? {} : undefined }),
@@ -180,7 +225,7 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
         <span className="text-xs text-muted">{t("quotes.version", { version: f.num(q.version) })}</span><StatusBadge group="quote" status={q.status} />
         <Badge>{t(`quotes.basis.${q.price_basis}`)}</Badge></span>}
         actions={<>
-          {draft && <Button variant="primary" busy={action.isPending} disabled={!q.approval?.ok} onClick={() => action.mutate("approve")}>{t("quotes.approve")}</Button>}
+          {draft && <Button variant="primary" busy={approve.isPending} disabled={!q.approval?.ok} onClick={() => approve.mutate(undefined)}>{t("quotes.approve")}</Button>}
           {q.status === "approved" && <Button variant="primary" onClick={() => setDialog("sent")}>{t("quotes.markSent")}</Button>}
           {["sent", "expired", "accepted", "partially_accepted", "rejected"].includes(q.status) && <Button variant="primary" onClick={() => setDialog("outcome")}>{t("quotes.recordOutcome")}</Button>}
           {["approved", "sent", "expired", "partially_accepted", "rejected"].includes(q.status) && <Button onClick={() => action.mutate("revise")}>{t("quotes.revise")}</Button>}
@@ -194,7 +239,7 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
           {draft && <span className="self-center text-xs text-warning">{t("quotes.draftWatermark")}</span>}
         </div>
         {pdfUnavailable && <p className="mb-2 rounded-md bg-warning-soft px-2.5 py-1.5 text-sm text-warning" role="alert">{t("quotes.pdfUnavailable")}</p>}
-        <ErrorNote error={pdfUnavailable ? null : output.error || action.error || patch.error || remove.error} />
+        <ErrorNote error={pdfUnavailable ? null : output.error || action.error || patch.error || remove.error || (belowCost ? null : approve.error)} />
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label={t("quotes.buyer")}><span className="flex flex-wrap items-center gap-1.5">{q.buyer_party_id ? <PartyName fa={q.buyer_name_fa} en={q.buyer_name_en} id={q.buyer_party_id} /> : <span className="text-danger">{t("quotes.noBuyer")}</span>}
             <ContactName fa={q.contact_name_fa} en={q.contact_name_en} className="text-xs" /></span></Field>
@@ -235,8 +280,8 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
                     onSave={(v) => patchItem.mutate({ id: i.id, body: { description_override: v } })} /></td>
                   <td className="p-1.5 whitespace-nowrap"><Bdi ltr className="tabular-nums">{f.num(i.quantity)} {unitLabel(i.unit_code, i.unit_text)}</Bdi></td>
                   <td className="p-1.5">
-                    {draft ? <BlurInput dir="ltr" inputMode="decimal" className="w-32" aria-label={t("quotes.columns.unitPrice")} value={i.unit_price}
-                      onSave={(v) => patchItem.mutate({ id: i.id, body: { unit_price: v } })} /> : <Money amount={i.unit_price} currency={q.currency} />}
+                    {draft ? <PriceCell item={i} onSave={(v) => patchItem.mutate({ id: i.id, body: { unit_price: v } })} />
+                      : <Money amount={i.unit_price} currency={q.currency} />}
                     {i.price_manual && <Badge tone="warning">{t("costing.pricing.manual")}</Badge>}
                   </td>
                   <td className="p-1.5"><Money amount={i.total} currency={q.currency} /></td>
@@ -259,7 +304,10 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
       </Card>
       <Card title={t("quotes.terms")} actions={draft ? <Button variant="ghost" onClick={() => action.mutate("terms")}>{t("quotes.regenerateTerms")}</Button> : undefined}>
         <BlurInput multiline id="q-terms" aria-label={t("quotes.terms")} value={q.terms_text} disabled={!draft} onSave={save("terms_text")} />
-        <p className="mt-1 text-xs text-muted">{t("quotes.termsHint")}</p>
+        {draft && q.terms_manual
+          ? <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-warning" data-testid="terms-manual">{t("quotes.termsManual")}
+            <Button variant="ghost" onClick={() => action.mutate("terms")}>{t("quotes.regenerateTerms")}</Button></p>
+          : <p className="mt-1 text-xs text-muted">{t(draft ? "quotes.termsAuto" : "quotes.termsHint")}</p>}
       </Card>
       {q.approval && (
         <Card title={<span className="flex items-center gap-2">{t("quotes.approvalTitle")}{q.approval.ok ? <Badge tone="success">{t("costing.gate.ok")}</Badge> : <Badge tone="warning">{t("costing.gate.blocked")}</Badge>}</span>}>
@@ -279,6 +327,8 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
           ))}</ul>
         </Card>
       )}
+      {belowCost && <BelowCostDialog rows={belowCost} currency={q.currency} busy={approve.isPending} error={null}
+        onClose={() => approve.reset()} onConfirm={(reason) => approve.mutate(reason)} />}
       {dialog === "sent" && <MarkSentDialog quote={q} onClose={() => setDialog(null)} onDone={refresh} />}
       {dialog === "outcome" && <OutcomesDialog quote={q} onClose={() => setDialog(null)} onDone={refresh} />}
       {dialog === "withdraw" && <ReasonDialog title={t("quotes.withdraw")} onClose={() => setDialog(null)} onConfirm={(r) => withdraw.mutate(r)} busy={withdraw.isPending} error={withdraw.error} />}

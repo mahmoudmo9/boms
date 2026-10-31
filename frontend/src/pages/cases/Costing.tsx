@@ -458,13 +458,52 @@ function GateCard({ sheet, onChanged, onQuote }: { sheet: CostSheet; onChanged: 
   );
 }
 
+/** Finalize with the gate checklist in view (v0.5.0): unfilled lines can be treated as not applicable in one step;
+ * a sheet that still fails can be finalized after confirmation (some failures belong to the quote). */
+function FinalizeDialog({ sheet, onClose, onDone }: { sheet: CostSheet; onClose: () => void; onDone: () => void }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const failing = sheet.gate.failures.filter((x) => x.code !== "sheet_not_final");
+  const unfilled = sheet.lines.filter((ln) => sheet.unfilled_line_ids.includes(ln.id));
+  const finalize = useMutation({
+    mutationFn: (confirm: boolean) => api(`/api/cost-sheets/${sheet.id}/finalize`, { method: "POST", body: confirm ? { confirm: true } : undefined }),
+    onSuccess: () => { onDone(); onClose(); },
+  });
+  const notApplicable = useMutation({ mutationFn: () => api(`/api/cost-sheets/${sheet.id}/lines/not-applicable`, { method: "POST" }), onSuccess: onDone });
+  return (
+    <Modal open wide title={t("costing.finalizeDialog.title")} onClose={onClose}
+      footer={<>
+        <Button onClick={onClose}>{t("costing.finalizeDialog.back")}</Button>
+        {unfilled.length > 0 && <Button busy={notApplicable.isPending} onClick={() => notApplicable.mutate()}>{t("costing.finalizeDialog.notApplicable")}</Button>}
+        <Button variant={failing.length ? "danger" : "primary"} busy={finalize.isPending} onClick={() => finalize.mutate(failing.length > 0)}>
+          {failing.length ? t("costing.finalizeDialog.anyway") : t("costing.finalize")}</Button>
+      </>}>
+      {failing.length === 0 ? <p className="text-sm text-success">{t("costing.finalizeDialog.passes")}</p> : (
+        <>
+          <p className="mb-2 text-sm">{t("costing.finalizeDialog.failing")}</p>
+          <GateChecklist failures={failing} overrides={sheet.gate.overrides} day={f.day} />
+        </>
+      )}
+      {unfilled.length > 0 && (
+        <div className="mt-3" data-testid="unfilled-lines">
+          <p className="mb-1 text-sm font-medium">{t("costing.finalizeDialog.unfilled", { n: f.num(unfilled.length), count: unfilled.length })}</p>
+          <ul className="flex flex-wrap gap-1.5 text-sm">{unfilled.map((ln) => <li key={ln.id} className="rounded border border-line px-1.5 py-0.5"><Bdi>{ln.label}</Bdi></li>)}</ul>
+          <p className="mt-1 text-xs text-muted">{t("costing.finalizeDialog.notApplicableHint")}</p>
+        </div>
+      )}
+      <ErrorNote error={finalize.error || notApplicable.error} />
+    </Modal>
+  );
+}
+
 function SheetEditor({ sheetId, onChanged, onQuote, onSelect }: { sheetId: string; onChanged: () => void; onQuote: (id: string) => void; onSelect: (id: string | null) => void }) {
   const { t } = useTranslation();
   const f = useFormat();
   const sheet = useQuery({ queryKey: ["cost-sheet", sheetId], queryFn: () => api<CostSheet>(`/api/cost-sheets/${sheetId}`) });
   const refresh = () => { void sheet.refetch(); onChanged(); };
   const m = useSheetMutations(sheetId, refresh);
-  const finalize = useMutation({ mutationFn: () => api(`/api/cost-sheets/${sheetId}/finalize`, { method: "POST" }), onSuccess: refresh });
+  const [finalizing, setFinalizing] = useState(false);
+  const removeUnused = useMutation({ mutationFn: () => api(`/api/cost-sheets/${sheetId}/lines/remove-unused`, { method: "POST" }), onSuccess: refresh });
   const version = useMutation({ mutationFn: () => api<CostSheet>(`/api/cost-sheets/${sheetId}/new-version`, { method: "POST" }), onSuccess: (s) => { onChanged(); onSelect(s.id); } });
   const remove = useMutation({ mutationFn: () => api(`/api/cost-sheets/${sheetId}`, { method: "DELETE" }), onSuccess: () => { onChanged(); onSelect(null); } });
   if (sheet.isLoading) return <Loading />;
@@ -477,7 +516,9 @@ function SheetEditor({ sheetId, onChanged, onQuote, onSelect }: { sheetId: strin
       <Card title={<span className="flex flex-wrap items-center gap-2">{t("costing.sheet", { version: f.num(s.version) })}<StatusBadge group="costSheet" status={s.status} />
         <Badge>{t(`costing.dealTypes.${s.deal_type}`)}</Badge><Bdi ltr>{s.pricing_currency}</Bdi></span>}
         actions={<>
-          {editable && <Button variant="primary" busy={finalize.isPending} onClick={() => finalize.mutate()}>{t("costing.finalize")}</Button>}
+          {editable && <Button variant="primary" onClick={() => setFinalizing(true)}>{t("costing.finalize")}</Button>}
+          {editable && s.unfilled_line_ids.some((id) => s.lines.find((ln) => ln.id === id)?.kind !== "purchase") && (
+            <Button busy={removeUnused.isPending} onClick={() => removeUnused.mutate()}>{t("costing.removeUnused")}</Button>)}
           <Button busy={version.isPending} onClick={() => version.mutate()}>{t("costing.newVersion")}</Button>
           {editable && <Button variant="ghost" onClick={() => remove.mutate()}>{t("delete.button")}</Button>}
         </>}>
@@ -497,13 +538,14 @@ function SheetEditor({ sheetId, onChanged, onQuote, onSelect }: { sheetId: strin
           </ul>
         )}
         {s.compute_error && s.compute_error.code !== "fx_missing" && <p className="mt-2 text-sm text-danger">{t(`errors.${s.compute_error.code}`, { defaultValue: s.compute_error.message })}</p>}
-        <ErrorNote error={finalize.error || version.error || remove.error || m.patchSheet.error} />
+        <ErrorNote error={removeUnused.error || version.error || remove.error || m.patchSheet.error} />
       </Card>
       <FxCard sheet={s} editable={editable} onChanged={refresh} />
       <LinesCard sheet={s} editable={editable} onChanged={refresh} />
       <MoneyTimeCard sheet={s} editable={editable} onChanged={refresh} />
       <PricingCard sheet={s} editable={editable} onChanged={refresh} />
       <GateCard sheet={s} onChanged={refresh} onQuote={onQuote} />
+      {finalizing && <FinalizeDialog sheet={s} onClose={() => setFinalizing(false)} onDone={refresh} />}
     </div>
   );
 }

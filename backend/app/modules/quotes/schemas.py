@@ -56,6 +56,11 @@ class QuoteItemPatch(InputModel):
     note: Text500 | None = None
 
 
+class ApproveIn(InputModel):
+    confirm_below_cost: bool = False
+    reason: Annotated[str, Field(max_length=500)] | None = None
+
+
 class MarkSentIn(InputModel):
     channel: Literal["email", "whatsapp", "phone", "in_person", "letter", "other"] = "email"
     sent_at: datetime | None = None

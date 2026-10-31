@@ -54,6 +54,13 @@ describe("translations", () => {
     }
   });
 
+  it("Persian uses the reference-flow terms for exposure, margin and markup (v0.5.0)", () => {
+    const values = flatten(fa).map((k) => k.split(".").reduce<unknown>((o, p) => (o as Record<string, unknown>)[p], fa) as string);
+    expect(values.filter((v) => /درگیری مالی|سربار سود|ریسک مالی/.test(v))).toEqual([]);
+    const pricing = (fa as unknown as { costing: { pricing: Record<string, string>; money: Record<string, string> } }).costing;
+    expect([pricing.pricing.margin, pricing.pricing.markup, pricing.money.exposure]).toEqual(["حاشیهٔ سود", "مارک‌آپ", "نقدینگی درگیر"]);
+  });
+
   it("every funnel stage of migration 0004 has a label in both languages", () => {
     const stages: Record<string, string[]> = {
       buyer: ["new_lead", "contacted", "in_conversation", "inquiry_received", "quoted", "won", "lost", "dormant"],

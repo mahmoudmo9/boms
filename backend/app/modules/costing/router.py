@@ -11,6 +11,7 @@ from app.core.db import get_db
 from app.core.web import request_source
 from app.modules.costing import service
 from app.modules.costing.schemas import (
+    FinalizeIn,
     FxIn,
     LineIn,
     LinePatch,
@@ -144,6 +145,7 @@ def sheet_detail(db: Session, sheet_id: uuid.UUID, valid_until: date | None = No
         "compute_error": error,
         "warnings": service.warnings(db, sheet, computation),
         "gate": service.gate(db, sheet, valid_until),
+        "unfilled_line_ids": [r.id for r in service.unfilled_lines(db, sheet)],
     })
 
 
@@ -196,8 +198,22 @@ def new_version(sheet_id: uuid.UUID, request: Request, user: CurrentUser, db: Db
 
 
 @sheets_router.post("/{sheet_id}/finalize")
-def finalize(sheet_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
-    service.finalize(db, sheet_id, request_source(request), user.username)
+def finalize(sheet_id: uuid.UUID, request: Request, user: CurrentUser, db: Db, body: FinalizeIn | None = None):
+    service.finalize(db, sheet_id, request_source(request), user.username, confirm=bool(body and body.confirm))
+    db.commit()
+    return sheet_detail(db, sheet_id)
+
+
+@sheets_router.post("/{sheet_id}/lines/not-applicable")
+def lines_not_applicable(sheet_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    service.mark_not_applicable(db, sheet_id, request_source(request), user.username)
+    db.commit()
+    return sheet_detail(db, sheet_id)
+
+
+@sheets_router.post("/{sheet_id}/lines/remove-unused")
+def lines_remove_unused(sheet_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    service.remove_unused_lines(db, sheet_id, request_source(request), user.username)
     db.commit()
     return sheet_detail(db, sheet_id)
 

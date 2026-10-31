@@ -34,6 +34,9 @@ from app.modules.system import settings
 EDITABLE = ("language", "price_basis", "valid_until", "incoterm", "incoterm_place", "payment_terms", "delivery_terms",
             "lead_time_days", "terms_text", "notes", "buyer_party_id", "contact_id")
 OPEN_STATUSES = ("draft", "approved", "sent")
+# a change of any of these rebuilds the terms text of a draft quote (unless edited by hand, v0.5.0)
+TERMS_INPUTS = {"payment_terms", "delivery_terms", "lead_time_days", "incoterm", "incoterm_place", "valid_until",
+                "buyer_party_id", "language"}
 DECIDED = ("accepted", "partially_accepted", "rejected")
 CHASE_ACTION = {"en": "Chase quote response", "fa": "پیگیری پاسخ پیش‌فاکتور"}
 INTERACTION_CHANNELS = {"email": "email", "whatsapp": "whatsapp", "phone": "call", "in_person": "in_person",
@@ -119,15 +122,26 @@ def render_terms(db: Session, quote: Quote) -> str:
     if template is None:
         return ""
     lang = quote.language
+    digits = sourcing_templates.owner_digits(db)
     lead = ""
     if quote.lead_time_days is not None:
-        lead = f"{quote.lead_time_days} " + ("روز" if lang == "fa" else "days")
+        lead = sourcing_templates.localize_digits(str(quote.lead_time_days), lang, digits) + " " + (
+            "روز" if lang == "fa" else "days")
     bank = (settings.get(db, "company.bank_details") or {}).get(lang) or ""
     values = {"buyer_name": _party_name(db, quote.buyer_party_id, lang),
-              "valid_until": sourcing_templates.format_date(quote.valid_until, lang),
+              "valid_until": sourcing_templates.format_date(quote.valid_until, lang, digits),
               "payment_terms": quote.payment_terms or "", "lead_time": lead, "bank_details": bank,
               "incoterm": " ".join(x for x in (quote.incoterm, quote.incoterm_place) if x)}
-    return sourcing_templates.render(template.body_template, values)
+    return sourcing_templates.render(template.body_template, values, drop_empty_lines=True)
+
+
+def _revision_number(db: Session, supersedes_id: uuid.UUID) -> str:
+    """A revision keeps the base number and adds the next version suffix (v0.5.0): PI-1405-0001 -> -v2 -> -v3.
+    Revisions made by v0.4.0 under new numbers are their own base."""
+    base = get_quote(db, supersedes_id).number.split("-v")[0]
+    used = db.scalars(select(Quote.number).where((Quote.number == base) | Quote.number.like(f"{base}-v%"))).all()
+    versions = [int(n.rsplit("-v", 1)[1]) if "-v" in n else 1 for n in used]
+    return f"{base}-v{max(versions, default=1) + 1}"
 
 
 def _fill_items(db: Session, quote: Quote, sheet, keep: dict[uuid.UUID, QuoteItem] | None = None) -> None:
@@ -180,7 +194,8 @@ def create_quote(db: Session, data: dict, calendar: str, source: str, actor: str
         payment_terms = next((t.label_fa if language == "fa" else t.label_en
                               for t in sourcing_cases.payment_terms(db) if t.code == case.payment_term), None)
     quote = Quote(case_id=case.id, cost_sheet_id=sheet.id, version=version, status="draft", language=language,
-                  number=next_number(db, numbering_year(clock.today(), calendar)),
+                  number=(_revision_number(db, data["supersedes_id"]) if data.get("supersedes_id")
+                          else next_number(db, numbering_year(clock.today(), calendar))),
                   price_basis=data.get("price_basis") or "before_vat", currency=sheet.pricing_currency,
                   valid_until=date.fromisoformat(gate["valid_until"]), buyer_party_id=buyer, contact_id=contact,
                   supersedes_id=data.get("supersedes_id"),
@@ -188,6 +203,7 @@ def create_quote(db: Session, data: dict, calendar: str, source: str, actor: str
                                                "notes")}, payment_terms=payment_terms)
     db.add(quote)
     flush(db, "invalid_quote")
+    quote.terms_manual = bool(data.get("terms_manual"))
     quote.terms_text = data.get("terms_text") if data.get("terms_text") is not None else render_terms(db, quote)
     _fill_items(db, quote, sheet, data.get("_keep"))
     _totals(db, quote)
@@ -216,10 +232,17 @@ def update_quote(db: Session, quote_id: uuid.UUID, changes: dict, source: str, a
         if any(f["code"] == "validity_too_long" for f in gate["failures"]):
             raise AppError("validity_too_long", "The quote cannot be valid longer than the offers and FX allow",
                            {"max_valid_until": gate["max_valid_until"]}, status=422)
-    changed = diff(quote, {k: v for k, v in changes.items() if k in EDITABLE})
+    if "terms_text" in changes and changes["terms_text"] != quote.terms_text:
+        changes["terms_manual"] = True  # typed by the owner: the automatic rebuild leaves it alone
+    changed = diff(quote, {k: v for k, v in changes.items() if k in EDITABLE or k == "terms_manual"})
     if changed:
         if "price_basis" in changed:
             _totals(db, quote)
+        if set(changed) & TERMS_INPUTS and not quote.terms_manual:
+            rebuilt = render_terms(db, quote)  # v0.5.0: terms follow their inputs while the quote is a draft
+            if rebuilt != quote.terms_text:
+                changed["terms_text"] = {"old": quote.terms_text, "new": rebuilt}
+                quote.terms_text = rebuilt
         flush(db, "invalid_quote")
         events.record(db, "quote", quote.id, "update", jsonable({"changes": changed}), source, actor=actor)
     return quote
@@ -228,7 +251,10 @@ def update_quote(db: Session, quote_id: uuid.UUID, changes: dict, source: str, a
 def regenerate_terms(db: Session, quote_id: uuid.UUID, source: str, actor: str | None = None) -> Quote:
     quote = get_quote(db, quote_id)
     _draft(quote)
-    return update_quote(db, quote_id, {"terms_text": render_terms(db, quote)}, source, actor)
+    quote = update_quote(db, quote_id, {"terms_text": render_terms(db, quote)}, source, actor)
+    quote.terms_manual = False  # back to the template: follows its inputs again
+    flush(db, "invalid_quote")
+    return quote
 
 
 def update_item(db: Session, quote_item_id: uuid.UUID, changes: dict, source: str, actor: str | None = None) -> QuoteItem:
@@ -310,15 +336,34 @@ def approval_check(db: Session, quote: Quote) -> dict:
     return {"ok": not failures, "failures": failures, "max_valid_until": gate["max_valid_until"]}
 
 
-def approve(db: Session, quote_id: uuid.UUID, source: str, actor: str | None = None) -> Quote:
-    """The owner's final review before sending: gate again, then the numbers are locked."""
+def below_cost(db: Session, quote: Quote) -> list[dict]:
+    """Rows whose unit price is below the unit landed cost of the sheet (v0.5.0)."""
+    names = {i.id: i.name for i in sourcing_items.items_of(db, case_id=quote.case_id)}
+    return jsonable([{"quote_item_id": r.id, "line_item_id": r.line_item_id, "name": names.get(r.line_item_id),
+                      "unit_price": r.unit_price, "unit_cost": r.unit_cost}
+                     for r in items_of(db, quote.id) if r.unit_cost is not None and r.unit_price < r.unit_cost])
+
+
+def approve(db: Session, quote_id: uuid.UUID, source: str, actor: str | None = None,
+            confirm_below_cost: bool = False, reason: str | None = None) -> Quote:
+    """The owner's final review before sending: the full gate again on the current prices (minimums included),
+    then the numbers are locked. A price below cost needs ``confirm_below_cost`` with a reason (v0.5.0)."""
     quote = get_quote(db, quote_id)
     _draft(quote)
     check = approval_check(db, quote)
     if not check["ok"]:
         raise Conflict("gate_failed", "The quote cannot be approved yet", {"failures": check["failures"]})
+    below = below_cost(db, quote)
+    reason = (reason or "").strip() or None
+    if below and not confirm_below_cost:
+        raise Conflict("below_cost", "Some prices are below cost", {"items": below})
+    if below and not reason:
+        raise AppError("reason_required", "Approving below cost needs a reason", status=422)
     quote.status, quote.approved_at, quote.approved_by = "approved", clock.now(), actor or "unknown"
     flush(db, "invalid_quote")
+    if below:
+        events.record(db, "quote", quote.id, "approve_below_cost", {"reason": reason, "items": below}, source,
+                      actor=actor)
     events.record(db, "quote", quote.id, "approve", jsonable({"number": quote.number, "subtotal": quote.subtotal,
                                                              "total": quote.total, "valid_until": quote.valid_until}),
                   source, actor=actor)
@@ -410,8 +455,10 @@ def revise(db: Session, quote_id: uuid.UUID, data: dict, calendar: str, source: 
     flush(db, "invalid_quote")
     new = create_quote(db, {"case_id": old.case_id, "cost_sheet_id": sheet_id, "supersedes_id": old.id,
                             "valid_until": data.get("valid_until"),
-                            "_keep": {r.line_item_id: r for r in items_of(db, old.id)},
-                            **{k: getattr(old, k) for k in EDITABLE if k != "valid_until"}}, calendar, source, actor)
+                            "_keep": {r.line_item_id: r for r in items_of(db, old.id)}, "terms_manual": old.terms_manual,
+                            **{k: getattr(old, k) for k in EDITABLE
+                               if k != "valid_until" and (k != "terms_text" or old.terms_manual)}},
+                       calendar, source, actor)
     cancelled = _cancel_chases(db, old, "quote revised", source, actor)
     events.record(db, "quote", old.id, "superseded", jsonable({"by": new.id, "number": new.number,
                                                               "old_status": previous_status,

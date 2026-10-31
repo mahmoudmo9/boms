@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { GATE_CONDITIONS, gateChecklist, gridTarget, marginMarkupView } from "./costing";
+import { GATE_CONDITIONS, gateChecklist, gridTarget, marginMarkupView, priceWarning } from "./costing";
 
 describe("margin and markup display", () => {
   it("shows both views of the same profit", () => {
@@ -47,5 +47,20 @@ describe("gate checklist", () => {
   });
   it("passes everything when there are no failures", () => {
     expect(gateChecklist([]).every((r) => r.ok)).toBe(true);
+  });
+});
+
+describe("price warning while typing", () => {
+  it("flags a price below cost first, then below the item minimum", () => {
+    expect(priceWarning("99", "100", "150")).toBe("below_cost");
+    expect(priceWarning("120", "100", "150")).toBe("below_minimum");
+    expect(priceWarning("150", "100", "150")).toBeNull();
+    expect(priceWarning("200", "100", null)).toBeNull();
+  });
+  it("reads Persian digits and thousands separators, ignores empty or partial input", () => {
+    expect(priceWarning("۹۹", "100", null)).toBe("below_cost");
+    expect(priceWarning("1,000", "1001", null)).toBe("below_cost");
+    expect(priceWarning("", "100", null)).toBeNull();
+    expect(priceWarning("abc", "100", null)).toBeNull();
   });
 });

@@ -380,7 +380,7 @@ def test_word_output_reopens_with_items_totals_and_is_linked(client):
     r = client.post(f"/api/quotes/{quote['id']}/outputs", json={"format": "docx"})
     assert r.status_code == 201, r.text
     out = r.json()
-    assert out["draft"] is True and out["filename"] == f"{quote['number']}-v1-DRAFT.docx"
+    assert out["draft"] is True and out["filename"] == f"{quote['number']}-DRAFT.docx"
     data = client.get(f"/api/documents/{out['document_id']}/download").content
     doc = Document(io.BytesIO(data))
     body = "\n".join(p.text for p in doc.paragraphs)
@@ -425,7 +425,7 @@ def test_pdf_with_the_available_chromium(client):
         client.patch("/api/settings", json={"pdf.browser_path": None})
     assert r.status_code == 201, r.text
     out = r.json()
-    assert out["draft"] is False and out["filename"] == f"{quote['number']}-v1.pdf"
+    assert out["draft"] is False and out["filename"] == f"{quote['number']}.pdf"
     data = client.get(f"/api/documents/{out['document_id']}/download").content
     assert data[:5] == b"%PDF-"
     import fitz  # pymupdf (already a dependency): the PDF text has the quote number and an item

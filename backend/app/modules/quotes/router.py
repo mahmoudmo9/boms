@@ -13,6 +13,7 @@ from app.modules.costing import service as costing
 from app.modules.parties import service as parties
 from app.modules.quotes import output, service
 from app.modules.quotes.schemas import (
+    ApproveIn,
     CaseResultIn,
     MarkSentIn,
     OutcomesIn,
@@ -43,7 +44,9 @@ def quote_detail(db: Session, quote_id: uuid.UUID) -> dict:
         "buyer_name_fa": buyer.name_fa if buyer else None, "buyer_name_en": buyer.name_en if buyer else None,
         "contact_name_fa": contact.name_fa if contact else None, "contact_name_en": contact.name_en if contact else None,
         "cost_sheet": {"id": sheet.id, "version": sheet.version, "status": sheet.status},
-        "items": [{**row_snapshot(r), "name": names.get(r.line_item_id, "")} for r in service.items_of(db, quote.id)],
+        "items": [{**row_snapshot(r), "name": names.get(r.line_item_id, ""),
+                   "min_unit_price": (sheet.item_min_prices or {}).get(str(r.line_item_id))}
+                  for r in service.items_of(db, quote.id)],
         "outputs": output.outputs_of(db, quote.id),
         "approval": service.approval_check(db, quote) if quote.status == "draft" else None,
         "default_followup": service.default_followup(quote) if quote.status == "approved" else None,
@@ -129,8 +132,9 @@ def remove_item(quote_item_id: uuid.UUID, request: Request, user: CurrentUser, d
 
 
 @router.post("/{quote_id}/approve")
-def approve(quote_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
-    service.approve(db, quote_id, request_source(request), user.username)
+def approve(quote_id: uuid.UUID, request: Request, user: CurrentUser, db: Db, body: ApproveIn | None = None):
+    service.approve(db, quote_id, request_source(request), user.username,
+                    confirm_below_cost=bool(body and body.confirm_below_cost), reason=body.reason if body else None)
     db.commit()
     return quote_detail(db, quote_id)
 

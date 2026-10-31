@@ -46,3 +46,13 @@ export function gateChecklist(failures: GateFailure[], overrides?: { fx_stale: s
 
 /** Quote statuses that are still open (the case cannot be marked won/lost yet). */
 export const OPEN_QUOTE_STATUSES = ["draft", "approved", "sent"];
+
+/** Warning for a unit price as it is typed (v0.5.0): below the unit landed cost, or below the item's minimum.
+ * Unparseable or empty input gives no warning (the server validates on save). */
+export function priceWarning(typed: string, unitCost: string | null | undefined, minUnit: string | null | undefined): "below_cost" | "below_minimum" | null {
+  const price = Number(typed.trim().replace(/[٬,]/g, "").replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))));
+  if (!typed.trim() || Number.isNaN(price)) return null;
+  if (unitCost != null && price < Number(unitCost)) return "below_cost";
+  if (minUnit != null && price < Number(minUnit)) return "below_minimum";
+  return null;
+}

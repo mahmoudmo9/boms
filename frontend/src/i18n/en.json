@@ -524,7 +524,9 @@
     "invalid_period": "The period is not valid.",
     "invalid_percent": "The percent is not valid.",
     "invalid_method": "Unknown pricing method.",
-    "no_followup_reason": "Enter why no follow-up is set."
+    "no_followup_reason": "Enter why no follow-up is set.",
+    "below_cost": "Some prices are below cost.",
+    "gate_failing": "The sheet does not pass the quote gate yet."
   },
   "cc": {
     "subtitle": "Follow-ups and leads for {{date}}.",
@@ -1547,6 +1549,18 @@
       "down": "Move down",
       "lines": "{{n}} lines",
       "lines_one": "{{n}} line"
+    },
+    "removeUnused": "Remove unused lines",
+    "finalizeDialog": {
+      "title": "Finalize cost sheet",
+      "back": "Go back",
+      "notApplicable": "Treat as not applicable",
+      "anyway": "Finalize anyway",
+      "passes": "The sheet passes the quote gate.",
+      "failing": "The quote gate still fails. You can finalize anyway: some conditions belong to the quote (validity, minimums).",
+      "unfilled": "{{n}} lines have no amount or percent:",
+      "unfilled_one": "{{n}} line has no amount or percent:",
+      "notApplicableHint": "\"Treat as not applicable\" saves them as 0 with the note N/A."
     }
   },
   "quotes": {
@@ -1647,7 +1661,20 @@
       "none": "No quote sent for this product yet.",
       "sent": "Sent"
     },
-    "summary_one": "{{n}} quote · won {{won}} · lost {{lost}}"
+    "summary_one": "{{n}} quote · won {{won}} · lost {{lost}}",
+    "termsManual": "Terms were edited by hand; rebuild from template?",
+    "termsAuto": "Rebuilt from the template when payment, delivery, lead time, Incoterm, validity or buyer change.",
+    "priceWarning": {
+      "below_cost": "Below cost",
+      "below_minimum": "Below the minimum price"
+    },
+    "belowCost": {
+      "title": "Price below cost",
+      "text": "These prices are below the unit landed cost. Approve anyway?",
+      "cost": "cost",
+      "back": "Go back",
+      "confirm": "Approve below cost"
+    }
   },
   "letterhead": {
     "subtitle": "Company details printed on quotes, in Persian and English.",
