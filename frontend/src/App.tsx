@@ -24,6 +24,7 @@ import { InquiriesPage } from "./pages/sourcing/InquiriesPage";
 import { InquiryDetailPage } from "./pages/sourcing/InquiryDetailPage";
 import { TemplatesPage } from "./pages/sourcing/TemplatesPage";
 import { SystemPage } from "./pages/system/SystemPage";
+import { ListingsPage } from "./pages/tenders/ListingsPage";
 import { AppShell } from "./shell/AppShell";
 
 export function App() {
@@ -42,6 +43,7 @@ export function App() {
           <Route key={w.key} path={w.path.slice(1)} element={<PlaceholderPage workspace={w} />} />
         ))}
         <Route path="command-center" element={<CommandCenterPage />} />
+        <Route path="tenders" element={<ListingsPage />} />
         <Route path="parties" element={<PartiesPage />} />
         <Route path="parties/funnels" element={<FunnelsPage />} />
         <Route path="parties/:id" element={<PartyDetailPage />} />

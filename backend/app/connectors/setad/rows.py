@@ -49,7 +49,7 @@ def setad_datetime(text, default_time=(23, 59)) -> datetime | None:
 
 
 def _amount(value):
-    text = western_digits(str(value or "")).replace(",", "").replace("٬", "").strip()
+    text = western_digits("" if value is None else str(value)).replace(",", "").replace("٬", "").strip()
     if text in ("", "null", "None"):
         return None
     try:

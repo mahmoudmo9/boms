@@ -82,3 +82,17 @@ export interface Page<T> {
   page: number;
   page_size: number;
 }
+
+/** POST that answers with a file (e.g. a CSV export); returns the bytes for a client-side download. */
+export async function apiBlob(path: string, body: unknown): Promise<Blob> {
+  const response = await fetch(path, {
+    method: "POST", credentials: "same-origin",
+    headers: { "X-BOMS-Client": "ui", "X-CSRF-Token": csrfToken(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const err = (await response.json().catch(() => null))?.error ?? {};
+    throw new ApiError(response.status, err.code ?? `http_${response.status}`, err.message ?? response.statusText, err.details ?? {});
+  }
+  return response.blob();
+}

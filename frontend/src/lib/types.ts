@@ -1009,3 +1009,106 @@ export interface ProductQuotes {
     party_fa: string | null; party_en: string | null; unit_group: string; normalized_price: string | null }[];
   summary: { currency: string; unit_group: string; count: number; min: string; median: string; max: string }[];
 }
+
+// ---- Setad listings and screening (v0.5.0) -----------------------------------------------------------------
+
+export interface ListingRow {
+  id: string;
+  source: "setad_purchase" | "setad_tender";
+  external_no: string;
+  title: string;
+  organization: string;
+  province: string;
+  city: string;
+  category: string;
+  goods_group: string;
+  service_group: string;
+  published_at: string | null;
+  deadline: string | null;
+  deadline_exact: boolean;
+  document_price: string | null;
+  in_my_calls: boolean;
+  site_state: string;
+  site_state_name: string;
+  status: "new" | "starred" | "reviewing" | "converted" | "dismissed";
+  inquiry_id: string | null;
+  dismiss_reason: string | null;
+  is_new: boolean;
+  documents: { downloaded: number; total: number };
+  warn: string[];
+}
+
+export interface ListingCounts {
+  all: number; new: number; starred: number; reviewing: number; converted: number; dismissed: number;
+  open: number; soon: number; passed: number; downloaded: number; my_calls: number; free: number; paid: number;
+}
+
+export interface ListingPage {
+  items: ListingRow[];
+  total: number;
+  page: number;
+  page_size: number;
+  counts: ListingCounts;
+  since: string | null;
+}
+
+export interface ListingFile {
+  id: string;
+  group: string;
+  group_key: string;
+  appendix_id: string;
+  name: string;
+  extension: string;
+  size: string;
+  state: "pending" | "downloaded" | "missing" | "error";
+  sha256: string | null;
+  document_id: string | null;
+  error: string | null;
+}
+
+export interface ListingDetail {
+  listing: {
+    id: string; source: ListingRow["source"]; external_id: string; external_no: string; title: string; organization: string;
+    province: string; city: string; category: string; goods_group: string; service_group: string; type_name: string;
+    need_type: string; description: string; published_at: string | null; documents_deadline: string | null;
+    proposal_deadline: string | null; inquiry_deadline: string | null; opening_at: string | null; edition_date: string | null;
+    edition_no: string; response_deadline: string | null; deadline_exact: boolean; price_valid_until: string | null;
+    document_price: string | null; guarantee_amount: string | null; estimate: string | null; site_state: string;
+    site_state_name: string; in_my_calls: boolean; detail_url: string | null; first_seen: string; last_seen: string;
+  };
+  groups: { title: string; pairs: [string, string][] }[];
+  technical: [string, string][];
+  detail: { buyer_note: string; items: { headers: string[]; rows: string[][] }; fetched_at: string; text: string;
+    attachments: string[] | null } | null;
+  files: ListingFile[];
+  changes: { field: string; old: string | null; new: string | null; at: string }[];
+  screening: { status: ListingRow["status"]; dismiss_reason: string | null; note: string | null; checklist: boolean[];
+    inquiry_id: string | null; starred_at: string | null; converted_at: string | null } | null;
+  warn: string[];
+  checklist_questions: string[];
+}
+
+export interface HarvestRunInfo {
+  id: string; kind: "full" | "quick"; status: "running" | "done" | "needs_review" | "cancelled" | "error";
+  started_at: string; finished_at: string | null; reported_count: number | null; pages_total: number | null;
+  pages_done: number; rows_seen: number; new_count: number; changed_count: number; duplicates: number; errors: string;
+}
+
+export interface AgentState {
+  alive: boolean;
+  connected: boolean;
+  pid?: number | null;
+  role?: "EPROC" | "ETEND" | null;
+  browser_channel?: string | null;
+  command?: string | null;
+  pages_done?: number | null;
+  pages_total?: number | null;
+  rows_seen?: number | null;
+  captcha_waiting?: boolean;
+  captcha_message?: string | null;
+  message?: string | null;
+  last_error?: string | null;
+  recording?: boolean;
+  queued: number;
+  runs: Record<"setad_purchase" | "setad_tender", HarvestRunInfo | null>;
+}

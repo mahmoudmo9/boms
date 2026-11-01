@@ -44,3 +44,10 @@ def test_only_tracked_fields_are_compared():
     b = tender_row({"id": 1, "number": "1", "title": "x", "recCount": 2, "anyOtherField": "y"})
     assert tracked_changes(a, b) == []
     assert "recCount" not in TRACKED_FIELDS and "proposal_deadline" in TRACKED_FIELDS
+
+
+def test_zero_document_price_is_free_not_unknown():
+    """Free tenders (price 0) must stay 0: SetadSuite 0.9.2 treats an unknown price as NOT free."""
+    assert tender_row({"id": 1, "tenderDocumentsPrice": 0.0})["document_price"] == "0.0"
+    assert tender_row({"id": 1, "tenderDocumentsPrice": None})["document_price"] is None
+    assert tender_row({"id": 1})["document_price"] is None
