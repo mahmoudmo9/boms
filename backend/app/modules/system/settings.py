@@ -89,6 +89,26 @@ def _optional_uuid(value: Any) -> str | None:
     return value.lower()
 
 
+def _text_list(value: Any) -> list[str]:
+    """A list of short texts (warn keywords, dismiss reasons, checklist questions); empty entries are dropped."""
+    if not isinstance(value, list) or len(value) > 200:
+        raise ValueError("expected a list of texts")
+    out = []
+    for item in value:
+        if not isinstance(item, str) or len(item) > 300:
+            raise ValueError("expected a list of texts")
+        if item.strip() and item.strip() not in out:
+            out.append(item.strip())
+    return out
+
+
+# Setad screening defaults from SetadSuite v0.9.23 (inquiries/pipeline.py DEFAULT_SETTINGS)
+SETAD_DISMISS_REASONS = ["خارج از حوزه کاری", "مهلت کافی نیست", "الزامات خریدار قابل تأمین نیست", "تأمین‌کننده پیدا نشد",
+                         "قیمت تأمین‌کننده بالا است", "شرایط پرداخت نامناسب", "سایر"]
+SETAD_CHECKLIST = ["کالا/خدمت در حوزه کاری ما است", "شرایط و الزامات خریدار قابل تأمین است",
+                   "محل تحویل و هزینه ارسال قابل قبول است", "شرایط پرداخت قابل قبول است",
+                   "مهلت برای گرفتن قیمت از تأمین‌کننده کافی است"]
+
 # key -> (default, validator)
 DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "backup.time": ("02:00", _time),
@@ -114,6 +134,18 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "company.footer": ({"fa": "", "en": ""}, _signature),
     "company.bank_details": ({"fa": "", "en": ""}, _signature),
     "pdf.browser_path": (None, _optional_path),
+    # Setad connector and screening (v0.5.0)
+    "setad.files_dir": (None, _optional_path),          # None = <data folder>/setad-files (not backed up)
+    "setad.agent_idle_minutes": (60, _int_range(5, 1440)),
+    "setad.retention_days": (180, _int_range(30, 3650)),
+    "setad.warn_keywords": ([], _text_list),
+    "setad.dismiss_reasons": (SETAD_DISMISS_REASONS, _text_list),
+    "setad.checklist": (SETAD_CHECKLIST, _text_list),
+    # Setad proforma letterhead (v0.5.0)
+    "company.national_id": ("", _short_text),
+    "company.economic_code": ("", _short_text),
+    "company.signer_name": ({"fa": "", "en": ""}, _signature),
+    "company.signer_title": ({"fa": "", "en": ""}, _signature),
 }
 
 

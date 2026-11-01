@@ -89,6 +89,7 @@ class Job(Timestamps, Base):
     locked_at: Mapped[datetime | None] = mapped_column(TZ)
     last_error: Mapped[str | None] = mapped_column(Text)
     finished_at: Mapped[datetime | None] = mapped_column(TZ)
+    lane: Mapped[str] = mapped_column(Text, default="default")
 
 
 class BackupRun(Timestamps, Base):

@@ -26,8 +26,11 @@ def enqueue(
     max_attempts: int = 5,
     source: str = "api",
     actor: str | None = None,
+    lane: str = "default",
 ) -> Job:
-    job = Job(type=job_type, payload=payload or {}, max_attempts=max_attempts)
+    """``lane``: ``default`` for the worker; ``setad`` for the Setad agent (v0.5.0), so a long fetch or a captcha
+    wait never delays backups or other jobs."""
+    job = Job(type=job_type, payload=payload or {}, max_attempts=max_attempts, lane=lane)
     if run_after is not None:
         job.run_after = run_after
     db.add(job)
@@ -36,22 +39,23 @@ def enqueue(
     return job
 
 
-def claim_next(db: Session) -> Job | None:
-    """Atomically take the next due job. Safe with several concurrent workers."""
+def claim_next(db: Session, lane: str = "default") -> Job | None:
+    """Atomically take the next due job of a lane. Safe with several concurrent workers."""
     row = db.execute(
         text(
             """
             UPDATE sys.job SET status = 'running', attempts = attempts + 1, locked_at = now()
             WHERE id = (
               SELECT id FROM sys.job
-              WHERE status = 'queued' AND run_after <= now()
+              WHERE status = 'queued' AND run_after <= now() AND lane = :lane
               ORDER BY run_after, id
               FOR UPDATE SKIP LOCKED
               LIMIT 1
             )
             RETURNING id
             """
-        )
+        ),
+        {"lane": lane},
     ).scalar()
     db.commit()
     return db.get(Job, row) if row else None
@@ -86,9 +90,10 @@ def mark_failed(db: Session, job_id: uuid.UUID, error: str, backoff_base: float)
                   "worker")
 
 
-def requeue_stale(db: Session) -> int:
-    """Return jobs left 'running' by a stopped worker to the queue (single-worker startup)."""
-    result = db.execute(text("UPDATE sys.job SET status = 'queued', locked_at = NULL WHERE status = 'running'"))
+def requeue_stale(db: Session, lane: str = "default") -> int:
+    """Return jobs left 'running' by a stopped worker of this lane to the queue (single-worker startup)."""
+    result = db.execute(text("UPDATE sys.job SET status = 'queued', locked_at = NULL "
+                             "WHERE status = 'running' AND lane = :lane"), {"lane": lane})
     return result.rowcount
 
 

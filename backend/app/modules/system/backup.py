@@ -38,7 +38,7 @@ from app.modules.system.models import BackupRun
 
 log = logging.getLogger("boms.backup")
 
-APP_SCHEMAS = ("sys", "ref", "core", "outreach", "tender", "ops", "fin", "compliance", "analytics")
+APP_SCHEMAS = ("sys", "ref", "core", "outreach", "tender", "ops", "fin", "compliance", "analytics", "ext")
 DUMP_RE = re.compile(r"^boms_(\d{8}T\d{9}Z)_(nightly|manual|pre_update)\.dump$")
 RESTORE_SAMPLE_SIZE = 20
 KEEP_DAILY, KEEP_WEEKLY, KEEP_MONTHLY = 7, 4, 12
