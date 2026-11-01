@@ -56,7 +56,11 @@
       "templates": "قالب پیام‌ها",
       "costing": "بهای تمام‌شده و مالیات",
       "letterhead": "سربرگ",
-      "setad": "ستاد"
+      "setad": "ستاد",
+      "casesList": "پرونده‌ها",
+      "guarantees": "تضمین‌ها",
+      "tenderSettings": "مناقصات",
+      "companyDocuments": "مدارک شرکت"
     }
   },
   "placeholder": {
@@ -97,7 +101,10 @@
       "product": "کالاها",
       "cost_sheet": "برگه‌های بهای تمام‌شده",
       "quote": "پیش‌فاکتورها",
-      "listing": "آگهی‌های ستاد"
+      "listing": "آگهی‌های ستاد",
+      "tender": "مناقصه‌ها",
+      "guarantee": "تضمین‌ها",
+      "company_document": "مدارک شرکت"
     }
   },
   "date": {
@@ -537,7 +544,26 @@
     "not_screened": "ابتدا آگهی را ستاره‌دار یا «در حال بررسی» کنید.",
     "files_not_downloaded": "برخی پیوست‌ها هنوز دانلود نشده‌اند.",
     "duplicate_party": "طرف مشابهی وجود دارد.",
-    "no_deadline_change": "مهلت در ستاد تغییری نکرده است."
+    "no_deadline_change": "مهلت در ستاد تغییری نکرده است.",
+    "already_a_tender": "این پرونده از قبل بخش مناقصه دارد.",
+    "not_from_setad": "این مناقصه از ستاد نیامده است.",
+    "nothing_to_apply": "این موارد با ستاد تفاوتی ندارند.",
+    "no_setad_change": "این تاریخ در ستاد تغییر نکرده است.",
+    "date_exists": "این تاریخ برای مناقصه ثبت شده؛ آن را تغییر دهید.",
+    "company_document_expired": "مدرک شرکت منقضی شده است.",
+    "guarantee_not_issued": "تضمین شرکت در مناقصه هنوز صادر نشده.",
+    "guarantee_issued": "تضمین صادرشده حذف نمی‌شود؛ آن را لغو کنید.",
+    "guarantee_closed": "این تضمین بسته شده است.",
+    "valid_until_required": "تاریخ اعتبار جدید را وارد کنید.",
+    "extension_not_later": "اعتبار جدید باید دیرتر باشد.",
+    "no_draft_sheet": "پرونده برگهٔ بهای تمام‌شدهٔ پیش‌نویس ندارد.",
+    "nothing_to_add": "هزینهٔ غیرقابل استردادی برای افزودن نیست.",
+    "proposal_locked": "پیشنهاد تأیید شده؛ نسخهٔ جدید بسازید.",
+    "blockers_remain": "هنوز آمادهٔ ارسال نیست؛ برای ارسال دلیل بنویسید.",
+    "tender_has_result": "مناقصه نتیجه دارد.",
+    "tender_closed": "مناقصه بسته شده است.",
+    "summary_required": "الحاقیه خلاصه لازم دارد.",
+    "invalid_order": "هر مورد را یک‌بار بدهید."
   },
   "cc": {
     "subtitle": "پیگیری‌ها و سرنخ‌های {{date}}.",
@@ -577,6 +603,18 @@
       "due": "ستاره‌دار / در حال بررسی: مهلت ≤ ۳ روز یا گذشته",
       "deadlineChanged": "تبدیل‌شده: مهلت در ستاد تغییر کرده",
       "warn": "آگهی‌های جدید با کلمات هشدار"
+    },
+    "tenders": {
+      "title": "مناقصات",
+      "datesSoon": "تاریخ‌های مناقصه تا ۳ روز آینده",
+      "envelopes": "پاکت‌های ناقص با مهلت نزدیک",
+      "guarantees": "تضمین‌های رو به انقضا یا منتظر آزادسازی",
+      "documents": "مدارک شرکت رو به انقضا",
+      "setad": "تغییرات ستاد که اعمال نشده",
+      "waiting": "ارسال‌شده، منتظر نتیجه",
+      "awaitingRelease": "منتظر آزادسازی",
+      "dateChanges": "{{n}} تغییر تاریخ",
+      "newAddenda": "الحاقیهٔ جدید"
     }
   },
   "funnel": {
@@ -1015,7 +1053,8 @@
         "documents": "اسناد",
         "history": "تاریخچه",
         "costing": "بهای تمام‌شده",
-        "quotes": "پیش‌فاکتورها"
+        "quotes": "پیش‌فاکتورها",
+        "tender": "مناقصه"
       },
       "cascadeHint": "فقط برای داده‌های آزمایشی: این پرونده را با اقلام، استعلام‌ها، گیرندگان، پیشنهادها و پیوند اسناد حذف می‌کند. فایل‌ها در اسناد و تعامل‌ها در سابقهٔ طرف‌ها می‌مانند. حذف در گزارش رویدادها ثبت می‌شود.",
       "typeTitle": "برای تأیید، عنوان پرونده را بنویسید",
@@ -2077,6 +2116,386 @@
       "hours": "گذشته · {{n}} ساعت پیش",
       "days": "گذشته · {{n}} روز پیش",
       "days_one": "گذشته · {{n}} روز پیش"
+    }
+  },
+  "tenders": {
+    "title": "مناقصه",
+    "notATender": "این پرونده بخش مناقصه ندارد.",
+    "makeTender": "این پرونده مناقصه است",
+    "stages": {
+      "screening": "بررسی",
+      "documents": "اسناد",
+      "pricing": "قیمت‌گذاری",
+      "guarantee": "تضمین",
+      "envelopes": "پاکت‌ها",
+      "submitted": "ارسال‌شده",
+      "opening": "بازگشایی",
+      "result": "نتیجه",
+      "closed": "بسته"
+    },
+    "stageHint": "پیشنهاد بر پایهٔ داده‌ها",
+    "hintText": "داده‌ها مرحلهٔ «{{stage}}» را نشان می‌دهند.",
+    "participation": "شرکت در مناقصه",
+    "participations": {
+      "undecided": "تصمیم نگرفته",
+      "yes": "شرکت می‌کنیم",
+      "no": "شرکت نمی‌کنیم"
+    },
+    "participationReason": "دلیل",
+    "financialMode": "پیشنهاد مالی",
+    "modes": {
+      "buyer_form": "فرم خود کارفرما (برگهٔ خلاصه)",
+      "letterhead": "سربرگ ما (پیش‌فاکتور)"
+    },
+    "organizer": "برگزارکننده",
+    "noOrganizer": "برگزارکننده ندارد: یادآوری‌ها به آن نیاز دارند",
+    "documentPrice": "مبلغ خرید اسناد",
+    "estimate": "برآورد",
+    "validityDays": "اعتبار پیشنهاد (روز)",
+    "neededUntil": "اعتبار لازم تضمین تا",
+    "fields": {
+      "tender_no": "شمارهٔ مناقصه",
+      "tender_type": "نوع",
+      "stages": "مراحل",
+      "document_price": "مبلغ خرید اسناد",
+      "estimate": "برآورد",
+      "guarantee_amount": "مبلغ تضمین شرکت در مناقصه"
+    },
+    "dateKinds": {
+      "documents_deadline": "مهلت دریافت اسناد",
+      "briefing": "جلسهٔ توجیهی",
+      "site_visit": "بازدید از محل",
+      "questions_deadline": "مهلت پرسش",
+      "proposal_deadline": "مهلت ارسال پیشنهاد",
+      "opening": "بازگشایی پاکت‌ها",
+      "quality_docs_deadline": "مهلت ارزیابی کیفی",
+      "offer_valid_until": "پایان اعتبار پیشنهاد",
+      "other": "سایر"
+    },
+    "setad": {
+      "datesChanged": "تاریخ‌ها در ستاد تغییر کرده است",
+      "apply": "اعمال",
+      "applyAll": "اعمال همه",
+      "newAddenda": "الحاقیهٔ جدید در ستاد",
+      "appendix": {
+        "renewal_appendix_count": "تمدید",
+        "price_appendix_count": "قیمت",
+        "cancel_appendix_count": "لغو"
+      },
+      "openListing": "اسناد آگهی",
+      "seen": "ثبت/دیده شد",
+      "refresh": "به‌روزرسانی از ستاد",
+      "applyChosen": "اعمال موارد انتخاب‌شده",
+      "noDiff": "تفاوتی با ستاد نیست.",
+      "field": "مورد",
+      "current": "در BOMS",
+      "onSetad": "در ستاد",
+      "keep": "تاریخ‌های خودم بماند"
+    },
+    "dates": {
+      "title": "تاریخ‌ها و یادآوری‌ها",
+      "add": "افزودن تاریخ",
+      "edit": "تغییر تاریخ",
+      "none": "هنوز تاریخی ثبت نشده.",
+      "kind": "تاریخ",
+      "label": "نام",
+      "day": "روز",
+      "time": "ساعت",
+      "reminders": "یادآوری چند روز قبل",
+      "remindersHint": "مثلاً ۳، ۱",
+      "remindersInvalid": "روزهای صحیح ۰ تا ۳۶۵، جدا با ویرگول",
+      "reason": "دلیل تغییر",
+      "sources": {
+        "setad": "ستاد",
+        "manual": "دستی",
+        "addendum": "الحاقیه"
+      },
+      "reminderList": "یادآوری‌ها: {{list}}",
+      "noReminders": "بدون یادآوری",
+      "history": "تاریخچهٔ تغییرات ({{n}})"
+    },
+    "addenda": {
+      "title": "الحاقیه‌ها، پرسش و پاسخ، تمدید",
+      "add": "ثبت الحاقیه",
+      "none": "الحاقیه‌ای ثبت نشده.",
+      "kind": "نوع",
+      "number": "شماره",
+      "received": "تاریخ دریافت",
+      "summary": "خلاصه",
+      "question": "پرسش",
+      "answer": "پاسخ",
+      "q": "پرسش",
+      "a": "پاسخ",
+      "dateChanges": "تغییر تاریخ‌ها در این الحاقیه",
+      "confirmCancel": "این کار مناقصه را لغو می‌کند (نتیجه: لغو).",
+      "kinds": {
+        "clarification": "توضیحات",
+        "question_answer": "پرسش و پاسخ",
+        "extension": "تمدید",
+        "change": "اصلاحیه",
+        "cancellation": "لغو",
+        "other": "سایر"
+      }
+    },
+    "envelopes": {
+      "title": "پاکت‌ها",
+      "progress": "{{done}} از {{total}} آماده",
+      "fromTemplate": "افزودن از الگو",
+      "names": {
+        "A": "پاکت الف — تضمین شرکت در مناقصه",
+        "B": "پاکت ب — مدارک و پیشنهاد فنی",
+        "C": "پاکت ج — پیشنهاد قیمت"
+      },
+      "statuses": {
+        "not_ready": "آماده نیست",
+        "in_progress": "در حال تهیه",
+        "needs_signature": "نیاز به امضا و مهر",
+        "ready": "آماده",
+        "submitted": "تحویل/آپلود شد"
+      },
+      "status": "وضعیت",
+      "followsBond": "همراه وضعیت تضمین",
+      "up": "بالا",
+      "down": "پایین",
+      "newItem": "مورد جدید",
+      "envelope": "پاکت",
+      "itemTitle": "عنوان",
+      "kind": "نوع",
+      "kinds": {
+        "document": "مدرک",
+        "bid_bond": "تضمین شرکت در مناقصه",
+        "price_form": "فرم قیمت"
+      }
+    },
+    "library": {
+      "pick": "انتخاب از مدارک شرکت",
+      "use": "از مدارک شرکت",
+      "empty": "هنوز مدرکی ثبت نشده.",
+      "open": "باز کردن مدارک شرکت",
+      "add": "افزودن مدرک شرکت",
+      "edit": "ویرایش مدرک شرکت",
+      "subtitle": "مدارک ثابت شرکت، یک‌بار ثبت و در پاکت‌های مناقصه دوباره استفاده می‌شوند.",
+      "titleField": "عنوان",
+      "category": "دسته",
+      "issued": "تاریخ صدور",
+      "expires": "تاریخ انقضا",
+      "file": "فایل",
+      "fileSet": "فایل پیوست شد",
+      "note": "یادداشت",
+      "filter": "انقضا",
+      "all": "همه",
+      "quickAdd": "افزودن سریع",
+      "openFile": "باز کردن فایل",
+      "noFile": "بدون فایل",
+      "archive": "بایگانی",
+      "expiry": {
+        "ok": "معتبر",
+        "soon": "انقضا تا ۳۰ روز",
+        "expired": "منقضی",
+        "none": "بدون انقضا"
+      },
+      "categories": {
+        "registration": "ثبتی",
+        "tax": "مالیاتی",
+        "insurance": "بیمه",
+        "certificates": "گواهینامه",
+        "track_record": "سوابق",
+        "qualification": "صلاحیت/رتبه",
+        "identity": "هویتی/وکالت",
+        "other": "سایر"
+      }
+    },
+    "guarantee": {
+      "title": "تضمین‌ها",
+      "add": "افزودن تضمین",
+      "edit": "ویرایش تضمین",
+      "none": "تضمینی ثبت نشده.",
+      "bidBond": "تضمین شرکت",
+      "purpose": "نوع تضمین",
+      "form": "شکل",
+      "amount": "مبلغ",
+      "bank": "بانک",
+      "branch": "شعبه",
+      "number": "شماره",
+      "validUntil": "اعتبار تا",
+      "fee": "کارمزد",
+      "blocked": "سپردهٔ مسدود",
+      "description": "شرح",
+      "onDate": "تاریخ",
+      "reason": "دلیل/یادداشت",
+      "history": "تاریخچه",
+      "tiedUp": "نقدینگی درگیر تضمین‌ها",
+      "status": "وضعیت",
+      "allStatuses": "همهٔ وضعیت‌ها",
+      "allPurposes": "همهٔ انواع",
+      "expiringWithin": "انقضا تا (روز)",
+      "listSubtitle": "همهٔ تضمین‌های پرونده‌ها.",
+      "cols": {
+        "case": "پرونده",
+        "purpose": "نوع",
+        "status": "وضعیت",
+        "amount": "مبلغ",
+        "bank": "بانک",
+        "number": "شماره",
+        "validUntil": "اعتبار تا",
+        "beneficiary": "ذی‌نفع"
+      },
+      "purposes": {
+        "bid": "تضمین شرکت در مناقصه",
+        "performance": "تضمین انجام تعهدات",
+        "advance_payment": "تضمین پیش‌پرداخت",
+        "retention": "تضمین حسن انجام کار",
+        "other": "سایر"
+      },
+      "forms": {
+        "bank": "ضمانت‌نامهٔ بانکی",
+        "electronic_bank": "ضمانت‌نامهٔ الکترونیکی",
+        "cheque": "چک",
+        "cash_deposit": "واریز نقدی",
+        "insurance": "بیمه‌نامه",
+        "promissory_note": "سفته",
+        "other": "سایر"
+      },
+      "statuses": {
+        "to_request": "درخواست نشده",
+        "requested": "درخواست شد",
+        "issued": "صادر شد",
+        "ready_to_upload": "اسکن و آماده آپلود",
+        "submitted": "آپلود/تحویل شد",
+        "extended": "تمدید شد",
+        "released": "مسترد شد",
+        "claimed": "ضبط شد",
+        "cancelled": "لغو شد"
+      },
+      "steps": {
+        "requested": "درخواست شد",
+        "issued": "صادر شد",
+        "ready_to_upload": "آماده آپلود",
+        "submitted": "آپلود/تحویل شد",
+        "extended": "تمدید",
+        "released": "مسترد شد",
+        "claimed": "ضبط شد",
+        "cancelled": "لغو"
+      }
+    },
+    "reminders": {
+      "guarantee_expiry": "یادآوری انقضا",
+      "guarantee_release": "پیگیری آزادسازی",
+      "opening": "بازگشایی",
+      "contract": "قرارداد",
+      "date_reminder": "یادآوری"
+    },
+    "costs": {
+      "title": "هزینه‌های شرکت در مناقصه",
+      "toSheet": "افزودن به برگهٔ بهای تمام‌شده",
+      "none": "هزینه‌ای ثبت نشده.",
+      "kind": "نوع",
+      "amount": "مبلغ",
+      "paid": "پرداخت شده",
+      "markPaid": "پرداخت شد",
+      "markRefunded": "مسترد شد",
+      "refundable": "قابل استرداد",
+      "refunded": "مسترد شد",
+      "totals": "پرداخت‌شده {{spent}}، قابل استرداد مانده {{out}}، هزینهٔ خالص {{net}} {{cur}}",
+      "noDraft": "پرونده برگهٔ پیش‌نویس ندارد: اول در زبانهٔ بهای تمام‌شده نسخهٔ جدید بسازید.",
+      "added": "به برگهٔ پیش‌نویس افزوده شد.",
+      "kinds": {
+        "documents_purchase": "خرید اسناد",
+        "guarantee_fee": "کارمزد تضمین",
+        "deposit": "سپرده",
+        "travel": "سفر",
+        "other": "سایر"
+      },
+      "nothingToAdd": "هزینهٔ غیرقابل‌برگشتی برای افزودن به برگهٔ بها نیست."
+    },
+    "proposal": {
+      "title": "پیشنهاد مالی",
+      "create": "تهیهٔ برگهٔ خلاصه",
+      "newVersion": "نسخهٔ جدید",
+      "none": "هنوز پیشنهاد مالی تهیه نشده.",
+      "letterhead": "پیشنهاد، پیش‌فاکتور روی سربرگ ماست (الگوی «Tender (fa)»).",
+      "toQuotes": "زبانهٔ پیش‌فاکتورها",
+      "version": "نسخهٔ {{n}}",
+      "validUntil": "اعتبار تا",
+      "item": "قلم",
+      "qty": "مقدار",
+      "unitPrice": "قیمت واحد",
+      "total": "جمع",
+      "beforeVat": "جمع بدون مالیات",
+      "vat": "مالیات بر ارزش افزوده",
+      "withVat": "جمع با مالیات",
+      "inWords": "به حروف",
+      "approve": "تأیید",
+      "belowCost": "برخی قیمت‌ها زیر بهای تمام‌شده است؛ برای تأیید دلیل بنویسید.",
+      "reason": "دلیل",
+      "approveAnyway": "تأیید زیر قیمت تمام‌شده",
+      "versions": "{{n}} نسخه",
+      "statuses": {
+        "draft": "پیش‌نویس",
+        "approved": "تأیید شده",
+        "superseded": "جایگزین شده"
+      }
+    },
+    "blockers": {
+      "participation": "تصمیم «شرکت می‌کنیم» ثبت نشده.",
+      "envelopes_empty": "چک‌لیست پاکت‌ها خالی است.",
+      "envelopes_incomplete": "موارد ناآماده در پاکت‌ها: {{list}}",
+      "bid_bond_not_issued": "تضمین شرکت در مناقصه صادر نشده.",
+      "guarantee_validity_short": "اعتبار تضمین ({{valid}}) قبل از پایان اعتبار پیشنهاد ({{needed}}) تمام می‌شود.",
+      "proposal_not_approved": "پیشنهاد مالی تأیید نشده.",
+      "deadline_passed": "مهلت ارسال پیشنهاد گذشته است.",
+      "company_document_expired": "مدارک منقضی: {{list}}"
+    },
+    "submit": {
+      "title": "ارسال پیشنهاد",
+      "ready": "آمادهٔ ارسال",
+      "channel": "روش ارسال",
+      "note": "یادداشت",
+      "override": "دلیل ارسال با موارد باز",
+      "button": "ثبت ارسال",
+      "done": "ارسال شد {{at}}",
+      "overridden": "با موارد باز ارسال شد: {{reason}}",
+      "channels": {
+        "setad": "ستاد",
+        "in_person": "حضوری",
+        "post": "پست",
+        "other": "سایر"
+      }
+    },
+    "result": {
+      "title": "نتیجه",
+      "result": "نتیجه",
+      "reason": "دلیل",
+      "winner": "برنده (در صورت اطلاع)",
+      "winnerPrice": "قیمت برنده (در صورت اطلاع)",
+      "rank": "رتبهٔ ما",
+      "note": "یادداشت",
+      "caseStatus": "وضعیت پرونده",
+      "caseDefaultCancelled": "لغو (پیش‌فرض)",
+      "caseDefaultLost": "باخته (پیش‌فرض)",
+      "save": "ثبت نتیجه",
+      "revise": "اصلاح نتیجه",
+      "results": {
+        "won": "برنده شدیم",
+        "lost": "باختیم",
+        "cancelled": "لغو شد",
+        "no_result": "بدون نتیجه"
+      }
+    },
+    "settings": {
+      "subtitle": "یادآوری‌ها، الگوهای پاکت و دلایل نتیجه.",
+      "reminders": "یادآوری‌ها",
+      "reminderDays": "چند روز قبل از تاریخ‌های مناقصه",
+      "guaranteeDays": "چند روز قبل از انقضای تضمین",
+      "releaseDays": "پیگیری آزادسازی پس از نتیجه (روز)",
+      "templates": "الگوهای پاکت",
+      "newTemplate": "الگوی جدید",
+      "templateName": "نام",
+      "default": "پیش‌فرض",
+      "addLine": "افزودن ردیف",
+      "lines": "{{n}} ردیف",
+      "reasons": "دلایل نتیجه",
+      "active": "فعال"
     }
   }
 }

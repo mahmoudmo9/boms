@@ -8,7 +8,7 @@ import { TimeLeftBadge } from "../../components/TimeLeft";
 import { Badge, Button, Card, EmptyState, ErrorNote, Loading, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
-import type { CommandCenter, FollowupRow, SetadSummary, SourcingSummary } from "../../lib/types";
+import type { CommandCenter, FollowupRow, SetadSummary, SourcingSummary, TendersSummary } from "../../lib/types";
 import { useQuickLog } from "./QuickLog";
 import { FollowupActions, PartyName, stageLabel } from "./shared";
 
@@ -163,6 +163,46 @@ function SetadSection({ s }: { s: SetadSummary }) {
   );
 }
 
+/** v0.6.0: tender dates within 3 days, envelopes incomplete close to the deadline, guarantees expiring or awaiting
+ * release, company documents expiring, Setad changes not applied, submitted tenders waiting for a result. */
+function TendersSection({ s }: { s: TendersSummary }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const list = (rows: { key: string; to: string; label: ReactNode; extra?: ReactNode }[]) => rows.length === 0 ? <EmptyState>{t("cc.nothing")}</EmptyState> : (
+    <ul className="divide-y divide-line">{rows.map((r) => (
+      <li key={r.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
+        <Link to={r.to} className="min-w-0 truncate text-accent hover:underline" dir="auto">{r.label}</Link>{r.extra}
+      </li>
+    ))}</ul>
+  );
+  const tab = (caseId: string) => `/cases/${caseId}?tab=tender`;
+  const card = (key: string, n: number, tone: "warning" | "danger", body: ReactNode) => (
+    <Card padded={false} title={<span className="flex items-center gap-2">{t(`cc.tenders.${key}`)} <Badge tone={n ? tone : "neutral"}>{f.num(n)}</Badge></span>}>{body}</Card>
+  );
+  return (
+    <section className="flex flex-col gap-3" data-testid="cc-tenders">
+      <h2 className="text-base font-semibold">{t("cc.tenders.title")}</h2>
+      <div className="grid gap-4 xl:grid-cols-3">
+        {card("datesSoon", s.dates_soon.length, "warning", list(s.dates_soon.map((r) => ({ key: `${r.tender_id}-${r.kind}-${r.at}`, to: tab(r.case_id), label: r.case_title,
+          extra: <span className="flex items-center gap-1.5 text-xs"><span>{t(`tenders.dateKinds.${r.kind}`)}</span><TimeLeftBadge at={r.at} /></span> }))))}
+        {card("envelopes", s.envelopes_incomplete.length, "danger", list(s.envelopes_incomplete.map((r) => ({ key: r.tender_id, to: tab(r.case_id), label: r.case_title,
+          extra: <span className="text-xs text-danger">{t("tenders.envelopes.progress", { done: f.num(r.done), total: f.num(r.total) })}</span> }))))}
+        {card("guarantees", s.guarantees_expiring.length + s.guarantees_release.length, "warning", list([
+          ...s.guarantees_expiring.map((r) => ({ key: `e${r.guarantee_id}`, to: tab(r.case_id), label: r.case_title,
+            extra: <span className="text-xs text-warning">{t(`tenders.guarantee.purposes.${r.purpose}`)} · {r.valid_until ? f.day(r.valid_until) : "—"}</span> })),
+          ...s.guarantees_release.map((r) => ({ key: `r${r.guarantee_id}`, to: tab(r.case_id), label: r.case_title,
+            extra: <span className="text-xs text-warning">{t("cc.tenders.awaitingRelease")}</span> }))]))}
+        {card("documents", s.documents_expiring.length, "warning", list(s.documents_expiring.map((d) => ({ key: d.id, to: `/settings/company-documents?doc=${d.id}`, label: d.title,
+          extra: <span className={`text-xs ${d.expiry === "expired" ? "text-danger" : "text-warning"}`}>{t(`tenders.library.expiry.${d.expiry}`)}{d.expires_on ? ` · ${f.day(d.expires_on)}` : ""}</span> }))))}
+        {card("setad", s.setad_changes.length, "danger", list(s.setad_changes.map((r) => ({ key: r.tender_id, to: tab(r.case_id), label: r.case_title,
+          extra: <span className="text-xs text-danger">{r.date_changes ? t("cc.tenders.dateChanges", { n: f.num(r.date_changes) }) : ""} {Object.keys(r.new_appendices).length ? t("cc.tenders.newAddenda") : ""}</span> }))))}
+        {card("waiting", s.waiting_result.length, "warning", list(s.waiting_result.map((r) => ({ key: r.tender_id, to: tab(r.case_id), label: r.case_title,
+          extra: <span className="text-xs text-muted">{t("tenders.dateKinds.opening")} {f.date(r.opening, true)}</span> }))))}
+      </div>
+    </section>
+  );
+}
+
 export function CommandCenterPage() {
   const { t } = useTranslation();
   const f = useFormat();
@@ -215,6 +255,7 @@ export function CommandCenterPage() {
       </div>
       <SourcingSection s={d.sourcing} />
       {d.setad && <SetadSection s={d.setad} />}
+      {d.tenders && <TendersSection s={d.tenders} />}
       <div className="grid gap-4 xl:grid-cols-2">
         {FUNNELS.map((role) => (
           <Card key={role} title={t(`funnel.title.${role}`)} actions={<Link className="text-sm text-accent hover:underline" to={`/parties/funnels?role=${role}`}>{t("funnel.openBoard")}</Link>}>

@@ -87,6 +87,7 @@ def create_for_case(db: Session, case_id: uuid.UUID, source: str, actor: str | N
                     "estimate_currency"):
             setattr(tender, key, values[key])
         tender.appendix_seen = {f: getattr(listing, f) for f in APPENDIX_FIELDS if getattr(listing, f) is not None}
+        tender.setad_dates_seen = {kind: at.isoformat() for kind, at in values["dates"].items()}
     elif case.inquiry_id:
         inquiry = sourcing.get_inquiry(db, case.inquiry_id)
         tender.tender_no = inquiry.external_no
@@ -162,7 +163,8 @@ def refresh_preview(db: Session, tender_id: uuid.UUID) -> list[dict]:
     for key in ("tender_no", "tender_type", "stages", "document_price", "estimate"):
         if values[key] is not None and values[key] != getattr(tender, key):
             out.append({"field": key, "current": getattr(tender, key), "setad": values[key]})
-    out += [{"field": f"date:{c['kind']}", "current": c["old"], "setad": c["new"]} for c in setad_date_changes(db, tender)]
+    out += [{"field": f"date:{c['kind']}", "current": c["old"], "setad": c["new"]}
+            for c in setad_date_changes(db, tender, since_seen=False)]
     bid = _bid_bond(db, tender)
     g = values["guarantee"]
     if g and (bid is None or bid.amount != g["amount"]):
@@ -205,8 +207,17 @@ def refresh_apply(db: Session, tender_id: uuid.UUID, fields: list[str], source: 
     return tender
 
 
-def setad_date_changes(db: Session, tender: Tender) -> list[dict]:
-    """Tracked dates whose Setad value differs from the tender's (the banner "Dates changed on Setad")."""
+def _seen_at(tender: Tender, kind: str) -> datetime | None:
+    value = (tender.setad_dates_seen or {}).get(kind)
+    return datetime.fromisoformat(value) if value else None
+
+
+def setad_date_changes(db: Session, tender: Tender, since_seen: bool = True) -> list[dict]:
+    """Tracked dates whose Setad value differs from the tender's.
+
+    The banner ("Dates changed on Setad", ``since_seen``) lists only dates that Setad changed after the tender last
+    saw them (at the prefill, an apply or a dismiss): a date the owner moved on purpose (an addendum, a manual change)
+    is not offered back. "Refresh from Setad" (``since_seen=False``) lists every difference."""
     if tender.listing_id is None:
         return []
     try:
@@ -218,21 +229,40 @@ def setad_date_changes(db: Session, tender: Tender) -> list[dict]:
         new = getattr(listing, field)
         if new is None:
             continue
+        if since_seen and _seen_at(tender, kind) == new:
+            continue
         row = tender_dates.date_of_kind(db, tender.id, kind)
         if row is None or row.at != new:
             out.append({"kind": kind, "date_id": row.id if row else None, "old": row.at if row else None, "new": new})
     return out
 
 
+def _mark_setad_dates_seen(db: Session, tender: Tender, values: dict[str, datetime]) -> None:
+    seen = {**(tender.setad_dates_seen or {}), **{k: v.isoformat() for k, v in values.items()}}
+    if seen != (tender.setad_dates_seen or {}):
+        tender.setad_dates_seen = seen
+        flush(db, "invalid_tender")
+
+
 def apply_setad_date(db: Session, tender_id: uuid.UUID, kind: str, source: str, actor: str | None = None,
                      reason: str = SETAD_CHANGE_REASON):
     tender = get_tender(db, tender_id)
-    change = next((c for c in setad_date_changes(db, tender) if c["kind"] == kind), None)
+    change = next((c for c in setad_date_changes(db, tender, since_seen=False) if c["kind"] == kind), None)
     if change is None:
         raise Conflict("no_setad_change", "This date has not changed on Setad", {"kind": kind})
+    _mark_setad_dates_seen(db, tender, {kind: change["new"]})
     if change["date_id"] is None:
         return tender_dates.add_date(db, tender.id, {"kind": kind, "at": change["new"], "source": "setad"}, source, actor)
     return tender_dates.change_date(db, change["date_id"], change["new"], reason, source, actor)
+
+
+def dismiss_setad_dates(db: Session, tender_id: uuid.UUID, source: str, actor: str | None = None) -> None:
+    """"Keep my dates": the Setad values shown in the banner count as seen; the tender's dates stay as they are."""
+    tender = get_tender(db, tender_id)
+    changes = setad_date_changes(db, tender)
+    if changes:
+        _mark_setad_dates_seen(db, tender, {c["kind"]: c["new"] for c in changes})
+        events.record(db, "tender", tender.id, "setad_dates_kept", jsonable(changes), source, actor=actor)
 
 
 def apply_all_setad_dates(db: Session, tender_id: uuid.UUID, source: str, actor: str | None = None) -> int:

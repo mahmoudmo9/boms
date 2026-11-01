@@ -168,7 +168,8 @@ export function ListingPanel({ id, onClose, onConvert, tab, onTab, refreshKey }:
           <Badge tone={converted ? "success" : status === "dismissed" ? "neutral" : status === "starred" ? "warning" : "accent"}>{t(`listings.status.${status}`)}</Badge>
           {d.warn.map((w) => <Badge key={w} tone="danger">⚠ <Bdi>{w}</Bdi></Badge>)}
         </p>
-        {converted && s?.inquiry_id && <p className="mb-2 text-sm"><Link className="text-accent hover:underline" to={`/sourcing/inquiries/${s.inquiry_id}`}>{t("listings.convertedTo")}</Link></p>}
+        {converted && s?.inquiry_id && <p className="mb-2 flex flex-wrap items-center gap-2 text-sm"><Link className="text-accent hover:underline" to={`/sourcing/inquiries/${s.inquiry_id}`}>{t("listings.convertedTo")}</Link>
+          {tender && <TenderStage listingId={id} />}</p>}
         <div className="flex flex-wrap gap-1.5" data-testid="panel-actions">
           {!converted && (status === "starred"
             ? <Button onClick={() => screen.mutate({ action: "unstar" })}>{t("listings.unstar")}</Button>
@@ -277,6 +278,14 @@ export function ListingPanel({ id, onClose, onConvert, tab, onTab, refreshKey }:
       )}
     </aside>
   );
+}
+
+/** v0.6.0: a converted tender listing shows its tender stage (link to the case's Tender tab). */
+function TenderStage({ listingId }: { listingId: string }) {
+  const { t } = useTranslation();
+  const q = useQuery({ queryKey: ["tender-by-listing", listingId], queryFn: () => api<{ case_id: string; stage: string; result: string | null } | null>(`/api/tenders/by-listing/${listingId}`) });
+  if (!q.data) return null;
+  return <Link to={`/cases/${q.data.case_id}?tab=tender`} data-testid="listing-tender-stage"><Badge tone="accent">{t(`tenders.stages.${q.data.stage}`)}</Badge></Link>;
 }
 
 function load(key: string): string | null {

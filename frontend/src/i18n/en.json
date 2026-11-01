@@ -56,7 +56,11 @@
       "templates": "Message templates",
       "costing": "Costing & tax",
       "letterhead": "Letterhead",
-      "setad": "Setad"
+      "setad": "Setad",
+      "casesList": "Cases",
+      "guarantees": "Guarantees",
+      "tenderSettings": "Tenders",
+      "companyDocuments": "Company documents"
     }
   },
   "placeholder": {
@@ -97,7 +101,10 @@
       "product": "Products",
       "cost_sheet": "Cost sheets",
       "quote": "Quotes",
-      "listing": "Setad listings"
+      "listing": "Setad listings",
+      "tender": "Tenders",
+      "guarantee": "Guarantees",
+      "company_document": "Company documents"
     }
   },
   "date": {
@@ -537,7 +544,26 @@
     "not_screened": "Star the listing or mark it as reviewing first.",
     "files_not_downloaded": "Some attachments are not downloaded yet.",
     "duplicate_party": "A similar party exists.",
-    "no_deadline_change": "The deadline on Setad has not changed."
+    "no_deadline_change": "The deadline on Setad has not changed.",
+    "already_a_tender": "This case already has a tender part.",
+    "not_from_setad": "This tender did not come from Setad.",
+    "nothing_to_apply": "These fields do not differ from Setad.",
+    "no_setad_change": "This date has not changed on Setad.",
+    "date_exists": "This tender already has that date; change it instead.",
+    "company_document_expired": "The company document has expired.",
+    "guarantee_not_issued": "The bid bond is not issued yet.",
+    "guarantee_issued": "An issued guarantee cannot be deleted; cancel it.",
+    "guarantee_closed": "The guarantee is already closed.",
+    "valid_until_required": "Give the new validity date.",
+    "extension_not_later": "The new validity must be later.",
+    "no_draft_sheet": "The case has no draft cost sheet.",
+    "nothing_to_add": "There is no non-refundable cost to add.",
+    "proposal_locked": "The proposal is approved; make a new version.",
+    "blockers_remain": "Not ready to submit; give a reason to submit anyway.",
+    "tender_has_result": "The tender already has a result.",
+    "tender_closed": "The tender is closed.",
+    "summary_required": "The addendum needs a summary.",
+    "invalid_order": "Give every item once."
   },
   "cc": {
     "subtitle": "Follow-ups and leads for {{date}}.",
@@ -577,6 +603,18 @@
       "due": "Starred / reviewing: deadline ≤ 3 days or passed",
       "deadlineChanged": "Converted: deadline changed on Setad",
       "warn": "New listings with warn keywords"
+    },
+    "tenders": {
+      "title": "Tenders",
+      "datesSoon": "Tender dates within 3 days",
+      "envelopes": "Envelopes incomplete, deadline close",
+      "guarantees": "Guarantees expiring or awaiting release",
+      "documents": "Company documents expiring",
+      "setad": "Setad changes not applied",
+      "waiting": "Submitted, waiting for the result",
+      "awaitingRelease": "awaiting release",
+      "dateChanges": "{{n}} date changes",
+      "newAddenda": "new addenda"
     }
   },
   "funnel": {
@@ -1015,7 +1053,8 @@
         "documents": "Documents",
         "history": "History",
         "costing": "Costing",
-        "quotes": "Quotes"
+        "quotes": "Quotes",
+        "tender": "Tender"
       },
       "cascadeHint": "For test data only: deletes this case with its items, RFQs, recipients, offers and document links. Files stay in Documents and interactions stay in the parties' history. The deletion is recorded in the event log.",
       "typeTitle": "Type the case title to confirm",
@@ -2077,6 +2116,386 @@
       "hours": "passed {{n}} h ago",
       "days": "passed {{n}} days ago",
       "days_one": "passed {{n}} day ago"
+    }
+  },
+  "tenders": {
+    "title": "Tender",
+    "notATender": "This case has no tender part.",
+    "makeTender": "Make this a tender",
+    "stages": {
+      "screening": "Screening",
+      "documents": "Documents",
+      "pricing": "Pricing",
+      "guarantee": "Guarantee",
+      "envelopes": "Envelopes",
+      "submitted": "Submitted",
+      "opening": "Opening",
+      "result": "Result",
+      "closed": "Closed"
+    },
+    "stageHint": "Suggested from the data",
+    "hintText": "The data suggests the stage «{{stage}}».",
+    "participation": "Participation",
+    "participations": {
+      "undecided": "Undecided",
+      "yes": "We take part",
+      "no": "We do not take part"
+    },
+    "participationReason": "Reason",
+    "financialMode": "Financial proposal",
+    "modes": {
+      "buyer_form": "Buyer's own form (summary sheet)",
+      "letterhead": "Our letterhead (quote)"
+    },
+    "organizer": "Organizer",
+    "noOrganizer": "No organizer: reminders need one",
+    "documentPrice": "Document price",
+    "estimate": "Estimate",
+    "validityDays": "Proposal validity (days)",
+    "neededUntil": "Guarantee needed until",
+    "fields": {
+      "tender_no": "Tender number",
+      "tender_type": "Type",
+      "stages": "Stages",
+      "document_price": "Document price",
+      "estimate": "Estimate",
+      "guarantee_amount": "Bid bond amount"
+    },
+    "dateKinds": {
+      "documents_deadline": "Documents deadline",
+      "briefing": "Briefing",
+      "site_visit": "Site visit",
+      "questions_deadline": "Questions deadline",
+      "proposal_deadline": "Proposal deadline",
+      "opening": "Opening",
+      "quality_docs_deadline": "Quality evaluation deadline",
+      "offer_valid_until": "Offer valid until",
+      "other": "Other"
+    },
+    "setad": {
+      "datesChanged": "Dates changed on Setad",
+      "apply": "Apply",
+      "applyAll": "Apply all",
+      "newAddenda": "New addenda on Setad",
+      "appendix": {
+        "renewal_appendix_count": "renewal",
+        "price_appendix_count": "price",
+        "cancel_appendix_count": "cancellation"
+      },
+      "openListing": "Open the listing documents",
+      "seen": "Recorded / seen",
+      "refresh": "Refresh from Setad",
+      "applyChosen": "Apply the chosen",
+      "noDiff": "Nothing differs from Setad.",
+      "field": "Field",
+      "current": "In BOMS",
+      "onSetad": "On Setad",
+      "keep": "Keep my dates"
+    },
+    "dates": {
+      "title": "Dates and reminders",
+      "add": "Add date",
+      "edit": "Change date",
+      "none": "No dates yet.",
+      "kind": "Date",
+      "label": "Name",
+      "day": "Day",
+      "time": "Time",
+      "reminders": "Remind days before",
+      "remindersHint": "e.g. 3, 1",
+      "remindersInvalid": "Whole days 0-365, separated by commas",
+      "reason": "Reason for the change",
+      "sources": {
+        "setad": "Setad",
+        "manual": "manual",
+        "addendum": "addendum"
+      },
+      "reminderList": "Reminders: {{list}}",
+      "noReminders": "No reminders",
+      "history": "Change history ({{n}})"
+    },
+    "addenda": {
+      "title": "Addenda, Q&A, extensions",
+      "add": "Record addendum",
+      "none": "No addenda.",
+      "kind": "Kind",
+      "number": "Number",
+      "received": "Received",
+      "summary": "Summary",
+      "question": "Question",
+      "answer": "Answer",
+      "q": "Q",
+      "a": "A",
+      "dateChanges": "Date changes in this addendum",
+      "confirmCancel": "This cancels the tender (result: cancelled).",
+      "kinds": {
+        "clarification": "Clarification",
+        "question_answer": "Question and answer",
+        "extension": "Extension",
+        "change": "Change",
+        "cancellation": "Cancellation",
+        "other": "Other"
+      }
+    },
+    "envelopes": {
+      "title": "Envelopes",
+      "progress": "{{done}} of {{total}} ready",
+      "fromTemplate": "Add from template",
+      "names": {
+        "A": "Envelope A — bid bond",
+        "B": "Envelope B — documents and technical",
+        "C": "Envelope C — price"
+      },
+      "statuses": {
+        "not_ready": "Not ready",
+        "in_progress": "In progress",
+        "needs_signature": "Needs signature and stamp",
+        "ready": "Ready",
+        "submitted": "Delivered / uploaded"
+      },
+      "status": "Status",
+      "followsBond": "follows the bid bond",
+      "up": "Move up",
+      "down": "Move down",
+      "newItem": "New item",
+      "envelope": "Envelope",
+      "itemTitle": "Title",
+      "kind": "Kind",
+      "kinds": {
+        "document": "Document",
+        "bid_bond": "Bid bond",
+        "price_form": "Price form"
+      }
+    },
+    "library": {
+      "pick": "Pick from the company documents",
+      "use": "Use library document",
+      "empty": "No company documents yet.",
+      "open": "Open the library",
+      "add": "Add company document",
+      "edit": "Edit company document",
+      "subtitle": "Fixed company documents, recorded once and reused in tender envelopes.",
+      "titleField": "Title",
+      "category": "Category",
+      "issued": "Issued",
+      "expires": "Expires",
+      "file": "File",
+      "fileSet": "file attached",
+      "note": "Note",
+      "filter": "Expiry",
+      "all": "All",
+      "quickAdd": "Quick add",
+      "openFile": "Open file",
+      "noFile": "no file",
+      "archive": "Archive",
+      "expiry": {
+        "ok": "Valid",
+        "soon": "Expires within 30 days",
+        "expired": "Expired",
+        "none": "No expiry"
+      },
+      "categories": {
+        "registration": "Registration",
+        "tax": "Tax",
+        "insurance": "Insurance",
+        "certificates": "Certificates",
+        "track_record": "Track record",
+        "qualification": "Qualification / rating",
+        "identity": "Identity / authority",
+        "other": "Other"
+      }
+    },
+    "guarantee": {
+      "title": "Guarantees",
+      "add": "Add guarantee",
+      "edit": "Edit guarantee",
+      "none": "No guarantees.",
+      "bidBond": "Bid bond",
+      "purpose": "Purpose",
+      "form": "Form",
+      "amount": "Amount",
+      "bank": "Bank",
+      "branch": "Branch",
+      "number": "Number",
+      "validUntil": "Valid until",
+      "fee": "Fee",
+      "blocked": "Blocked deposit",
+      "description": "Description",
+      "onDate": "Date",
+      "reason": "Reason / note",
+      "history": "History",
+      "tiedUp": "Cash tied up by guarantees",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "allPurposes": "All purposes",
+      "expiringWithin": "Expiring within (days)",
+      "listSubtitle": "All guarantees across cases.",
+      "cols": {
+        "case": "Case",
+        "purpose": "Purpose",
+        "status": "Status",
+        "amount": "Amount",
+        "bank": "Bank",
+        "number": "Number",
+        "validUntil": "Valid until",
+        "beneficiary": "Beneficiary"
+      },
+      "purposes": {
+        "bid": "Bid bond",
+        "performance": "Performance",
+        "advance_payment": "Advance payment",
+        "retention": "Retention",
+        "other": "Other"
+      },
+      "forms": {
+        "bank": "Bank guarantee",
+        "electronic_bank": "Electronic bank guarantee",
+        "cheque": "Cheque",
+        "cash_deposit": "Cash deposit",
+        "insurance": "Insurance",
+        "promissory_note": "Promissory note",
+        "other": "Other"
+      },
+      "statuses": {
+        "to_request": "To request",
+        "requested": "Requested",
+        "issued": "Issued",
+        "ready_to_upload": "Scanned, ready to upload",
+        "submitted": "Submitted",
+        "extended": "Extended",
+        "released": "Released",
+        "claimed": "Claimed",
+        "cancelled": "Cancelled"
+      },
+      "steps": {
+        "requested": "Requested",
+        "issued": "Issued",
+        "ready_to_upload": "Ready to upload",
+        "submitted": "Submitted",
+        "extended": "Extend",
+        "released": "Released",
+        "claimed": "Claimed",
+        "cancelled": "Cancel"
+      }
+    },
+    "reminders": {
+      "guarantee_expiry": "Expiry reminder",
+      "guarantee_release": "Release follow-up",
+      "opening": "Opening",
+      "contract": "Contract",
+      "date_reminder": "Reminder"
+    },
+    "costs": {
+      "title": "Costs of taking part",
+      "toSheet": "Add to cost sheet",
+      "none": "No costs yet.",
+      "kind": "Kind",
+      "amount": "Amount",
+      "paid": "Paid",
+      "markPaid": "Mark paid",
+      "markRefunded": "Mark refunded",
+      "refundable": "Refundable",
+      "refunded": "Refunded",
+      "totals": "Spent {{spent}}, refundable outstanding {{out}}, net cost {{net}} {{cur}}",
+      "noDraft": "The case has no draft cost sheet: make a new version on the Costing tab first.",
+      "added": "Added to the draft cost sheet.",
+      "kinds": {
+        "documents_purchase": "Documents purchase",
+        "guarantee_fee": "Guarantee fee",
+        "deposit": "Deposit",
+        "travel": "Travel",
+        "other": "Other"
+      },
+      "nothingToAdd": "There is no non-refundable tender cost to add."
+    },
+    "proposal": {
+      "title": "Financial proposal",
+      "create": "Create summary",
+      "newVersion": "New version",
+      "none": "No financial proposal yet.",
+      "letterhead": "The proposal is a quote on our letterhead (template «Tender (fa)»).",
+      "toQuotes": "Open the Quotes tab",
+      "version": "Version {{n}}",
+      "validUntil": "Valid until",
+      "item": "Item",
+      "qty": "Quantity",
+      "unitPrice": "Unit price",
+      "total": "Total",
+      "beforeVat": "Total before VAT",
+      "vat": "VAT",
+      "withVat": "Total with VAT",
+      "inWords": "In words",
+      "approve": "Approve",
+      "belowCost": "Some prices are below cost; give a reason to approve anyway.",
+      "reason": "Reason",
+      "approveAnyway": "Approve below cost",
+      "versions": "{{n}} versions",
+      "statuses": {
+        "draft": "Draft",
+        "approved": "Approved",
+        "superseded": "Superseded"
+      }
+    },
+    "blockers": {
+      "participation": "Participation is not «we take part».",
+      "envelopes_empty": "The envelope checklist is empty.",
+      "envelopes_incomplete": "Envelope items not ready: {{list}}",
+      "bid_bond_not_issued": "The bid bond is not issued.",
+      "guarantee_validity_short": "The guarantee ends ({{valid}}) before the proposal validity ({{needed}}).",
+      "proposal_not_approved": "The financial proposal is not approved.",
+      "deadline_passed": "The proposal deadline has passed.",
+      "company_document_expired": "Expired company documents: {{list}}"
+    },
+    "submit": {
+      "title": "Submission",
+      "ready": "Ready to submit",
+      "channel": "Channel",
+      "note": "Note",
+      "override": "Reason to submit with open blockers",
+      "button": "Mark submitted",
+      "done": "submitted {{at}}",
+      "overridden": "Submitted with open blockers: {{reason}}",
+      "channels": {
+        "setad": "Setad",
+        "in_person": "In person",
+        "post": "Post",
+        "other": "Other"
+      }
+    },
+    "result": {
+      "title": "Result",
+      "result": "Result",
+      "reason": "Reason",
+      "winner": "Winner (if known)",
+      "winnerPrice": "Winner's price (if known)",
+      "rank": "Our rank",
+      "note": "Note",
+      "caseStatus": "Case becomes",
+      "caseDefaultCancelled": "Cancelled (default)",
+      "caseDefaultLost": "Lost (default)",
+      "save": "Save result",
+      "revise": "Revise result",
+      "results": {
+        "won": "Won",
+        "lost": "Lost",
+        "cancelled": "Cancelled",
+        "no_result": "No result"
+      }
+    },
+    "settings": {
+      "subtitle": "Reminders, envelope templates and result reasons.",
+      "reminders": "Reminders",
+      "reminderDays": "Days before tender dates",
+      "guaranteeDays": "Days before a guarantee expires",
+      "releaseDays": "Release follow-up after the result (days)",
+      "templates": "Envelope templates",
+      "newTemplate": "New template",
+      "templateName": "Name",
+      "default": "Default",
+      "addLine": "Add line",
+      "lines": "{{n}} lines",
+      "reasons": "Result reasons",
+      "active": "Active"
     }
   }
 }

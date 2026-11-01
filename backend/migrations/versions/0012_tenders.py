@@ -135,6 +135,7 @@ def upgrade() -> None:
           our_rank               integer CHECK (our_rank IS NULL OR our_rank >= 1),
           result_on              date,
           appendix_seen          jsonb NOT NULL DEFAULT '{{}}'::jsonb,
+          setad_dates_seen       jsonb NOT NULL DEFAULT '{{}}'::jsonb,
           {TS},
           CONSTRAINT tender_lost_reason CHECK (result IS DISTINCT FROM 'lost' OR result_reason IS NOT NULL),
           CONSTRAINT tender_participation_reason CHECK (participation <> 'no' OR btrim(coalesce(participation_reason, '')) <> '')

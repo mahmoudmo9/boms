@@ -60,6 +60,7 @@ class Tender(Timestamps, Base):
     our_rank: Mapped[int | None] = mapped_column(Integer)
     result_on: Mapped[date | None] = mapped_column(Date)
     appendix_seen: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    setad_dates_seen: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
 
 class TenderDate(Timestamps, Base):

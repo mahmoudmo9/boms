@@ -11,7 +11,9 @@ Behaviour reproduced from what the ported code expects (and from SetadSuite's ow
   "is solved" after BOMS_SETAD_FAKE_CAPTCHA_MS (the owner typing it), purchaseNeedView.do detail forms,
   anonymousAppendixDocument.do attachment lists and appendixDocument.do?method=viewFile downloads.
 - etend: indexPage.action with a jqGrid stand-in (#tendersGrid, getGridParam), the grid JSON, favoriteForm /
-  callMainPageCartable-add.action, reloadCsrfToken, myCallsCartable-execute/-search/-delete.
+  callMainPageCartable-add.action, reloadCsrfToken, myCallsCartable-execute/-search/-delete, and (v0.6.0)
+  tenderDetails-execute.action: a #tenderDetailsForm of label/value rows; tenders without a guarantee in the list
+  carry it there as «مبلغ تضمین».
 State lives in this process (FAKE).
 """
 from __future__ import annotations
@@ -326,6 +328,19 @@ def _etend(route, url, one, request):
         FAKE.delete_requests.append(tid)
         FAKE.my_calls.discard(tid)
         return _json(route, {"errorMessage": "", "selectedTenderId": tid})
+    if path.endswith("tenderDetails-execute.action"):
+        tid = one("tenderId")
+        t = next((x for x in FAKE.tenders if str(x["id"]) == str(tid)), None)
+        if t is None:
+            return _html(route, _page(token + "<p>صفحهٔ آزمایشی</p>"))
+        i = t["id"] - 700000
+        rows = [("شماره فراخوان", t["number"]), ("عنوان", t["title"]), ("نوع فراخوان", t["typeName"]),
+                ("دستگاه مناقصه‌گزار", t["organization"]["name"]), ("مهلت دریافت اسناد", t["documentsDeadlineDate"]),
+                ("مهلت ارسال پیشنهاد", t["proposalDeadlineDate"]), ("نوع تضمین", t["guarantyDescription"])]
+        if t["guarantyPrice"] is None:
+            rows.append(("مبلغ تضمین شرکت در فرآیند", f"{(i % 5 + 2) * 40_000_000:,} ریال"))
+        body = "".join(f"<tr><td>{html.escape(a)}</td><td>{html.escape(str(b))}</td></tr>" for a, b in rows)
+        return _html(route, _page(token + f'<form id="tenderDetailsForm"><h3>مشخصات فراخوان</h3><table>{body}</table></form>'))
     return _html(route, _page(token + "<p>صفحهٔ آزمایشی</p>"))
 
 

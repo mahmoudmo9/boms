@@ -148,6 +148,13 @@ def apply_setad_dates(tender_id: uuid.UUID, body: SetadDateApplyIn, request: Req
     return tender_detail(db, tender_id)
 
 
+@router.post("/{tender_id}/setad-dates/keep")
+def keep_dates(tender_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    service.dismiss_setad_dates(db, tender_id, request_source(request), user.username)
+    db.commit()
+    return tender_detail(db, tender_id)
+
+
 @router.post("/{tender_id}/appendices/seen")
 def appendices_seen(tender_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
     service.acknowledge_appendices(db, get_tender(db, tender_id), request_source(request), user.username)

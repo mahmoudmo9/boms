@@ -247,6 +247,29 @@ def test_setad_date_banner_apply_per_date_and_all(client, db):
     assert r.status_code == 409 and r.json()["error"]["code"] == "no_setad_change"
 
 
+def test_setad_date_banner_ignores_dates_the_owner_moved_and_can_be_kept(client, db):
+    """An addendum that extends the deadline is not offered back as a Setad change; only a later Setad change is,
+    and «keep my dates» dismisses it while "Refresh from Setad" still lists every difference."""
+    case, t, raw, lid = setad_tender_case(client, db)
+    prop = next(d for d in t["dates"] if d["kind"] == "proposal_deadline")
+    later = at(30)
+    r = client.post(f"/api/tenders/{t['id']}/addenda", json={"received_on": date.today().isoformat(), "kind": "extension",
+                    "summary": "تمدید", "date_changes": [{"date_id": prop["id"], "at": later}]})
+    assert r.status_code == 201, r.text
+    detail = client.get(f"/api/tenders/{t['id']}").json()
+    assert detail["setad_date_changes"] == []
+    assert "date:proposal_deadline" in [c["field"] for c in client.get(f"/api/tenders/{t['id']}/setad-refresh").json()["changes"]]
+    refetch({**raw, "proposalDeadlineDate": jdate(24)})
+    banner = client.get(f"/api/tenders/{t['id']}").json()["setad_date_changes"]
+    assert [c["kind"] for c in banner] == ["proposal_deadline"]
+    r = client.post(f"/api/tenders/{t['id']}/setad-dates/keep")
+    assert r.status_code == 200 and r.json()["setad_date_changes"] == []
+    kept = next(d for d in r.json()["dates"] if d["kind"] == "proposal_deadline")
+    assert datetime.fromisoformat(kept["at"]) == datetime.fromisoformat(later)
+    assert db.execute(text("SELECT count(*) FROM core.event WHERE entity_id = :t AND action = 'setad_dates_kept'"),
+                      {"t": t["id"]}).scalar() == 1
+
+
 def test_new_addenda_on_setad_until_recorded(client, db):
     case, t, raw, lid = setad_tender_case(client, db)
     assert client.get(f"/api/tenders/{t['id']}").json()["new_appendices"] == {}

@@ -20,6 +20,9 @@ import { SettingsPage } from "./pages/settings/SettingsPage";
 import { CostingSettingsPage } from "./pages/settings/CostingSettingsPage";
 import { LetterheadPage } from "./pages/settings/LetterheadPage";
 import { SetadSettingsPage } from "./pages/settings/SetadSettingsPage";
+import { TendersSettingsPage } from "./pages/settings/TendersSettingsPage";
+import { CompanyDocumentsPage } from "./pages/settings/CompanyDocumentsPage";
+import { GuaranteesPage } from "./pages/cases/GuaranteesPage";
 import { CatalogPage, ProductPage } from "./pages/sourcing/CatalogPage";
 import { InquiriesPage } from "./pages/sourcing/InquiriesPage";
 import { InquiryDetailPage } from "./pages/sourcing/InquiryDetailPage";
@@ -54,6 +57,7 @@ export function App() {
         <Route path="sourcing/catalog/:id" element={<ProductPage />} />
         <Route path="sourcing/templates" element={<TemplatesPage />} />
         <Route path="cases" element={<CasesPage />} />
+        <Route path="cases/guarantees" element={<GuaranteesPage />} />
         <Route path="cases/:id" element={<CaseDetailPage />} />
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="documents/:id" element={<DocumentDetailPage />} />
@@ -65,6 +69,8 @@ export function App() {
         <Route path="settings/costing" element={<CostingSettingsPage />} />
         <Route path="settings/letterhead" element={<LetterheadPage />} />
         <Route path="settings/setad" element={<SetadSettingsPage />} />
+        <Route path="settings/tenders" element={<TendersSettingsPage />} />
+        <Route path="settings/company-documents" element={<CompanyDocumentsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

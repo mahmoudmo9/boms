@@ -333,6 +333,7 @@ export interface CommandCenter {
   funnel_counts: Record<string, Record<string, number>>;
   sourcing: SourcingSummary;
   setad?: SetadSummary;
+  tenders?: TendersSummary;
 }
 
 /** Command center section "Setad" (v0.5.0). */
@@ -1141,4 +1142,82 @@ export interface AgentState {
   files_done?: number | null;
   files_total?: number | null;
   runs: Record<"setad_purchase" | "setad_tender", HarvestRunInfo | null>;
+}
+
+// ---- tenders (v0.6.0) -----------------------------------------------------------------------------------------------
+export type TenderStage = "screening" | "documents" | "pricing" | "guarantee" | "envelopes" | "submitted" | "opening" | "result" | "closed";
+export interface PartyRef { id: string; name_fa: string | null; name_en: string | null }
+export interface TenderDateRow {
+  id: string; tender_id: string; kind: string; label: string | null; at: string; all_day: boolean; note: string | null;
+  remind_days_before: number[]; source: "setad" | "manual" | "addendum";
+  reminders: { id: string; due_on: string; days_before: number | null }[];
+}
+export interface TenderDateChangeRow { id: string; tender_date_id: string; old_at: string | null; new_at: string; reason: string; addendum_id: string | null; created_at: string }
+export interface AddendumRow {
+  id: string; number: string | null; received_on: string; kind: string; summary: string; document_id: string | null;
+  question: string | null; asked_on: string | null; answer: string | null; answered_on: string | null;
+}
+export interface EnvelopeItemRow {
+  id: string; envelope: "A" | "B" | "C"; position: number; title: string; kind: "document" | "bid_bond" | "price_form";
+  status: "not_ready" | "in_progress" | "needs_signature" | "ready" | "submitted"; company_document_id: string | null;
+  document_id: string | null; guarantee_id: string | null; note: string | null;
+  company_document: { id: string; title: string; expires_on: string | null; expiry: "ok" | "soon" | "expired" | "none"; days_left: number | null; document_id: string | null } | null;
+}
+export interface GuaranteeRow {
+  id: string; case_id: string; tender_id: string | null; purpose: string; form: string | null; status: string;
+  beneficiary_party_id: string | null; reminder_party_id: string | null; amount: string | null; amount_currency: string | null;
+  bank_name: string | null; branch: string | null; number: string | null; issued_on: string | null; valid_until: string | null;
+  claim_period_until: string | null; fee: string | null; fee_currency: string | null; blocked_deposit: string | null;
+  blocked_deposit_currency: string | null; document_id: string | null; description: string | null; note: string | null;
+  history: { id: string; kind: string; on_date: string; old_status: string | null; new_status: string | null; valid_until: string | null; reason: string | null }[];
+  beneficiary: PartyRef | null; reminder_party: PartyRef | null;
+  coverage: { code: string; valid_until: string; needed_until: string } | null;
+  reminders: { id: string; due_on: string; action: string; purpose: string }[];
+  case_title?: string; tender_no?: string | null; beneficiary_name?: string | null;
+}
+export interface TenderCostRow { id: string; kind: string; amount: string; amount_currency: string; paid_on: string | null; refundable: boolean; refunded_on: string | null; note: string | null; document_id: string | null }
+export interface ProposalRow {
+  id: string; tender_id: string; cost_sheet_id: string; version: number; status: "draft" | "approved" | "superseded";
+  price_basis: string; currency: string; subtotal: string; vat_amount: string; total: string; valid_until: string | null;
+  approved_at: string | null; below_cost_reason: string | null; decimals: number; words: string;
+  lines: { id: string; line_item_id: string; name: string; position: number; quantity: string; unit_code: string | null; unit_text: string | null; unit_price: string; total: string; vat_amount: string; unit_cost: string | null }[];
+  below_cost: { line_id: string; name: string | null; unit_price: string; unit_cost: string }[];
+  outputs: { link_id: string; document_id: string; original_filename: string; linked_at: string }[];
+}
+export interface Blocker { code: string; [key: string]: unknown }
+export interface TenderDetail {
+  id: string; case_id: string; tender_no: string | null; listing_id: string | null; organizer_party_id: string | null;
+  tender_type: string | null; stages: string | null; stage: TenderStage; participation: "undecided" | "yes" | "no";
+  participation_reason: string | null; document_price: string | null; document_price_currency: string | null;
+  documents_obtained_at: string | null; estimate: string | null; estimate_currency: string | null;
+  proposal_validity_days: number | null; proposal_valid_until: string | null; financial_mode: "buyer_form" | "letterhead";
+  submitted_at: string | null; submit_channel: string | null; submit_note: string | null; submit_override_reason: string | null;
+  result: "won" | "lost" | "cancelled" | "no_result" | null; result_reason: string | null; result_note: string | null;
+  winner_name: string | null; winner_price: string | null; winner_price_currency: string | null; our_rank: number | null; result_on: string | null;
+  organizer: PartyRef | null; stage_hint: TenderStage;
+  dates: TenderDateRow[]; date_changes: TenderDateChangeRow[];
+  next_date: { id: string; kind: string; label: string | null; at: string } | null;
+  setad_date_changes: { kind: string; date_id: string | null; old: string | null; new: string }[];
+  new_appendices: Record<string, number>;
+  addenda: AddendumRow[]; envelope_items: EnvelopeItemRow[]; envelope_progress: Record<"A" | "B" | "C" | "all", [number, number]>;
+  guarantees: GuaranteeRow[]; bid_bond: { id: string; status: string; valid_until: string | null } | null;
+  needed_until: string | null; tied_up: Record<string, { blocked_deposit: string; fee: string; total: string }>;
+  costs: TenderCostRow[]; cost_totals: Record<string, { spent: string; refundable_outstanding: string; refunded: string; unpaid: string; net: string }>;
+  proposals: ProposalRow[]; blockers: Blocker[];
+  other_reminders: { id: string; due_on: string; action: string; purpose: string }[];
+}
+export interface CompanyDocumentRow {
+  id: string; title: string; category: string; document_id: string | null; issued_on: string | null; expires_on: string | null;
+  note: string | null; status: "active" | "archived"; expiry: "ok" | "soon" | "expired" | "none"; days_left: number | null;
+}
+export interface EnvelopeTemplateRow { id: string; name: string; is_default: boolean; lines: { id: string; envelope: "A" | "B" | "C"; position: number; title: string; kind: string }[] }
+export interface ResultReasonRow { code: string; label_fa: string; label_en: string; sort_order: number; active: boolean }
+export interface TendersSummary {
+  dates_soon: { tender_id: string; case_id: string; case_title: string; tender_no: string | null; kind: string; label: string; at: string }[];
+  envelopes_incomplete: { tender_id: string; case_id: string; case_title: string; tender_no: string | null; at: string; done: number; total: number }[];
+  guarantees_expiring: { guarantee_id: string; case_id: string; case_title: string; purpose: string; number: string | null; valid_until: string | null; status: string }[];
+  guarantees_release: { guarantee_id: string; case_id: string; case_title: string; purpose: string; number: string | null; status: string }[];
+  documents_expiring: CompanyDocumentRow[];
+  setad_changes: { tender_id: string; case_id: string; case_title: string; tender_no: string | null; date_changes: number; new_appendices: Record<string, number> }[];
+  waiting_result: { tender_id: string; case_id: string; case_title: string; tender_no: string | null; opening: string }[];
 }

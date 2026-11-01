@@ -17,9 +17,10 @@ import { CostingTab } from "./Costing";
 import { ComparisonTab, CoverageCard, OffersTab } from "./Offers";
 import { QuotesTab } from "./Quotes";
 import { RfqsTab } from "./Rfqs";
+import { TenderHeaderFacts, TenderTab } from "./Tender";
 import { SetadOrigin } from "../tenders/SetadOrigin";
 
-const TABS = ["items", "rfqs", "offers", "comparison", "costing", "quotes", "documents", "history"] as const;
+const TABS = ["items", "tender", "rfqs", "offers", "comparison", "costing", "quotes", "documents", "history"] as const;
 type Tab = (typeof TABS)[number];
 
 function EditCaseDialog({ c, onClose, onSaved }: { c: CaseDetail; onClose: () => void; onSaved: () => void }) {
@@ -88,6 +89,7 @@ export function CaseDetailPage() {
           {costing.data?.current?.margin_percent && <span>{t("costing.pricing.margin")} <span className="tabular-nums">{f.num(costing.data.current.margin_percent)} %</span> · {t("costing.pricing.markup")} <span className="tabular-nums">{f.num(costing.data.current.markup_percent ?? "")} %</span></span>}
           {quotes.data?.summary.latest && <span className="inline-flex items-center gap-1">{t("quotes.latest")}: <Bdi ltr>{quotes.data.summary.latest.number}</Bdi> <StatusBadge group="quote" status={quotes.data.summary.latest.status} /></span>}
           <span className="tabular-nums">{f.date(c.created_at)}</span>
+          <TenderHeaderFacts caseId={c.id} />
         </span>}
         actions={<>
           <Select className="w-36" aria-label={t("sourcing.status.label")} value={c.status} onChange={(e) => setStatus.mutate(e.target.value)}>
@@ -112,6 +114,7 @@ export function CaseDetailPage() {
           <ItemsCard owner={{ case_id: c.id }} items={c.items} warnings={c.warnings} ownerDocuments={c.documents} onChanged={refresh} inCase />
         </div>
       )}
+      {tab === "tender" && <TenderTab caseData={c} />}
       {tab === "rfqs" && <RfqsTab caseData={c} highlight={params.get("rfq")} />}
       {tab === "offers" && <OffersTab caseData={c} highlight={params.get("offer")} recordFor={params.get("record")} />}
       {tab === "comparison" && <ComparisonTab caseData={c} />}
