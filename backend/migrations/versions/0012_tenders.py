@@ -361,7 +361,7 @@ def upgrade() -> None:
           note              text,
           {TS},
           UNIQUE (tender_id, version),
-          CONSTRAINT tender_proposal_approved CHECK (status = 'draft' OR (approved_at IS NOT NULL AND approved_by IS NOT NULL))
+          CONSTRAINT tender_proposal_approved CHECK (status <> 'approved' OR (approved_at IS NOT NULL AND approved_by IS NOT NULL))
         )
         """
     )

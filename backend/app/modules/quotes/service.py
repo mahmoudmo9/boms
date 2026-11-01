@@ -190,13 +190,14 @@ def render_terms(db: Session, quote: Quote) -> str:
     origin = setad_origin(db, quote.case_id)
     source = terms_source(db, quote) if lang == "fa" else None
     if source and source.get("number"):
-        origin = {**(origin or {}), "setad_number": source["number"]}
+        origin = {**(origin or {}), "setad_number": source["number"], "keep_digits": True}
     buyer_name = _party_name(db, quote.buyer_party_id, lang)
     addressee = ""
     if buyer_name:
         addressee = f"مدیریت محترم امور تدارکات {buyer_name}" if lang == "fa" else f"To the procurement department of {buyer_name}"
     values = {"buyer_name": buyer_name, "addressee": addressee,
-              "setad_number": sourcing_templates.localize_digits(origin["setad_number"], lang, digits) if origin else "",
+              "setad_number": ("" if not origin else origin["setad_number"] if origin.get("keep_digits")
+                               else sourcing_templates.localize_digits(origin["setad_number"], lang, digits)),
               "valid_until": sourcing_templates.format_date(quote.valid_until, lang, digits),
               "payment_terms": quote.payment_terms or "", "lead_time": lead, "bank_details": bank,
               "incoterm": " ".join(x for x in (quote.incoterm, quote.incoterm_place) if x)}
