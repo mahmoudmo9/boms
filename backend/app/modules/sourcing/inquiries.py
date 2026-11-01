@@ -464,7 +464,32 @@ def convert(db: Session, inquiry_id: uuid.UUID, title: str | None, source: str, 
                   actor=actor)
     if case.party_id:
         events.record(db, "party", case.party_id, "case_add", jsonable({"case_id": case.id}), source, actor=actor)
+    _run_case_hooks(_case_converted_hooks, db, case, inquiry, source, actor)
     return case
+
+
+# later modules react to a new case (tenders, v0.6.0: a tender inquiry becomes a case with a tender part) and to a
+# case status change (a cancelled case cancels its tender reminders): fn(db, case, other, source, actor)
+_case_converted_hooks: list = []
+_case_status_hooks: list = []
+
+
+def register_case_converted(fn) -> None:
+    if fn not in _case_converted_hooks:
+        _case_converted_hooks.append(fn)
+
+
+def register_case_status_changed(fn) -> None:
+    if fn not in _case_status_hooks:
+        _case_status_hooks.append(fn)
+
+
+def _run_case_hooks(hooks: list, db: Session, case, other, source: str, actor: str | None) -> None:
+    from app.core.modules import load_hooks
+
+    load_hooks()
+    for fn in hooks:
+        fn(db, case, other, source, actor)
 
 
 # ---- cases --------------------------------------------------------------------------------------
@@ -511,6 +536,8 @@ def update_case(db: Session, case_id: uuid.UUID, changes: dict, source: str, act
     if changed:
         flush(db, "invalid_case")
         events.record(db, "case", case.id, "update", jsonable({"changes": changed}), source, actor=actor)
+        if "status" in changed:
+            _run_case_hooks(_case_status_hooks, db, case, changed["status"]["old"], source, actor)
     return case
 
 

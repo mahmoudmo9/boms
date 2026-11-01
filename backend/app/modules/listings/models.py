@@ -71,6 +71,9 @@ class Listing(Timestamps, Base):
     guarantee_currency: Mapped[str | None] = mapped_column(Text)      # v0.6.0 (0011): as the site writes it
     guarantee_description: Mapped[str | None] = mapped_column(Text)
     estimate_currency: Mapped[str | None] = mapped_column(Text)
+    renewal_appendix_count: Mapped[int | None] = mapped_column(Integer)   # v0.6.0 (0012)
+    price_appendix_count: Mapped[int | None] = mapped_column(Integer)
+    cancel_appendix_count: Mapped[int | None] = mapped_column(Integer)
     site_state: Mapped[str] = mapped_column(Text, default="")
     site_state_name: Mapped[str] = mapped_column(Text, default="")
     in_my_calls: Mapped[bool] = mapped_column(Boolean, default=False)

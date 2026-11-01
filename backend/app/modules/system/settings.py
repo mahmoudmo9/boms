@@ -52,6 +52,14 @@ def _int_range(low: int, high: int) -> Callable[[Any], int]:
     return check
 
 
+def _day_offsets(value: Any) -> list[int]:
+    """Days before a date, e.g. [3, 1] (v0.6.0 tender reminders): distinct integers 0..365, largest first."""
+    if not isinstance(value, list) or len(value) > 10 or any(
+            isinstance(v, bool) or not isinstance(v, int) or not 0 <= v <= 365 for v in value):
+        raise ValueError("expected a list of whole days 0..365 (at most 10)")
+    return sorted(set(value), reverse=True)
+
+
 def _short_text(value: Any) -> str:
     if not isinstance(value, str) or len(value) > 300:
         raise ValueError("expected text (up to 300 characters)")
@@ -146,6 +154,10 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "company.economic_code": ("", _short_text),
     "company.signer_name": ({"fa": "", "en": ""}, _signature),
     "company.signer_title": ({"fa": "", "en": ""}, _signature),
+    # Tender workflow (v0.6.0)
+    "tenders.reminder_days": ([3, 1], _day_offsets),             # reminders before each tender date
+    "tenders.guarantee_reminder_days": ([30, 7], _day_offsets),  # before a guarantee's valid_until
+    "tenders.release_followup_days": (7, _int_range(0, 365)),    # bid bond release follow-up after the result
 }
 
 

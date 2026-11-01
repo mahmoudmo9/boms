@@ -131,9 +131,39 @@ def setad_origin(db: Session, case_id: uuid.UUID) -> dict | None:
             "required_valid_until": inquiry.required_price_validity}
 
 
+# later modules name another terms template for a quote (tenders, v0.6.0: "Tender (fa)" in the letterhead mode):
+# fn(db, quote) -> {"template_name", "number"} or None
+_terms_sources: list = []
+
+
+def register_terms_source(fn) -> None:
+    if fn not in _terms_sources:
+        _terms_sources.append(fn)
+
+
+def terms_source(db: Session, quote: Quote) -> dict | None:
+    from app.core.modules import load_hooks
+
+    load_hooks()
+    for fn in _terms_sources:
+        found = fn(db, quote)
+        if found:
+            return found
+    return None
+
+
 def terms_template(db: Session, quote: Quote):
-    """Quotes for inquiries from Setad default to the "Setad (fa)" template (Persian quotes); others to the default
-    of their language."""
+    """Quotes for inquiries from Setad default to the "Setad (fa)" template (Persian quotes); a registered source
+    (a tender in the letterhead mode) names its own; others take the default of their language."""
+    source = terms_source(db, quote) if quote.language == "fa" else None
+    if source:
+        from app.modules.sourcing.models import MessageTemplate
+
+        row = db.scalar(select(MessageTemplate).where(
+            MessageTemplate.kind == "quote_terms", MessageTemplate.name == source["template_name"],
+            MessageTemplate.status == "active"))
+        if row is not None:
+            return row
     if quote.language == "fa" and setad_origin(db, quote.case_id):
         from app.modules.sourcing.models import MessageTemplate
 
@@ -158,6 +188,9 @@ def render_terms(db: Session, quote: Quote) -> str:
             "روز" if lang == "fa" else "days")
     bank = (settings.get(db, "company.bank_details") or {}).get(lang) or ""
     origin = setad_origin(db, quote.case_id)
+    source = terms_source(db, quote) if lang == "fa" else None
+    if source and source.get("number"):
+        origin = {**(origin or {}), "setad_number": source["number"]}
     buyer_name = _party_name(db, quote.buyer_party_id, lang)
     addressee = ""
     if buyer_name:
@@ -648,6 +681,15 @@ def case_summary(db: Session, case_id: uuid.UUID) -> dict:
 
 # ---- product page: "Quotes we sent" -----------------------------------------------------------------------
 
+_product_quote_sources: list = []
+
+
+def register_product_quote_rows(fn) -> None:
+    """``fn(db, product_id) -> list[dict]`` with the same keys as a sent quote row (v0.6.0: tender proposals)."""
+    if fn not in _product_quote_sources:
+        _product_quote_sources.append(fn)
+
+
 def quotes_for_product(db: Session, product_id: uuid.UUID, today: date | None = None) -> dict:
     """Every sent quote row for items linked to the product, plus min/median/max per (currency, unit group)."""
     today = today or clock.today()
@@ -673,6 +715,16 @@ def quotes_for_product(db: Session, product_id: uuid.UUID, today: date | None = 
         entries.append({**dict(r), "unit_group": key, "normalized_price": price})
         if price is not None:
             groups.setdefault((r["currency"], key), []).append(price)
+    from app.core.modules import load_hooks
+
+    load_hooks()
+    for extra in _product_quote_sources:   # v0.6.0: approved tender proposals, marked "tender"
+        for r in extra(db, product_id):
+            key, factor = sourcing_coverage.unit_group(r["unit_code"], r["unit_text"], units)
+            price = sourcing_coverage.normalized_price(r["unit_price"], Decimal(1), factor)
+            entries.append({**r, "unit_group": key, "normalized_price": price})
+            if price is not None:
+                groups.setdefault((r["currency"], key), []).append(price)
     summary = [{"currency": cur, "unit_group": key, "count": len(values), "min": min(values),
                 "median": median(values), "max": max(values)} for (cur, key), values in sorted(groups.items())]
     return jsonable({"quotes": entries, "summary": summary})

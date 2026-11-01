@@ -30,7 +30,8 @@ DATE_FIELDS = ("published_at", "documents_deadline", "proposal_deadline", "inqui
                "edition_date", "response_deadline", "price_valid_until")
 WRITABLE = ("external_no", "title", "organization", "province", "city", "category", "goods_group", "service_group",
             "type_name", "need_type", "description", *DATE_FIELDS, "edition_no", *AMOUNT_FIELDS, "detail_url",
-            "guarantee_currency", "guarantee_description", "estimate_currency")  # v0.6.0
+            "guarantee_currency", "guarantee_description", "estimate_currency",  # v0.6.0
+            "renewal_appendix_count", "price_appendix_count", "cancel_appendix_count")
 # SetadSuite's Persian run statuses -> harvest_run.status
 RUN_STATUS = {"کامل": "done", "نیازمند بازبینی": "needs_review", "متوقف‌شده": "cancelled", "خطا": "error"}
 

@@ -30,6 +30,7 @@ TRACKED_FIELDS = (
     "document_price", "guarantee_amount", "estimate",
     "site_state",
     "response_deadline", "price_valid_until",
+    "renewal_appendix_count", "price_appendix_count", "cancel_appendix_count",   # v0.6.0 (addenda on Setad)
 )
 
 
@@ -96,6 +97,7 @@ def tender_row(raw: dict) -> dict:
         "document_price": _amount(raw.get('tenderDocumentsPrice')),
         **guarantee_fields(raw),
         **estimate_fields(raw),
+        **appendix_counts(raw),
         "raw": raw,
     }
 
@@ -132,6 +134,23 @@ def guarantee_fields(raw: dict) -> dict:
 def estimate_fields(raw: dict) -> dict:
     amount, currency = _first_amount(raw, ESTIMATE_KEYS)
     return {"estimate": amount, "estimate_currency": currency} if amount is not None else {}
+
+
+APPENDIX_KEYS = {"renewal_appendix_count": "renewalAppendixCount", "price_appendix_count": "priceAppendixCount",
+                 "cancel_appendix_count": "cancelAppendixCount"}
+
+
+def appendix_counts(raw: dict) -> dict:
+    """Setad's addenda counters of a tender (renewal / price / cancel); only those the row carries."""
+    out = {}
+    for field, key in APPENDIX_KEYS.items():
+        value = raw.get(key)
+        if value not in (None, ""):
+            try:
+                out[field] = int(float(value))
+            except (TypeError, ValueError):
+                continue
+    return out
 
 
 def guarantee_hints(pairs):
@@ -196,6 +215,8 @@ def tracked_changes(old: dict, new: dict) -> list[tuple[str, object, object]]:
         a, b = old.get(field), new.get(field)
         if (a in ("", None)) and (b in ("", None)):
             continue
+        if field in APPENDIX_KEYS and a is None:
+            continue   # v0.6.0: the first count seen (after the update) is not a new addendum
         if a != b:
             out.append((field, a, b))
     return out
