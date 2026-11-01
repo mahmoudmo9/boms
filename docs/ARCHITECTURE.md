@@ -571,3 +571,95 @@ validity (`quotes.default_validity_days`, 7) is shortened to the allowed date (`
 - **Revision numbers:** a revision keeps the base number with a version suffix (`PI-1405-0001-v2`); the gap-free
   base sequence counts first versions only; output file names are the number (plus `-DRAFT` before approval).
 - **Persian terms:** exposure «نقدینگی درگیر», margin «حاشیهٔ سود», markup «مارک‌آپ» on every screen.
+
+## Setad connector and screening (Phase 7a, v0.5.0, migration `0010_listings`)
+
+### Connector (`app/connectors/setad/`)
+
+The site-reading code of the owner's SetadSuite v0.9.23 (purchase calls «فراخوان‌های خرید» on eproc, tenders on
+etend) is ported with its parsers, captcha wait, recovery, «فراخوان‌های من», attachments and recorder unchanged.
+The full mapping (file by file, function by function) and the behaviour changes are in
+[`SETAD_PORT.md`](SETAD_PORT.md). `reference/` holds the original source as read-only reference material: it is
+never imported at runtime and never shipped (`build_release.py` refuses a release that contains it, browser
+profiles, the attachments cache or diagnostics).
+
+- The connector drives the installed **Microsoft Edge** (`channel="msedge"`), then Chrome, with a persistent profile
+  in `<data folder>/connectors/setad/browser_profile`; Playwright's own browsers are not bundled.
+- The owner logs in and types every captcha in the visible window. BOMS never solves captchas, never pays, never
+  submits an offer and never uploads to Setad. The only site writes are add / remove «فراخوان‌های من», each refused
+  without `confirm: true` (422 `confirmation_required`) and recorded as an event.
+- Passwords, cookies and tokens are never written to the database, logs or diagnostics (SetadSuite's `redact`).
+- Tests run against an offline fake host (`tests/connectors/setad/fakesite.py`: routes for `*.setadiran.ir`,
+  everything else aborted, a dead proxy as a second guard) and saved fixtures.
+
+### The Setad agent and the `setad` job lane
+
+`python -m app.connectors.setad.agent` is a separate process started on demand by the backend
+(`POST /api/setad/agent/start`) on the owner's PC, so the Edge window is visible on the desktop. It:
+
+- holds a single-instance OS file lock (`<data>/connectors/setad/agent.lock`); a second agent exits at once;
+- takes only jobs of lane `setad` from `sys.job` (`jobs.claim_next(db, lane="setad")`); the normal worker takes only
+  lane `default`, so a backup runs while a fetch waits for a captcha;
+- writes its status every 2 s to `ext.agent_status` (connected, role, command, pages, rows, captcha waiting,
+  message, heartbeat) and reads `cancel_requested` there (`POST /api/setad/cancel`): a cancelled fetch ends
+  cleanly with its run `cancelled`;
+- exits after `setad.agent_idle_minutes` without commands.
+
+Commands: `connect`, `set_role`, `full_fetch`, `quick_fetch`, `fetch_detail`, `download_files`, `sync_my_calls`,
+`add_my_call`, `remove_my_call`, `open_payment_page`, `record_start`, `record_stop`, `disconnect`.
+
+### Schema `ext` (module `listings`)
+
+| Table | Content |
+|---|---|
+| `harvest_run` | one row per fetch: source, kind (full / quick), status (running / done / needs_review / cancelled / error), pages, rows seen, new, changed, duplicates, errors, issues |
+| `listing` | machine rows refreshed from the site, unique per (source, external_id); `search_norm` (generated, trigram index); `first_run_id`, `last_full_run_id`; no audit trigger |
+| `listing_change` | one row per change of a tracked field (deadlines, edition, state, document price, required validity, …); never for volatile list metadata (`recCount`) |
+| `listing_detail` | detail page: field pairs, buyer note, items table, text |
+| `listing_file` | attachments: state pending / downloaded / missing / error, local path in the attachments cache, SHA-256, `document_id` once copied into the document store |
+| `listing_screening` | the owner's decisions (audited): new / starred / reviewing / converted / dismissed (reason required), note, checklist, `inquiry_id` |
+| `agent_status` | the single status row the UI polls |
+
+List rule (SetadSuite 0.9.23): a listing is shown when it was seen since the start of the last **full** fetch of its
+source, or when it is starred, reviewing or converted ("Include listings not seen in the last full fetch" shows
+everything). A quick fetch only adds and refreshes rows; it never hides older ones.
+
+The attachments cache (`setad.files_dir`, default `<data>/setad-files`) is **not** in the nightly backup: files of a
+converted listing are copied into the document store, which is backed up. "Clear cache" deletes only connector files;
+"Purge" deletes listings older than `setad.retention_days` that are not starred, reviewing or converted.
+
+### Conversion to an inquiry (hooks)
+
+`listings.convert` creates the inquiry through the sourcing service (it never writes sourcing tables itself):
+kind `rfq` (purchase call) or `tender`, channel `setad` with the Setad number and link (`ops.inquiry.listing_id`,
+`external_no`, `external_url`), received = published, `response_due_at` = the exact deadline from the detail page
+(else the list deadline), `required_price_validity`, delivery province / city, buyer note in the inquiry text; the
+buyer party matched by normalized name, or picked from suggestions / created with the Phase 3 duplicate warning
+(contact lines go to the party notes); items from the detail table (Setad goods code as a spec, product
+suggestions from the catalog) or one item from the description; downloaded files uploaded to the document store
+(hashed, deduplicated) and linked. A second conversion gives 409 `already_converted`.
+
+Hooks registered in `listings/hooks.py`:
+- `sourcing.inquiries.register_inquiry_cleanup` — deleting the inquiry (cascade) puts the listing back to
+  `reviewing` and clears `inquiry_id`; the listing stays.
+- `parties.command_center.register_section("setad", …)` — the command center's Setad section (due starred /
+  reviewing listings, converted listings whose deadline changed, new listings matching warn keywords, the last run
+  per source with a warning after 3 days).
+- `listings/searchable.py` — global search by number, title, organization (converted ones link to the inquiry).
+
+Deadline change after conversion: `GET /api/listings/by-inquiry/{id}` returns the listing's current deadline when it
+differs from `inquiry.response_due_at`; the inquiry and case show a banner; *Apply* calls
+`sourcing.inquiries.apply_response_deadline`, which moves the deadline and the open follow-ups of the buyer and of
+the case's RFQ chases that were due on or before the old deadline day by the same number of days (event
+`deadline_apply`). Nothing is applied silently.
+
+### Setad proforma (on Phase 6 quotes)
+
+A quote whose case comes from a Setad inquiry: Persian quotes use the seeded `quote_terms` template "Setad (fa)"
+(placeholders `{addressee}`, `{setad_number}` added to the quote-terms set); `valid_until` defaults to the buyer's
+required price validity, capped by the offers / FX limit; the approval gate fails with
+`validity_shorter_than_required` (both dates and the limit in the failure) unless accepted with a reason
+(`POST /api/quotes/{id}/validity-override`, `ops.quote.validity_override_reason`, event `gate_override`). Persian
+outputs write the total in words (SetadSuite's `number_words`); the file name carries the Setad number
+(`PI-1405-0001-Setad-<number>.pdf`); the letterhead shows the national ID, economic code and signer
+(Settings → Letterhead). The owner uploads the file to Setad by hand.

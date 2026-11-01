@@ -14,6 +14,8 @@ data folder `D:\BOMS-Data` (yours may be `C:\BOMS-Data` or another folder chosen
 | Uploaded files (read-only, named by SHA-256) | `<data>\files\aa\bb\<sha256>` |
 | Backups | `<data>\backups\db`, `<data>\backups\files`, `<data>\backups\archive` |
 | Logs (rotated, 5 × 5 MB) | `<data>\logs\backend.log`, `worker.log`, `worker.heartbeat` |
+| Setad agent: browser profile, lock, learned site templates, diagnostics (v0.5.0) | `<data>\connectors\setad\` (not backed up) |
+| Setad attachments cache (v0.5.0; Settings → Setad can move it) | `<data>\setad-files\` (not backed up; converted listings' files are copied into `files`) |
 
 Two Task Scheduler tasks, **BOMS Backend** and **BOMS Worker**, start hidden at logon and restart
 after a crash (every minute). The UI's *System & Backup* page shows whether the worker is alive.
@@ -280,3 +282,34 @@ Run once on the Windows PC after `update.bat` from 0.3.2 (not yet run there):
 - [ ] The product page of the rejected item shows the quote under *Quotes we sent*; the buyer's party page → *Quotes* lists it; Command Center → *Sales* shows it under won (30 days).
 - [ ] *Case won* closes the case.
 - [ ] Persian and English, light and dark: the Costing and Quotes tabs do not scroll sideways at 1280 px and 1024 px; selects show their full text.
+
+## Manual checks for v0.5.0 (Setad connector and screening)
+
+Run once on the Windows PC after `update.bat` from 0.4.0 (not yet run there). Nothing here pays, submits an offer or
+uploads anything to Setad.
+
+**Update**
+- [ ] Run the 0.5.0 `scripts\update.bat`: it prints `0.4.0 -> 0.5.0`, a `pre_update` backup appears, the migrations `0009` and `0010` run, and *Run restore test* passes afterwards (now 54 tables).
+- [ ] The menu shows *Tenders & Calls*; Settings shows *Setad*; Letterhead has national ID, economic code and signer.
+
+**Agent and fetch**
+- [ ] *Tenders & Calls* → *Connect to Setad*: the agent starts and an **Edge window is visible** on the desktop (not hidden behind the Task Scheduler session). If no window appears, note it: the agent was started from a hidden session.
+- [ ] Log in in that window with your own user name and password; the bar shows *Connected* and the role chip; switch role (EPROC ↔ ETEND) with the chip.
+- [ ] *Full fetch* on purchase calls: the progress shows pages and rows; when Setad asks for a captcha the yellow banner appears, type it in the Edge window, the fetch continues. The run ends *Complete*; *Report* shows pages, rows, new, changed.
+- [ ] Close BOMS (stop.bat) and start it again; *Connect*, then *Quick fetch*: only new rows are added, older rows stay listed.
+- [ ] Tenders tab: full fetch with the ETEND role; free / paid chips have counts.
+
+**Screening and files**
+- [ ] Search «کالا» and «كالا» give the same rows; pick organisations; star 3 rows; *Select all results* + star works over all pages.
+- [ ] Open a row: *Fetch details* fills items and the exact deadline; *Download files* saves the attachments into the folder chosen in Settings → Setad (change it first to e.g. `D:\Setad`); *Open folder* opens it in Explorer.
+- [ ] Add one tender to «فراخوان‌های من» (confirmation asked) and remove it again; both appear in the listing history.
+
+**Convert one real purchase call**
+- [ ] Star a purchase call with downloaded files, *Convert to inquiry*: the buyer is matched (or create it), items come from the goods table, the attachments appear on the inquiry (Documents) and the inquiry shows «From Setad <number>», the response deadline and the required price validity.
+- [ ] Decision → case → cost sheet → quote: the quote is Persian, uses the "Setad (fa)" terms, valid until the required validity (or the gate explains the conflict); approve.
+- [ ] **Setad proforma PDF and Word:** the file names contain the Setad number; the letterhead shows national ID, economic code and signer; the total is written in Persian words; Word opens the `.docx` without a repair prompt.
+- [ ] Upload the PDF to Setad by hand (BOMS never does).
+
+**Cache and backup**
+- [ ] Settings → Setad → *Clear attachments cache*: the Setad files folder is emptied; the converted inquiry's documents still open.
+- [ ] *Back up now*: the backup log and the file backup do not include `setad-files` or `connectors\setad` (only the document store `files`).

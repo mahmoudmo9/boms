@@ -24,6 +24,9 @@ DIST = ROOT / "dist"
 SCRIPT_FILES = ["common.ps1", "install.ps1", "update.ps1", "backup.ps1", "restore.ps1", "start.ps1", "stop.ps1",
                 "install.bat", "update.bat", "backup.bat", "restore.bat", "start.bat", "stop.bat"]
 BACKEND_EXCLUDE = {"tests", "__pycache__", ".pytest_cache", "boms.egg-info"}
+# v0.5.0: never shipped - SetadSuite reference source, browser profiles, the attachments cache, diagnostics
+FORBIDDEN = ("reference", "browser-profile", "profile", "setad-files", "diagnostics", ".download_info.json",
+             "learned.json", "connectors/setad/data")
 
 
 def run(cmd: list[str], cwd: Path) -> None:
@@ -117,6 +120,15 @@ def assemble(ver: str, skip_wheels: bool) -> Path:
     return out
 
 
+def check_forbidden(folder: Path) -> None:
+    """The release must not contain reference material, browser profiles, cache files or diagnostics."""
+    bad = [p.relative_to(folder).as_posix() for p in folder.rglob("*")
+           if any(part in FORBIDDEN for part in p.relative_to(folder).parts)
+           or any(f in p.relative_to(folder).as_posix() for f in FORBIDDEN if "/" in f)]
+    if bad:
+        sys.exit("release contains forbidden paths:\n  " + "\n  ".join(bad[:20]))
+
+
 def make_zip(folder: Path) -> Path:
     archive = folder.with_name(folder.name + "-win64.zip")
     archive.unlink(missing_ok=True)
@@ -135,6 +147,7 @@ def main() -> None:
     if not args.skip_frontend:
         build_frontend()
     folder = assemble(ver, args.skip_wheels)
+    check_forbidden(folder)
     archive = make_zip(folder)
     print(f"release: {archive} ({archive.stat().st_size // 1024 // 1024} MB)")
 

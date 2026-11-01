@@ -331,3 +331,116 @@ def test_command_center_setad_section_and_search(client, db, files_dir):
     flat = str(groups)
     assert str(lid) in flat and "/tenders?" in flat
     _ = io
+
+
+# ---- backup: the attachments cache and the agent folder are not backed up; ext tables are --------------------------
+
+def test_backup_excludes_the_setad_cache_and_counts_ext_tables(client):
+    import json
+
+    from app.core.config import get_config
+    from app.modules.system import backup
+    from app.modules.system.models import BackupRun
+
+    data = get_config().data_dir
+    marker = f"cache-{tag()}.pdf"
+    for folder in (data / "setad-files" / "1105090000000999", data / "connectors" / "setad" / "diagnostics"):
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / marker).write_bytes(b"%PDF-1.4 cache only")
+    run_id = backup.run_backup("manual", source="script")
+    with new_session() as db:
+        run = db.get(BackupRun, run_id)
+        assert run.status == "succeeded", run.details
+        manifest = json.loads(backup.manifest_path(__import__("pathlib").Path(run.db_dump_path)).read_text())
+    assert {"ext.listing", "ext.listing_screening", "ext.harvest_run", "ext.agent_status"} <= set(manifest["row_counts"])
+    assert not [p for p in get_config().backups_dir.rglob(marker)]
+
+
+def test_migrations_0009_0010_up_down_up_with_phase6_data():
+    from alembic import command
+    from sqlalchemy import create_engine
+
+    from app.cli import alembic_config
+    from app.core import dbadmin
+    from app.core.config import get_config
+    from tests.conftest import create_empty_database, superuser_conninfo
+
+    name = "boms_test_p7a_migrations"
+    create_empty_database(name)
+    url = get_config().db_url(name)
+    cfg = alembic_config(url)
+    engine = create_engine(url)
+    ext_tables = {"ext.harvest_run", "ext.listing", "ext.listing_change", "ext.listing_detail", "ext.listing_file",
+                  "ext.listing_screening", "ext.agent_status"}
+
+    def tables():
+        with engine.connect() as conn:
+            return set(conn.execute(text("SELECT schemaname || '.' || tablename FROM pg_tables "
+                                         "WHERE schemaname IN ('ops', 'ext', 'core', 'sys')")).scalars())
+
+    def phase6_rows():
+        with engine.connect() as conn:
+            return conn.execute(text(
+                "SELECT (SELECT count(*) FROM ops.quote), (SELECT count(*) FROM ops.cost_sheet), "
+                "(SELECT count(*) FROM ops.inquiry), (SELECT string_agg(number, ',' ORDER BY number) FROM ops.quote), "
+                "(SELECT count(*) FROM ops.message_template WHERE kind = 'quote_terms' AND is_default)")).one()
+
+    def columns(table):
+        schema, tab = table.split(".")
+        with engine.connect() as conn:
+            return set(conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_schema = :s "
+                                         "AND table_name = :t"), {"s": schema, "t": tab}).scalars())
+
+    try:
+        command.upgrade(cfg, "0008")
+        with engine.begin() as conn:   # Phase 6 data as it exists before the update (a quote with a sheet)
+            conn.execute(text("INSERT INTO sys.currency (code, name_fa, name_en, minor_units) "
+                              "VALUES ('IRR', 'ریال', 'Iranian rial', 0)"))
+            party = conn.execute(text("INSERT INTO core.party (name_fa) VALUES ('خریدار قدیمی') RETURNING id")).scalar()
+            inquiry = conn.execute(text("INSERT INTO ops.inquiry (party_id, source_channel, received_at, subject) "
+                                        "VALUES (:p, 'tender_portal', now(), 'Old') RETURNING id"), {"p": party}).scalar()
+            case = conn.execute(text("INSERT INTO ops.\"case\" (title, party_id, inquiry_id) VALUES ('Old case', :p, :i) "
+                                     "RETURNING id"), {"p": party, "i": inquiry}).scalar()
+            sheet = conn.execute(text("INSERT INTO ops.cost_sheet (case_id, version, deal_type, pricing_currency, status) "
+                                      "VALUES (:c, 1, 'domestic', 'IRR', 'final') RETURNING id"), {"c": case}).scalar()
+            conn.execute(text("INSERT INTO ops.quote (case_id, cost_sheet_id, version, number, language, currency, "
+                              "valid_until, buyer_party_id) VALUES (:c, :s, 1, 'PI-1405-0001', 'fa', 'IRR', "
+                              "current_date + 10, :p)"), {"c": case, "s": sheet, "p": party})
+        before = phase6_rows()
+        assert not (ext_tables & tables()) and "lane" not in columns("sys.job")
+        command.upgrade(cfg, "head")
+        assert ext_tables <= tables() and phase6_rows() == before
+        assert {"listing_id", "external_no", "required_price_validity"} <= columns("ops.inquiry")
+        assert {"terms_manual", "validity_override_reason"} <= columns("ops.quote") and "lane" in columns("sys.job")
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT count(*) FROM ops.message_template WHERE name = 'Setad (fa)'")).scalar() == 1
+            assert conn.execute(text("SELECT count(*) FROM ext.agent_status")).scalar() == 1
+        command.downgrade(cfg, "0008")
+        assert not (ext_tables & tables()) and phase6_rows() == before
+        assert "terms_manual" not in columns("ops.quote") and "listing_id" not in columns("ops.inquiry")
+        command.upgrade(cfg, "head")
+        assert ext_tables <= tables() and phase6_rows() == before
+    finally:
+        engine.dispose()
+        dbadmin.drop_database(superuser_conninfo(), name)
+
+
+def test_backup_and_restore_test_cover_every_table_with_listing_data(client, db, files_dir):
+    from app.core.db import get_engine
+    from app.modules.system import backup
+
+    org = f"دانشگاه {tag()}"
+    new_buyer(client, org)
+    lid = make_listing(db, files_dir, organization=org, files=("ج.pdf",))
+    star(client, lid)
+    assert convert(client, lid).status_code == 201
+    run_id = backup.run_backup("manual", source="script")
+    result = backup.restore_test(run_id, source="script")
+    with get_engine().connect() as conn:
+        counts = backup.table_counts(conn)
+    assert result["status"] == "passed", result
+    assert result["details"]["tables_checked"] == len(counts) and result["details"]["row_count_mismatches"] == {}
+    for table in ("ext.listing", "ext.listing_detail", "ext.listing_file", "ext.listing_screening", "ext.harvest_run",
+                  "ext.agent_status"):
+        assert table in counts and counts[table] > 0, table
+    assert "ext.listing_change" in counts
