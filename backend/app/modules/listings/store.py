@@ -29,7 +29,8 @@ AMOUNT_FIELDS = ("document_price", "guarantee_amount", "estimate")
 DATE_FIELDS = ("published_at", "documents_deadline", "proposal_deadline", "inquiry_deadline", "opening_at",
                "edition_date", "response_deadline", "price_valid_until")
 WRITABLE = ("external_no", "title", "organization", "province", "city", "category", "goods_group", "service_group",
-            "type_name", "need_type", "description", *DATE_FIELDS, "edition_no", *AMOUNT_FIELDS, "detail_url")
+            "type_name", "need_type", "description", *DATE_FIELDS, "edition_no", *AMOUNT_FIELDS, "detail_url",
+            "guarantee_currency", "guarantee_description", "estimate_currency")  # v0.6.0
 # SetadSuite's Persian run statuses -> harvest_run.status
 RUN_STATUS = {"کامل": "done", "نیازمند بازبینی": "needs_review", "متوقف‌شده": "cancelled", "خطا": "error"}
 
@@ -335,12 +336,31 @@ class ListingStore:
                               {"action": action, "result": result, "message": (message or "")[:500]}, "worker", actor="setad-agent")
                 db.commit()
 
+    # ------------------------------------------------------------------ command results (v0.6.0)
+    def record_listing_result(self, listing_id, action: str, data: dict) -> None:
+        """The real outcome of a download / detail command for one listing, as a listing event."""
+        with self.session() as db:
+            events.record(db, "listing", listing_id, action, data, "worker", actor="setad-agent")
+            db.commit()
+
+    def file_states(self, listing_id) -> dict[str, int]:
+        from sqlalchemy import func
+
+        with self.session() as db:
+            return {state: n for state, n in db.execute(
+                select(ListingFile.state, func.count()).where(ListingFile.listing_id == listing_id)
+                .group_by(ListingFile.state)).all()}
+
     # ------------------------------------------------------------------ details
     def save_detail(self, tender_id, text, pairs=None):
         with self.session() as db:
             x = self._by_external(db, tender_id)
             if x is not None:
                 self._write_detail(db, x, fields=pairs or [], text=text or "")
+                if x.guarantee_amount is None:   # v0.6.0: the list row had none; the detail page may
+                    amount, currency = setad_rows.guarantee_hint_amount(pairs or [])
+                    if amount is not None:
+                        x.guarantee_amount, x.guarantee_currency = _amount(amount), currency or x.guarantee_currency
                 db.commit()
 
     def _write_detail(self, db: Session, listing: Listing, **values) -> ListingDetail:

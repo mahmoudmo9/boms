@@ -79,9 +79,11 @@ def bulk(body: BulkIn, request: Request, user: CurrentUser, db: Db):
         return Response(service.export_csv(db, ids), media_type="text/csv; charset=utf-8",
                         headers={"Content-Disposition": "attachment; filename=setad-listings.csv"})
     if body.action in ("fetch_detail", "download_files"):
+        active = service.active_listing_jobs(db, body.action)
+        queued = len([i for i in ids if str(i) not in active])
         job = service.command(db, body.action, {"listing_ids": [str(i) for i in ids]}, source, user.username)
         db.commit()
-        return {"queued": len(ids), "job_id": str(job.id)}
+        return {"queued": queued, "already_queued": len(ids) - queued, "job_id": str(job.id)}
     result = service.bulk_screen(db, ids, body.action, {"reason": body.reason}, source, user.username)
     db.commit()
     return result
@@ -116,6 +118,17 @@ def command(body: CommandIn, request: Request, user: CurrentUser, db: Db):
     job = service.command(db, name, payload, request_source(request), user.username)
     db.commit()
     return {"job_id": str(job.id)}
+
+
+@setad_router.get("/jobs/{job_id}")
+def job_result(job_id: uuid.UUID, _: CurrentUser, db: Db):
+    return jsonable(service.job_result(db, job_id))
+
+
+@setad_router.get("/log")
+def agent_log(_: CurrentUser, job_id: str | None = None, lines: int = 200):
+    """The agent's log (secrets were redacted when written): the last lines, of one command if given."""
+    return {"lines": service.agent_log(job_id, max(1, min(lines, 1000)))}
 
 
 @setad_router.post("/cancel", status_code=204)

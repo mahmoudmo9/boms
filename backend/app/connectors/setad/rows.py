@@ -94,10 +94,66 @@ def tender_row(raw: dict) -> dict:
         "edition_date": setad_datetime(extra['last_edition_date'], (0, 0)),
         "edition_no": extra['edition_no'],
         "document_price": _amount(raw.get('tenderDocumentsPrice')),
-        "guarantee_amount": _amount(raw.get('guaranteeAmount') or raw.get('tenderGuaranteeAmount')),
-        "estimate": _amount(raw.get('estimatePrice') or raw.get('estimatedAmount')),
+        **guarantee_fields(raw),
+        **estimate_fields(raw),
         "raw": raw,
     }
+
+
+# v0.6.0: the keys the owner's real Setad data uses first, the earlier guesses as fallbacks
+GUARANTEE_KEYS = (("guarantyPrice", "guarantyPriceCurrency"), ("guaranteeAmount", None), ("tenderGuaranteeAmount", None))
+ESTIMATE_KEYS = (("financialEstimatePrice", "financialEstimatePriceCurrencyStr"),
+                 ("tndaFinancialEstimatesPrice", "tndaFinancialEstimatesPriceCurrencyStr"),
+                 ("elvFinancialEstimatePrice", "elvFinancialEstimatePriceCurrencyStr"),
+                 ("estimatePrice", None), ("estimatedAmount", None))
+
+
+def _first_amount(raw: dict, keys) -> tuple[str | None, str]:
+    for key, currency_key in keys:
+        value = _amount(raw.get(key))
+        if value is not None:
+            return value, scalar(raw.get(currency_key)).strip() if currency_key else ""
+    return None, ""
+
+
+def guarantee_fields(raw: dict) -> dict:
+    """Guarantee amount / currency / description of a grid row. Keys are left out when the row has no amount, so a
+    value read from the detail page (``guarantee_hint_amount``) is not overwritten by an empty list row."""
+    amount, currency = _first_amount(raw, GUARANTEE_KEYS)
+    out = {}
+    if amount is not None:
+        out.update(guarantee_amount=amount, guarantee_currency=currency)
+    description = scalar(raw.get("guarantyDescription")).strip()
+    if description:
+        out["guarantee_description"] = description
+    return out
+
+
+def estimate_fields(raw: dict) -> dict:
+    amount, currency = _first_amount(raw, ESTIMATE_KEYS)
+    return {"estimate": amount, "estimate_currency": currency} if amount is not None else {}
+
+
+def guarantee_hints(pairs):
+    # SetadSuite setad_tender/workspace.py guarantee_hints, unchanged
+    out = []
+    for k, v in pairs or []:
+        if any(w in k for w in ('تضمین', 'ضمانت', 'سپرده')):
+            out.append((k, v))
+    return out
+
+
+def guarantee_hint_amount(pairs) -> tuple[str | None, str]:
+    """(amount, currency) from the detail page's guarantee pairs: a label with «مبلغ» first, then any parseable
+    value (SetadSuite read the «مبلغ» hint the same way)."""
+    hints = guarantee_hints(pairs)
+    for k, v in sorted(hints, key=lambda kv: 'مبلغ' not in kv[0]):
+        if 'مبلغ' not in k and not any(w in str(v) for w in ('ریال', 'تومان')):
+            continue   # «مدت اعتبار تضمین: ۹۰ روز» is not an amount
+        amount = pipeline.parse_amount(v)
+        if amount:
+            return str(amount), ("ریال" if "ریال" in str(v) else "تومان" if "تومان" in str(v) else "")
+    return None, ""
 
 
 def need_row(need: Need) -> dict:

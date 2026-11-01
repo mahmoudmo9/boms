@@ -15,8 +15,10 @@ install(context)> (routes every Setad request to a local fake site; any other re
 from __future__ import annotations
 
 import importlib
+import json
 import logging
 import os
+import re
 import sys
 import threading
 import time
@@ -80,6 +82,35 @@ class InstanceLock:
 
 # ---- status row ----------------------------------------------------------------------------------------------------
 
+DOWNLOAD_KEYS = ("downloaded", "skipped", "failed", "restricted", "no_files")
+LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+FILE_PROGRESS = re.compile(r"پیوست\s*(\d+)\s*/\s*(\d+)")
+
+
+def setup_logging(path: Path) -> logging.Handler:
+    """v0.6.0: INFO log of the engine's and the tender worker's messages, rotated at 5 MB x 3 (secrets redacted
+    before they are written)."""
+    from logging.handlers import RotatingFileHandler
+
+    handler = RotatingFileHandler(path, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8")
+    handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    root.addHandler(handler)
+    return handler
+
+
+LAUNCH_FAILED = "مرورگر قابل اجرا پیدا نشد"   # bridge.SetadBrowser.open when no channel could be launched
+
+
+def status_text(text) -> str:
+    """v0.6.0: a launch failure keeps its own text (with the per-channel errors); only a real close of the window
+    reads «پنجره مرورگر ستاد بسته شد». Playwright's per-channel launch errors often contain "has been closed", which
+    made friendly_error() report a closed window when the browser had never opened."""
+    text = str(text or "")
+    return text if LAUNCH_FAILED in text else friendly_error(text)
+
+
 class Status:
     """ext.agent_status writer (no secrets: messages pass through the connector's redact())."""
 
@@ -92,7 +123,7 @@ class Status:
 
         for key in ("message", "last_error", "captcha_message"):
             if values.get(key):
-                values[key] = redact(friendly_error(str(values[key])))[:1000]
+                values[key] = redact(status_text(values[key]))[:1000]
         with self.lock:
             write_agent_status(self.session, **values)
 
@@ -127,11 +158,23 @@ class Agent:
                 raise RuntimeError("offline fake host")
             self.engine._make_background_page = _no_background
         self.worker = Worker(self.dir, self.cancel)
-        self.worker.message.connect(lambda m: self.status.set(message=m))
+        self.worker.message.connect(self._worker_message)
         self.worker.progress.connect(lambda p, t, u, r: self.status.set(pages_done=p, pages_total=t, rows_seen=u))
         self.worker.result.connect(self._tender_result)
         self._events: list[tuple[str, dict]] = []
         self.stop = False
+        self.job_tag = "-"            # "<job id> <command>" prefix of log lines (the UI filters the log by job)
+        if not os.environ.get("BOMS_SETAD_FAKE"):
+            make_background = self.engine._make_background_page
+
+            def _logged_background():
+                try:
+                    return make_background()
+                except Exception:
+                    # the hidden download browser could not start: say why (the visible window is used instead)
+                    self.log("hidden download browser failed: " + traceback.format_exc().strip().splitlines()[-1])
+                    raise
+            self.engine._make_background_page = _logged_background
 
     def _make_browser(self) -> SetadBrowser:
         fake = os.environ.get("BOMS_SETAD_FAKE")
@@ -144,8 +187,22 @@ class Agent:
                             channels=channels, launch_extra=extra, on_context=hook)
 
     # -- events from the ported code -------------------------------------------------------------------------------
+    def log(self, message: str, level: int = logging.INFO) -> None:
+        log.log(level, "%s %s", self.job_tag, redact(str(message)).replace("\n", " | ")[:2000])
+
+    def _worker_message(self, message: str) -> None:
+        self.log(message)
+        self.status.set(message=message)
+
     def _purchase_event(self, kind: str, values: dict) -> None:
         self._events.append((kind, values))
+        if kind in ("info", "progress", "error", "status", "completed_download", "completed_refresh"):
+            text = values.get("message") or values.get("status") or (values.get("results") if kind.startswith("completed") else "")
+            self.log(f"{kind}: {values.get('need_no', '')} {text}".strip(), logging.WARNING if kind == "error" else logging.INFO)
+        if kind == "progress":
+            m = FILE_PROGRESS.search(values.get("message") or "")
+            if m:
+                self.status.set(files_done=int(m.group(1)), files_total=int(m.group(2)))
         if kind == "needs":
             needs = values.get("needs") or []
             self.store.upsert_needs(needs)
@@ -264,10 +321,12 @@ class Agent:
         return Need(**{k: str(raw.get(k, "")) for k in Need.__dataclass_fields__})
 
     def cmd_fetch_detail(self, p: dict) -> dict:
-        ok, failed = 0, []
+        ok, failed, listings = 0, [], []
         for listing in self._listings(p["listing_ids"]):
             if self.cancel.is_set():
                 break
+            self.status.set(listing_id=listing.id, files_done=None, files_total=None)
+            before = len(failed)
             if listing.source == SOURCE_PURCHASE:
                 self._events = []
                 self.engine.handle({"command": "detail", "need": self._need(listing)})
@@ -283,33 +342,80 @@ class Agent:
                     ok += 1
                 except Exception as exc:
                     failed.append(f"{listing.external_no}: {redact(str(exc))[:200]}")
-        return {"ok": ok, "failed": failed}
+            row = {"listing_id": str(listing.id), "external_no": listing.external_no,
+                   "result": "failed" if len(failed) > before else "fetched", "failures": failed[before:]}
+            listings.append(row)
+            self.store.record_listing_result(listing.id, "detail_result", row)
+        return {"ok": ok, "failed": failed, "listings": listings}
 
     def cmd_download_files(self, p: dict) -> dict:
         from app.modules.listings.service import files_dir
 
         with self.session() as db:
             root = files_dir(db)
-        result = {"ok": 0, "failed": []}
+        result: dict = {"ok": 0, "failed": [], "listings": [], "totals": dict.fromkeys(DOWNLOAD_KEYS, 0)}
         for listing in self._listings(p["listing_ids"]):
             if self.cancel.is_set():
                 break
+            self.status.set(listing_id=listing.id, files_done=None, files_total=None)
             if listing.source == SOURCE_PURCHASE:
-                self._events = []
-                self.engine.handle({"command": "download", "needs": [self._need(listing)], "directory": str(root)})
-                self.store.record_need_files(listing.external_id, root / listing.external_no)
-                result["ok"] += 1
+                row = self._download_need(listing, root)
             else:
-                try:
-                    self.worker._guarded("documents", {"id": listing.external_id}, self.browser, self.store)
-                    keys = [[f["document_type"], f["appendix_id"]] for f in self.store.files(listing.external_id)]
-                    if keys:
-                        self.worker._guarded("download", {"id": listing.external_id, "file_keys": keys, "dest": str(root)},
-                                             self.browser, self.store)
-                    result["ok"] += 1
-                except Exception as exc:
-                    result["failed"].append(f"{listing.external_no}: {redact(str(exc))[:200]}")
+                row = self._download_tender(listing, root)
+            result["listings"].append(row)
+            for k in DOWNLOAD_KEYS:
+                result["totals"][k] += row["counts"].get(k, 0)
+            if row["result"] == "failed":
+                result["failed"].append(f"{listing.external_no}: {'; '.join(row['failures'])[:300]}")
+            else:
+                result["ok"] += 1
+            self.store.record_listing_result(listing.id, "download_result", row)
         return result
+
+    def _download_need(self, listing, root: Path) -> dict:
+        """One purchase call: the engine's own ``completed_download`` counts and failure messages (v0.6.0: was
+        counted as ok whatever happened)."""
+        self._events = []
+        self.engine.handle({"command": "download", "needs": [self._need(listing)], "directory": str(root)})
+        done = [v for k, v in self._events if k == "completed_download"]
+        counts = dict.fromkeys(DOWNLOAD_KEYS, 0)
+        counts.update((done[-1].get("results") or {}) if done else {})
+        failures = [v.get("message", "") for k, v in self._events
+                    if k == "info" and str(v.get("message", "")).startswith(("ناموفق", "نیاز "))]
+        failures += self._errors()
+        self.store.record_need_files(listing.external_id, root / listing.external_no)
+        visible = any(k == "info" and "دانلود با مرورگر باز" in str(v.get("message", "")) for k, v in self._events)
+        if visible:   # the hidden download browser was not available: put the Setad window away again
+            self.browser.minimize()
+            self.status.set(message="دانلود با پنجرهٔ ستاد انجام شد")
+        state = ("failed" if not done or (counts["failed"] and not counts["downloaded"] and not counts["skipped"])
+                 else "no_files" if counts["no_files"] else "partial" if counts["failed"] or counts["restricted"]
+                 else "ok")
+        return {"listing_id": str(listing.id), "external_no": listing.external_no, "result": state,
+                "counts": counts, "failures": [redact(f)[:300] for f in failures], "visible_window": visible}
+
+    def _download_tender(self, listing, root: Path) -> dict:
+        counts = dict.fromkeys(DOWNLOAD_KEYS, 0)
+        failures: list[str] = []
+        try:
+            self.worker._guarded("documents", {"id": listing.external_id}, self.browser, self.store)
+            files = self.store.files(listing.external_id)
+            keys = [[f["document_type"], f["appendix_id"]] for f in files]
+            if not keys:
+                counts["no_files"] = 1
+            else:
+                self.worker._guarded("download", {"id": listing.external_id, "file_keys": keys, "dest": str(root)},
+                                     self.browser, self.store)
+                states = self.store.file_states(listing.id)
+                counts["downloaded"] = states.get("downloaded", 0)
+                counts["failed"] = states.get("error", 0) + states.get("pending", 0) + states.get("missing", 0)
+        except Exception as exc:
+            failures.append(redact(str(exc))[:300])
+            counts["failed"] += 1
+        state = ("failed" if failures or (counts["failed"] and not counts["downloaded"]) else
+                 "no_files" if counts["no_files"] else "partial" if counts["failed"] else "ok")
+        return {"listing_id": str(listing.id), "external_no": listing.external_no, "result": state, "counts": counts,
+                "failures": failures, "visible_window": False}
 
     def cmd_sync_my_calls(self, p: dict) -> dict:
         self.worker._guarded("my_calls", {}, self.browser, self.store)
@@ -353,6 +459,8 @@ class Agent:
         from app.modules.system import jobs
 
         name = job_type.split(".", 1)[1]
+        self.job_tag = f"{job_id} {name}"
+        self.log(f"start {redact(json.dumps(payload, ensure_ascii=False, default=str))[:500]}")
         self._events = []
         self.cancel.clear()
         self.status.set(command=name, job_id=job_id, last_error=None, pages_done=None, pages_total=None,
@@ -360,18 +468,21 @@ class Agent:
         try:
             handler = getattr(self, f"cmd_{name}")
             result = handler(payload)
+            self.log(f"done {json.dumps(result, ensure_ascii=False, default=str)[:1500]}")
             with self.session() as db:
                 jobs.mark_done(db, job_id, result)
                 db.commit()
         except Exception as exc:
-            message = friendly_error(str(exc))
+            message = status_text(exc)
             log.warning("setad command %s failed: %s", name, redact(message.splitlines()[0] if message else ""))
             self.status.set(last_error=message)
             with self.session() as db:
                 jobs.mark_failed(db, job_id, redact(traceback.format_exc()), 30.0)
                 db.commit()
         finally:
-            self.status.set(command=None, job_id=None, captcha_waiting=False, captcha_message=None)
+            self.status.set(command=None, job_id=None, captcha_waiting=False, captcha_message=None, listing_id=None,
+                            files_done=None, files_total=None)
+            self.job_tag = "-"
 
     def serve(self, idle_minutes: float | None = None, poll: float = 0.5) -> None:
         from app.modules.system import jobs, settings
@@ -422,8 +533,7 @@ def main() -> int:
     data_dir = get_config().data_dir
     logs = data_dir / "logs"
     logs.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(filename=str(logs / "setad-agent.log"), level=logging.INFO,
-                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    setup_logging(logs / "setad-agent.log")
     lock = InstanceLock(data_dir / "connectors" / "setad" / "agent.lock")
     if not lock.acquire():
         log.info("another Setad agent is running; exiting")

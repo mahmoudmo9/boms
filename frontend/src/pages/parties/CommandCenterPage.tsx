@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { Bdi } from "../../components/Bdi";
+import { TimeLeftBadge } from "../../components/TimeLeft";
 import { Badge, Button, Card, EmptyState, ErrorNote, Loading, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
@@ -147,7 +148,7 @@ function SetadSection({ s }: { s: SetadSummary }) {
       <div className="grid gap-4 xl:grid-cols-3">
         <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.setad.due")} <Badge tone={s.due.length ? "warning" : "neutral"}>{f.num(s.due.length)}</Badge></span>}>
           {list(s.due.map((r) => ({ key: r.id, to: r.inquiry_id ? `/sourcing/inquiries/${r.inquiry_id}` : listingLink(r), label: r.title,
-            extra: <span className={`text-xs tabular-nums ${r.passed ? "text-danger" : "text-warning"}`}>{r.passed ? t("listings.passed") : f.date(r.deadline, true)}</span> })))}
+            extra: <span className="flex items-center gap-1.5 text-xs tabular-nums"><span className="text-muted">{f.date(r.deadline, true)}</span><TimeLeftBadge at={r.deadline} /></span> })))}
         </Card>
         <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.setad.deadlineChanged")} <Badge tone={s.deadline_changed.length ? "danger" : "neutral"}>{f.num(s.deadline_changed.length)}</Badge></span>}>
           {list(s.deadline_changed.map((r) => ({ key: r.listing_id, to: `/sourcing/inquiries/${r.inquiry_id}`, label: r.title,

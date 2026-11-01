@@ -1902,7 +1902,72 @@
     "filesMissing": "{{n}} پیوست هنوز دانلود نشده است.",
     "downloadThenConvert": "اول دانلود، بعد تبدیل",
     "downloadQueued": "دانلود در صف است؛ پس از پایان آن تبدیل کنید.",
-    "convertWithout": "تبدیل بدون پیوست‌های دانلودنشده"
+    "convertWithout": "تبدیل بدون پیوست‌های دانلودنشده",
+    "tabs": {
+      "fields": "مشخصات",
+      "schedule": "زمان‌بندی",
+      "items": "اقلام",
+      "files": "پیوست‌ها",
+      "screening": "بررسی",
+      "history": "تاریخچه",
+      "technical": "فیلدهای فنی"
+    },
+    "copy": "کپی",
+    "open": "باز کردن",
+    "noItems": "جدول اقلام در صفحهٔ جزئیات نیست.",
+    "noHistory": "هنوز چیزی ثبت نشده است.",
+    "technicalFilter": "جست‌وجوی فیلدها",
+    "guaranteeAmount": "تضمین",
+    "estimateAmount": "برآورد",
+    "techGroups": {
+      "general": "عمومی",
+      "schedule": "زمان‌بندی",
+      "money": "مالی و تضمین",
+      "organisation": "دستگاه و تماس"
+    },
+    "densityCompact": "ردیف‌های فشرده",
+    "densityComfortable": "ردیف‌های باز",
+    "job": {
+      "downloadQueued": "در صف دانلود",
+      "downloadRunning": "در حال دانلود: پیوست {{n}} از {{total}}",
+      "downloadStarted": "در حال دانلود…",
+      "detailQueued": "در صف دریافت جزئیات",
+      "detailRunning": "در حال دریافت جزئیات…",
+      "detailStarted": "در حال دریافت جزئیات…",
+      "downloadQueuedShort": "در صف دانلود",
+      "downloadRunningShort": "دانلود {{n}}/{{total}}",
+      "downloadStartedShort": "در حال دانلود",
+      "detailQueuedShort": "در صف جزئیات",
+      "detailRunningShort": "دریافت جزئیات",
+      "detailStartedShort": "دریافت جزئیات",
+      "failed": "فرمان ستاد انجام نشد.",
+      "detailDone": "جزئیات دریافت شد: {{n}}، ناموفق: {{failed}}",
+      "downloadDone": "پیوست‌های دانلودشده: {{downloaded}}، از قبل موجود: {{skipped}}، ناموفق: {{failed}}"
+    },
+    "actions": {
+      "screen_star": "ستاره‌دار شد",
+      "screen_unstar": "ستاره برداشته شد",
+      "screen_reviewing": "در حال بررسی",
+      "screen_dismiss": "صرف‌نظر شد",
+      "screen_restore": "بازگردانده شد",
+      "screen_note": "یادداشت ذخیره شد",
+      "screen_checklist": "پرسش‌های بررسی تغییر کرد",
+      "screen_reset": "بازگشت به «در حال بررسی» (استعلام حذف شد)",
+      "convert": "به استعلام تبدیل شد",
+      "download_result": "دانلود پیوست‌ها",
+      "detail_result": "دریافت جزئیات",
+      "add_my_call": "افزوده به فراخوان‌های من",
+      "remove_my_call": "حذف از فراخوان‌های من",
+      "site_action": "اقدام در ستاد",
+      "deadline_applied": "تغییر مهلت اعمال شد"
+    },
+    "results": {
+      "ok": "کامل",
+      "partial": "ناقص",
+      "failed": "ناموفق",
+      "no_files": "بدون پیوست",
+      "fetched": "دریافت شد"
+    }
   },
   "setad": {
     "connected": "به ستاد وصل است",
@@ -1997,5 +2062,21 @@
     "purgeHint": "آگهی‌های ستاره‌دار، در حال بررسی و تبدیل‌شده می‌مانند.",
     "purgeCount": "{{n}} آگهی قدیمی‌تر از {{days}} روز حذف می‌شود.",
     "purged": "{{n}} آگهی حذف شد"
+  },
+  "time": {
+    "about": "حدود {{text}}",
+    "left": {
+      "days": "{{d}} روز",
+      "days_one": "{{d}} روز",
+      "daysHours": "{{d}} روز و {{h}} ساعت",
+      "hoursMinutes": "{{h}} ساعت و {{m}} دقیقه",
+      "minutes": "{{m}} دقیقه"
+    },
+    "passedAgo": {
+      "minutes": "گذشته · {{n}} دقیقه پیش",
+      "hours": "گذشته · {{n}} ساعت پیش",
+      "days": "گذشته · {{n}} روز پیش",
+      "days_one": "گذشته · {{n}} روز پیش"
+    }
   }
 }

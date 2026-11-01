@@ -277,8 +277,9 @@ def apply_response_deadline(db: Session, inquiry_id: uuid.UUID, new_due_at: date
     if old_on is not None and new_on != old_on:
         delta = new_on - old_on
         for f in response_deadline_followups(db, row):
-            party_interactions.reschedule_followup(db, f.id, f.due_on + delta, DEADLINE_MOVED_NOTE, source, actor)
-            moved.append({"id": str(f.id), "old": f.due_on.isoformat(), "new": (f.due_on + delta).isoformat()})
+            old_due, new_due = f.due_on, f.due_on + delta   # v0.6.0: read before rescheduling changes the row
+            party_interactions.reschedule_followup(db, f.id, new_due, DEADLINE_MOVED_NOTE, source, actor)
+            moved.append({"id": str(f.id), "old": old_due.isoformat(), "new": new_due.isoformat()})
     row.response_due_at, row.response_due_on = new_due_at, new_on
     flush(db, "invalid_inquiry")
     events.record(db, "inquiry", row.id, "deadline_apply", jsonable({

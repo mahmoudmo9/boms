@@ -1902,7 +1902,72 @@
     "filesMissing": "{{n}} attachments are not downloaded yet.",
     "downloadThenConvert": "Download, then convert",
     "downloadQueued": "Download queued; convert when it finishes.",
-    "convertWithout": "Convert without the missing attachments"
+    "convertWithout": "Convert without the missing attachments",
+    "tabs": {
+      "fields": "Details",
+      "schedule": "Schedule",
+      "items": "Items",
+      "files": "Attachments",
+      "screening": "Screening",
+      "history": "History",
+      "technical": "Technical fields"
+    },
+    "copy": "Copy",
+    "open": "Open",
+    "noItems": "No items table on the detail page.",
+    "noHistory": "Nothing recorded yet.",
+    "technicalFilter": "Filter fields",
+    "guaranteeAmount": "Guarantee",
+    "estimateAmount": "Estimate",
+    "techGroups": {
+      "general": "General",
+      "schedule": "Schedule",
+      "money": "Money and guarantee",
+      "organisation": "Organisation and contact"
+    },
+    "densityCompact": "Compact rows",
+    "densityComfortable": "Comfortable rows",
+    "job": {
+      "downloadQueued": "Queued for download",
+      "downloadRunning": "Downloading: attachment {{n}} of {{total}}",
+      "downloadStarted": "Downloading…",
+      "detailQueued": "Queued for details",
+      "detailRunning": "Fetching details…",
+      "detailStarted": "Fetching details…",
+      "downloadQueuedShort": "download queued",
+      "downloadRunningShort": "downloading {{n}}/{{total}}",
+      "downloadStartedShort": "downloading",
+      "detailQueuedShort": "details queued",
+      "detailRunningShort": "fetching details",
+      "detailStartedShort": "fetching details",
+      "failed": "The Setad command failed.",
+      "detailDone": "Details fetched: {{n}}, failed: {{failed}}",
+      "downloadDone": "Attachments downloaded: {{downloaded}}, already there: {{skipped}}, failed: {{failed}}"
+    },
+    "actions": {
+      "screen_star": "Starred",
+      "screen_unstar": "Unstarred",
+      "screen_reviewing": "Marked as reviewing",
+      "screen_dismiss": "Dismissed",
+      "screen_restore": "Restored",
+      "screen_note": "Note saved",
+      "screen_checklist": "Checklist changed",
+      "screen_reset": "Back to reviewing (inquiry deleted)",
+      "convert": "Converted to an inquiry",
+      "download_result": "Attachments downloaded",
+      "detail_result": "Details fetched",
+      "add_my_call": "Added to my calls",
+      "remove_my_call": "Removed from my calls",
+      "site_action": "Action on Setad",
+      "deadline_applied": "Deadline change applied"
+    },
+    "results": {
+      "ok": "complete",
+      "partial": "partly",
+      "failed": "failed",
+      "no_files": "no attachments",
+      "fetched": "fetched"
+    }
   },
   "setad": {
     "connected": "Connected to Setad",
@@ -1997,5 +2062,21 @@
     "purgeHint": "Starred, reviewing and converted listings are kept.",
     "purgeCount": "{{n}} listings older than {{days}} days will be deleted.",
     "purged": "{{n}} listings deleted"
+  },
+  "time": {
+    "about": "about {{text}}",
+    "left": {
+      "days": "{{d}} days left",
+      "days_one": "{{d}} day left",
+      "daysHours": "{{d}} day {{h}} h left",
+      "hoursMinutes": "{{h}} h {{m}} min left",
+      "minutes": "{{m}} min left"
+    },
+    "passedAgo": {
+      "minutes": "passed {{n}} min ago",
+      "hours": "passed {{n}} h ago",
+      "days": "passed {{n}} days ago",
+      "days_one": "passed {{n}} day ago"
+    }
   }
 }

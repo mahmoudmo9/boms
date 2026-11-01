@@ -188,6 +188,22 @@ def _lines(value: str) -> str:
     return "<br>".join(_e(line) for line in (value or "").splitlines())
 
 
+def _css_string(value: str) -> str:
+    """Text for a CSS ``content:`` string (line breaks as \\A, quotes and backslashes escaped)."""
+    lines = [line.replace("\\", "\\\\").replace('"', '\\"') for line in (value or "").splitlines()]
+    return '"' + " \\A ".join(lines) + '"'
+
+
+def page_footer_css(footer: str) -> str:
+    """v0.6.0: the footer is printed in the page's bottom margin box, so it takes no content space and a one-page
+    quote prints on one page (the fixed footer at ``bottom: -12mm`` overflowed into a second, blank page)."""
+    if not (footer or "").strip():
+        return ""
+    return ("@page {{ @bottom-center {{ content: {text}; white-space: pre-wrap; font-family: 'Vazirmatn', Tahoma, "
+            "sans-serif; font-size: 8pt; color: #555; border-top: 1px solid #ccc; vertical-align: top; "
+            "padding-top: 3px; }} }}").format(text=_css_string(footer))
+
+
 def render_html(ctx: dict) -> str:
     lb, c = ctx["labels"], ctx["company"]
     logo = ""
@@ -224,8 +240,10 @@ header.letterhead {{ display: flex; align-items: center; gap: 12px; border-botto
 header.letterhead .logo {{ max-height: 60px; max-width: 160px; }}
 header.letterhead .name {{ font-size: 15pt; font-weight: 700; }}
 header.letterhead .small {{ font-size: 8.5pt; color: #444; }}
-footer.page-footer {{ position: fixed; bottom: -12mm; inset-inline: 0; font-size: 8pt; color: #555;
-  border-top: 1px solid #ccc; padding-top: 3px; text-align: center; }}
+{page_footer_css(c['footer'])}
+@media screen {{ footer.page-footer {{ margin-top: 24px; font-size: 8pt; color: #555; border-top: 1px solid #ccc;
+  padding-top: 3px; text-align: center; }} }}
+@media print {{ footer.page-footer {{ display: none; }} }}
 h1 {{ font-size: 16pt; margin: 14px 0 6px; }}
 .meta {{ display: flex; flex-wrap: wrap; gap: 4px 24px; margin-bottom: 10px; }}
 .meta div span {{ color: #555; }}

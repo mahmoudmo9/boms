@@ -22,7 +22,7 @@ export interface ListingFilters {
 
 export const DEFAULT_FILTERS: ListingFilters = {
   source: "setad_purchase", q: "", organizations: [], provinces: [], categories: [], status: null, new_only: false,
-  deadline: null, within_days: 3, downloaded: false, price: null, my_calls: false, include_old: false,
+  deadline: "open", within_days: 3, downloaded: false, price: null, my_calls: false, include_old: false,
 };
 
 const LIST_KEYS = ["organizations", "provinces", "categories"] as const;
@@ -36,7 +36,7 @@ export function filtersToParams(f: ListingFilters): URLSearchParams {
   for (const k of LIST_KEYS) for (const v of f[k]) p.append(k, v);
   if (f.status) p.set("status", f.status);
   for (const k of BOOL_KEYS) if (f[k]) p.set(k, "1");
-  if (f.deadline) p.set("deadline", f.deadline);
+  if (f.deadline !== DEFAULT_FILTERS.deadline) p.set("deadline", f.deadline ?? "any");   // "any" = no deadline filter
   if (f.deadline === "within" && f.within_days !== DEFAULT_FILTERS.within_days) p.set("within_days", String(f.within_days));
   if (f.price) p.set("price", f.price);
   return p;
@@ -54,7 +54,7 @@ export function filtersFromParams(p: URLSearchParams): ListingFilters {
     source: pick("source", ["setad_purchase", "setad_tender"] as const) ?? DEFAULT_FILTERS.source,
     q: p.get("q") ?? "",
     status: pick("status", ["new", "starred", "reviewing", "converted", "dismissed"] as const),
-    deadline: pick("deadline", ["open", "within", "passed"] as const),
+    deadline: p.get("deadline") === "any" ? null : pick("deadline", ["open", "within", "passed"] as const) ?? DEFAULT_FILTERS.deadline,
     within_days: Number.isInteger(days) && days >= 1 && days <= 365 ? days : DEFAULT_FILTERS.within_days,
     price: pick("price", ["free", "paid"] as const),
   };
@@ -70,13 +70,27 @@ export function activeFilterCount(f: ListingFilters): number {
   for (const k of LIST_KEYS) n += f[k].length ? 1 : 0;
   for (const k of BOOL_KEYS) n += f[k] ? 1 : 0;
   if (f.status) n++;
-  if (f.deadline) n++;
+  if (f.deadline !== DEFAULT_FILTERS.deadline) n++;
   if (f.price) n++;
   return n;
 }
 
 export function clearFilters(f: ListingFilters): ListingFilters {
   return { ...DEFAULT_FILTERS, source: f.source };
+}
+
+/** v0.6.0: the filters of each tab are remembered (browser storage) once the owner changes them. */
+export const filterStorageKey = (source: ListingSource) => `boms.listings.filters.${source}`;
+
+/** Search params of `source` from a remembered value (the tab's own filters, never another tab's). */
+export function rememberedParams(source: ListingSource, saved: string | null): URLSearchParams {
+  const f = filtersFromParams(new URLSearchParams(saved ?? ""));
+  return filtersToParams({ ...f, source });
+}
+
+/** What to remember for the current filters (without the source; empty when they are the defaults). */
+export function paramsToRemember(f: ListingFilters): string {
+  return filtersToParams({ ...f, source: DEFAULT_FILTERS.source }).toString();
 }
 
 /** Request body of POST /api/listings/query (the API rejects unknown fields). */

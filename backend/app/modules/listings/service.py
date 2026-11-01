@@ -29,6 +29,7 @@ from app.modules.events import service as events
 from app.modules.listings.models import (AgentStatus, HarvestRun, Listing, ListingChange, ListingDetail, ListingFile,
                                          ListingScreening)
 from app.modules.system import jobs, settings
+from app.modules.system.models import Job
 
 SOURCES = (SOURCE_PURCHASE, SOURCE_TENDER)
 STATUSES = ("new", "starred", "reviewing", "converted", "dismissed")
@@ -276,7 +277,7 @@ def detail(db: Session, listing_id: uuid.UUID) -> dict[str, Any]:
             "goods_group", "service_group", "type_name", "need_type", "description", "published_at",
             "documents_deadline", "proposal_deadline", "inquiry_deadline", "opening_at", "edition_date", "edition_no",
             "response_deadline", "deadline_exact", "price_valid_until", "document_price", "guarantee_amount",
-            "estimate", "site_state", "site_state_name", "in_my_calls", "detail_url", "first_seen", "last_seen")},
+            "estimate", "guarantee_currency", "guarantee_description", "estimate_currency", "site_state", "site_state_name", "in_my_calls", "detail_url", "first_seen", "last_seen")},
         "groups": [{"title": title, "pairs": [list(p) for p in items]} for title, items in grouped],
         "technical": [list(t) for t in technical],
         "detail": None if d is None else {"buyer_note": d.buyer_note, "items": d.items, "fetched_at": d.fetched_at,
@@ -287,8 +288,17 @@ def detail(db: Session, listing_id: uuid.UUID) -> dict[str, Any]:
             "status": s.status, "dismiss_reason": s.dismiss_reason, "note": s.note, "checklist": s.checklist,
             "inquiry_id": s.inquiry_id, "starred_at": s.starred_at, "converted_at": s.converted_at},
         "warn": setad_pipeline.find_keywords(scan, keywords) if keywords else [],
+        # v0.6.0: the owner's and the agent's actions on this listing (History tab)
+        "events": [{"action": r.action, "at": r.at, "source": r.source, "actor": r.actor,
+                    "data": {k: v for k, v in (r.data or {}).items() if k in EVENT_KEYS}}
+                   for r in db.execute(text("SELECT action, occurred_at AS at, source, actor, data FROM core.event WHERE "
+                                            "entity_type = 'listing' AND entity_id = :i ORDER BY id DESC LIMIT 100"),
+                                       {"i": str(x.id)}).all()],
         "checklist_questions": settings.get(db, "setad.checklist"),
     }
+
+
+EVENT_KEYS = ("old_status", "new_status", "reason", "result", "counts", "inquiry_id", "number", "action")
 
 
 def _file_out(f: ListingFile) -> dict:
@@ -483,8 +493,10 @@ def agent_status(db: Session) -> dict:
         "alive": alive,
         **({c: getattr(row, c) for c in ("pid", "connected", "role", "browser_channel", "command", "pages_done",
                                          "pages_total", "rows_seen", "captcha_waiting", "captcha_message", "message",
-                                         "last_error", "cancel_requested", "recording", "heartbeat_at", "started_at")}
+                                         "last_error", "cancel_requested", "recording", "heartbeat_at", "started_at",
+                                         "job_id", "listing_id", "files_done", "files_total")}
            if row else {}),
+        "jobs": setad_jobs(db),
         "connected": bool(row and row.connected and alive),
         "queued": queued,
         "runs": {src: None if r is None else {c: getattr(r, c) for c in (
@@ -524,13 +536,73 @@ def command(db: Session, name: str, payload: dict, source: str, actor: str | Non
         ids = [uuid.UUID(str(i)) for i in payload.get("listing_ids") or []]
         if not ids:
             raise AppError("ids_required", "Choose listings", status=422)
-        payload["listing_ids"] = [str(i) for i in ids]
+        # v0.6.0: a listing that already has the same command queued or running is not queued again
+        active = active_listing_jobs(db, name)
+        fresh = [str(i) for i in dict.fromkeys(ids) if str(i) not in active]
+        if not fresh:
+            return db.get(Job, uuid.UUID(active[str(ids[0])]))
+        payload["listing_ids"] = fresh
+    if name in ("full_fetch", "quick_fetch"):
+        same = db.execute(text("SELECT id FROM sys.job WHERE lane = 'setad' AND type = :t AND status IN "
+                               "('queued', 'running') AND payload->>'source' = :s ORDER BY created_at LIMIT 1"),
+                          {"t": f"setad.{name}", "s": payload.get("source")}).scalar()
+        if same is not None:
+            return db.get(Job, same)
     if name in ("connect", "set_role") and payload.get("role") not in (None, "EPROC", "ETEND"):
         raise AppError("invalid_role", "Role is EPROC (supplier) or ETEND (bidder)", status=422)
     row = db.get(AgentStatus, 1)
     if row is not None:
         row.cancel_requested = False
     return jobs.enqueue(db, f"setad.{name}", payload, max_attempts=1, source=source, actor=actor, lane="setad")
+
+
+def active_listing_jobs(db: Session, name: str | None = None) -> dict[str, str]:
+    """listing id -> id of a queued or running fetch_detail / download_files job that covers it."""
+    rows = db.execute(text(
+        "SELECT id, type, payload FROM sys.job WHERE lane = 'setad' AND status IN ('queued', 'running') "
+        "AND type IN ('setad.fetch_detail', 'setad.download_files') ORDER BY created_at")).all()
+    out: dict[str, str] = {}
+    for job_id, job_type, payload in rows:
+        if name and job_type != f"setad.{name}":
+            continue
+        for listing_id in (payload or {}).get("listing_ids") or []:
+            out.setdefault(str(listing_id), str(job_id))
+    return out
+
+
+def setad_jobs(db: Session) -> list[dict]:
+    """Queued and running Setad commands with their listings (the workspace shows «در صف دانلود» per row)."""
+    rows = db.execute(text(
+        "SELECT id, type, status, payload, created_at FROM sys.job WHERE lane = 'setad' AND status IN ('queued', "
+        "'running') ORDER BY created_at")).all()
+    return [{"id": r.id, "command": r.type.split(".", 1)[1], "status": r.status,
+             "listing_ids": (r.payload or {}).get("listing_ids") or [], "created_at": r.created_at} for r in rows]
+
+
+def job_result(db: Session, job_id: uuid.UUID) -> dict:
+    """Status and result of one Setad command (the result is in the job's ``done`` event)."""
+    job = db.get(Job, job_id)
+    if job is None or job.lane != "setad":
+        raise NotFound("not_found", "Command not found")
+    result = db.execute(text("SELECT data->'result' FROM core.event WHERE entity_type = 'job' AND entity_id = :i "
+                             "AND action = 'done' ORDER BY id DESC LIMIT 1"), {"i": str(job_id)}).scalar()
+    return {"id": job.id, "command": job.type.split(".", 1)[1], "status": job.status, "result": result,
+            "error": (job.last_error or "").strip().splitlines()[-1][:500] if job.last_error else None,
+            "finished_at": job.finished_at}
+
+
+def agent_log(job_id: str | None = None, lines: int = 200) -> list[str]:
+    """The last ``lines`` lines of logs/setad-agent.log (of one command when ``job_id`` is given)."""
+    from app.core.config import get_config
+
+    path = get_config().data_dir / "logs" / "setad-agent.log"
+    if not path.exists():
+        return []
+    with path.open(encoding="utf-8", errors="replace") as fh:
+        tail = fh.readlines()[-20000:]
+    if job_id:
+        tail = [line for line in tail if f" {job_id} " in line]
+    return [line.rstrip("\n") for line in tail[-lines:]]
 
 
 def cancel(db: Session, source: str, actor: str | None = None) -> None:

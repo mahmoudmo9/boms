@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { Icon } from "../../components/Icon";
+import { TimeLeftBadge } from "../../components/TimeLeft";
 import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Loading, Modal, PageHeader, Segmented, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
@@ -152,7 +153,8 @@ export function InquiryDetailPage() {
           {inq.party_id && <PartyName fa={inq.party_name_fa ?? null} en={inq.party_name_en ?? null} id={inq.party_id} />}
           <span>{t(`sourcing.channels.${inq.source_channel}`)} · {t(`sourcing.inquiry.kinds.${inq.kind}`)}</span>
           <span className="tabular-nums">{f.date(inq.received_at, true)}</span>
-          {inq.response_due_at ? <span>{t("sourcing.inquiry.responseDue")}: <span className="tabular-nums">{f.date(inq.response_due_at, true)}</span></span>
+          {inq.response_due_at ? <span className="inline-flex items-center gap-1.5">{t("sourcing.inquiry.responseDue")}: <span className="tabular-nums">{f.date(inq.response_due_at, true)}</span>
+            {inq.status !== "converted" && inq.status !== "rejected" && <TimeLeftBadge at={inq.response_due_at} />}</span>
             : inq.response_due_on && <span>{t("sourcing.inquiry.responseDue")}: <span className="tabular-nums">{f.day(inq.response_due_on)}</span></span>}
           {inq.required_price_validity && <span>{t("sourcing.inquiry.requiredValidity")}: <span className="tabular-nums">{f.day(inq.required_price_validity)}</span></span>}
           {(inq.delivery_province || inq.delivery_city) && <span>{t("sourcing.inquiry.deliveryPlace")}: <span dir="auto">{[inq.delivery_province, inq.delivery_city].filter(Boolean).join("، ")}</span></span>}

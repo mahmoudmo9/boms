@@ -1096,6 +1096,7 @@ export interface ListingDetail {
     proposal_deadline: string | null; inquiry_deadline: string | null; opening_at: string | null; edition_date: string | null;
     edition_no: string; response_deadline: string | null; deadline_exact: boolean; price_valid_until: string | null;
     document_price: string | null; guarantee_amount: string | null; estimate: string | null; site_state: string;
+    guarantee_currency: string | null; guarantee_description: string | null; estimate_currency: string | null;
     site_state_name: string; in_my_calls: boolean; detail_url: string | null; first_seen: string; last_seen: string;
   };
   groups: { title: string; pairs: [string, string][] }[];
@@ -1108,6 +1109,7 @@ export interface ListingDetail {
     inquiry_id: string | null; starred_at: string | null; converted_at: string | null } | null;
   warn: string[];
   checklist_questions: string[];
+  events: { action: string; at: string; source: string; actor: string | null; data: Record<string, unknown> }[];
 }
 
 export interface HarvestRunInfo {
@@ -1132,5 +1134,11 @@ export interface AgentState {
   last_error?: string | null;
   recording?: boolean;
   queued: number;
+  /** v0.6.0: queued / running commands with their listings, and the running command's listing and attachment n of m */
+  jobs?: { id: string; command: string; status: string; listing_ids: string[]; created_at: string }[];
+  job_id?: string | null;
+  listing_id?: string | null;
+  files_done?: number | null;
+  files_total?: number | null;
   runs: Record<"setad_purchase" | "setad_tender", HarvestRunInfo | null>;
 }

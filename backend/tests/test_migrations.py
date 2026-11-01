@@ -28,13 +28,13 @@ def _schema(url: str) -> set[str]:
     engine = create_engine(url)
     with engine.connect() as conn:
         rows = conn.execute(text(
-            "SELECT schemaname || '.' || indexname FROM pg_indexes WHERE schemaname IN ('sys', 'core', 'ops', 'ref') "
+            "SELECT schemaname || '.' || indexname FROM pg_indexes WHERE schemaname IN ('sys', 'core', 'ops', 'ref', 'ext') "
             "UNION SELECT 'constraint ' || conname || ' ' || pg_get_constraintdef(c.oid) "
             "FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace "
-            "WHERE n.nspname IN ('sys', 'core', 'ops', 'ref') "
+            "WHERE n.nspname IN ('sys', 'core', 'ops', 'ref', 'ext') "
             # columns too: a migration may only add a column or change a CHECK (0009)
             "UNION SELECT 'column ' || table_schema || '.' || table_name || '.' || column_name "
-            "FROM information_schema.columns WHERE table_schema IN ('sys', 'core', 'ops', 'ref')"
+            "FROM information_schema.columns WHERE table_schema IN ('sys', 'core', 'ops', 'ref', 'ext')"
         )).scalars().all()
     engine.dispose()
     return _tables(url) | set(rows)

@@ -129,6 +129,7 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       await panel.waitFor();
       await panel.getByRole('button', { name: `★ ${t('listings.star')}` }).click();
       await panel.getByText(t('listings.status.starred')).first().waitFor();
+      await panel.locator('[data-testid=panel-tab-screening]').click();   // v0.6.0: the note is on the «بررسی» tab
       await typeCheck(r, 'panel note', '#listing-note', lang === 'fa' ? 'تماس با تأمین‌کننده' : 'call the supplier');
       await page.locator('#listing-note').press('Tab'); await settle();
       await panel.getByRole('button', { name: t('listings.dismiss'), exact: true }).click();

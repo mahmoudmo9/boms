@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   activeFilterCount, bulkBody, clearFilters, COLUMNS, daysLeft, deadlineTone, DEFAULT_FILTERS, defaultColumns,
-  documentsState, EMPTY_SELECTION, filtersFromParams, filtersToParams, isSelected, parseColumns, queryBody,
+  documentsState, EMPTY_SELECTION, filterStorageKey, filtersFromParams, filtersToParams, isSelected, paramsToRemember,
+  parseColumns, queryBody, rememberedParams,
   selectAllResults, selectionCount, toggleColumn, toggleRow,
 } from "./listings";
 
@@ -16,6 +17,24 @@ describe("filter state", () => {
     expect(params.has("my_calls")).toBe(false);
     expect(filtersFromParams(params)).toEqual({ ...f, q: "کالا" });
     expect(filtersToParams(DEFAULT_FILTERS).toString()).toBe("");
+  });
+  it("opens with the deadline filter «open» (v0.6.0); «any» stays representable", () => {
+    expect(DEFAULT_FILTERS.deadline).toBe("open");
+    expect(filtersFromParams(new URLSearchParams("")).deadline).toBe("open");
+    const any = filtersToParams({ ...DEFAULT_FILTERS, deadline: null });
+    expect(any.get("deadline")).toBe("any");
+    expect(filtersFromParams(any).deadline).toBeNull();
+    expect(activeFilterCount(DEFAULT_FILTERS)).toBe(0);
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, deadline: null })).toBe(1);
+  });
+  it("remembers the filters of each tab", () => {
+    const f = { ...DEFAULT_FILTERS, source: "setad_tender" as const, q: "پمپ", price: "free" as const };
+    const saved = paramsToRemember(f);
+    expect(saved).not.toContain("source");
+    const back = filtersFromParams(rememberedParams("setad_tender", saved));
+    expect(back).toEqual(f);
+    expect(rememberedParams("setad_purchase", null).toString()).toBe("");
+    expect(filterStorageKey("setad_tender")).toBe("boms.listings.filters.setad_tender");
   });
   it("ignores invalid values and counts active filters; clear keeps the tab", () => {
     const f = filtersFromParams(new URLSearchParams("source=bogus&status=x&deadline=passed&within_days=999&my_calls=1"));

@@ -45,6 +45,7 @@ class Fake:
         self.my_calls: set[str] = set()
         self.add_requests: list[dict] = []
         self.delete_requests: list[str] = []
+        self.waf_files: set[str] = set()     # v0.6.0: attachments answered with an HTML block page (a failing file)
         self.needs = [self._need(i) for i in range(needs)]
         self.tenders = [self._tender(i) for i in range(tenders)]
 
@@ -66,7 +67,12 @@ class Fake:
                 "proposalDeadlineDate": _jalali(10 + i % 12) + " 12:00:00",
                 "tenderDocumentsPrice": 0.0 if i % 3 == 0 else 1500000.0, "favoriteCount": None,
                 "recCount": len(self.tenders) if hasattr(self, "tenders") else 0, "remainingTime": "0",
-                "tenderTypeId": 4, "setupCode": 2}
+                "tenderTypeId": 4, "setupCode": 2,
+                # v0.6.0: the key names of the owner's real data (every 4th tender has no guarantee in the list)
+                "guarantyPrice": None if i % 4 == 1 else float((i % 7 + 1) * 50_000_000),
+                "guarantyPriceCurrency": "ریال", "guarantyDescription": "ضمانت‌نامه بانکی یا واریز وجه نقد",
+                "financialEstimatePrice": float((i % 7 + 1) * 1_000_000_000), "financialEstimatePriceCurrencyStr": "ریال",
+                "renewalAppendixCount": 0, "priceAppendixCount": 0, "cancelAppendixCount": 0}
 
 
 FAKE = Fake(int(os.environ.get("BOMS_SETAD_FAKE_NEEDS", "75")), int(os.environ.get("BOMS_SETAD_FAKE_TENDERS", "120")))
@@ -219,6 +225,8 @@ def _eproc(route, url, one, request):
         fid = one("fileId")
         name = next((f for n in FAKE.needs for f_id, f in n["files"] if f_id == fid), "file.pdf")
         body = b"%PDF-1.4\n% fake Setad attachment " + fid.encode() + b"\n" + b"0" * 2048 + b"\n%%EOF\n"
+        if fid in FAKE.waf_files:
+            body = b"<html><body>Request blocked</body></html>"
         from urllib.parse import quote
         return route.fulfill(status=200, headers={"Content-Type": "application/pdf",
                                                   "Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"},

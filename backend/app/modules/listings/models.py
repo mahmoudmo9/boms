@@ -68,6 +68,9 @@ class Listing(Timestamps, Base):
     document_price: Mapped[Decimal | None] = mapped_column(AMOUNT)
     guarantee_amount: Mapped[Decimal | None] = mapped_column(AMOUNT)
     estimate: Mapped[Decimal | None] = mapped_column(AMOUNT)
+    guarantee_currency: Mapped[str | None] = mapped_column(Text)      # v0.6.0 (0011): as the site writes it
+    guarantee_description: Mapped[str | None] = mapped_column(Text)
+    estimate_currency: Mapped[str | None] = mapped_column(Text)
     site_state: Mapped[str] = mapped_column(Text, default="")
     site_state_name: Mapped[str] = mapped_column(Text, default="")
     in_my_calls: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -165,3 +168,6 @@ class AgentStatus(Timestamps, Base):
     recording: Mapped[bool] = mapped_column(Boolean, default=False)
     heartbeat_at: Mapped[datetime | None] = mapped_column(TZ)
     started_at: Mapped[datetime | None] = mapped_column(TZ)
+    listing_id: Mapped[uuid.UUID | None] = mapped_column(UUID)   # v0.6.0: the listing the command works on now
+    files_done: Mapped[int | None] = mapped_column(Integer)
+    files_total: Mapped[int | None] = mapped_column(Integer)
