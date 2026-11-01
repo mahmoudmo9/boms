@@ -157,6 +157,26 @@ def match_condition(db: Session, q: str | None):
     )
 
 
+# later modules (listings, v0.5.0) clear their references to an inquiry before it is deleted: fn(db, inquiry_id,
+# source, actor) -> dict (added to the delete event)
+_inquiry_cleanups: list = []
+
+
+def register_inquiry_cleanup(fn) -> None:
+    if fn not in _inquiry_cleanups:
+        _inquiry_cleanups.append(fn)
+
+
+def _run_inquiry_cleanups(db: Session, inquiry_id: uuid.UUID, source: str, actor: str | None) -> dict:
+    from app.core.modules import load_hooks
+
+    load_hooks()
+    out: dict = {}
+    for cleanup in _inquiry_cleanups:
+        out.update(cleanup(db, inquiry_id, source, actor) or {})
+    return out
+
+
 def delete_inquiry(db: Session, inquiry_id: uuid.UUID, source: str, actor: str | None = None) -> None:
     """Only before conversion and without attached documents; its items and decision go with it."""
     row = get_inquiry(db, inquiry_id)
@@ -169,6 +189,7 @@ def delete_inquiry(db: Session, inquiry_id: uuid.UUID, source: str, actor: str |
     decision = db.scalar(select(Decision).where(Decision.inquiry_id == row.id))
     snapshot = {"inquiry": row_snapshot(row), "items": [row_snapshot(i) for i in item_rows],
                 "decision": row_snapshot(decision) if decision else None}
+    snapshot.update(_run_inquiry_cleanups(db, row.id, source, actor))
     for item in item_rows:
         db.delete(item)
     if decision:
@@ -205,6 +226,7 @@ def cascade_delete_inquiry(db: Session, inquiry_id: uuid.UUID, confirm_subject: 
                 "decision": row_snapshot(decision) if decision else None}
     snapshot["document_links"] = (_unlink_all(db, "inquiry", [row.id], source, actor)
                                   + _unlink_all(db, "line_item", [i.id for i in item_rows], source, actor))
+    snapshot.update(_run_inquiry_cleanups(db, row.id, source, actor))
     for item in item_rows:
         db.delete(item)
     if decision:
@@ -216,6 +238,53 @@ def cascade_delete_inquiry(db: Session, inquiry_id: uuid.UUID, confirm_subject: 
     events.record(db, "inquiry", inquiry_id, "delete", {"cascade": True, "counts": counts, "deleted": snapshot},
                   source, actor=actor)
     return counts
+
+
+DEADLINE_MOVED_NOTE = "response deadline changed on Setad"
+
+
+def response_deadline_followups(db: Session, inquiry: Inquiry) -> list:
+    """Open follow-ups planned around the response deadline: those of the buyer and of the case's RFQ chases that
+    are due on or before the current deadline day."""
+    if inquiry.response_due_on is None:
+        return []
+    interaction_ids: list = []
+    case = case_of(db, inquiry.id)
+    if case is not None:
+        rfq_ids = list(db.scalars(select(Rfq.id).where(Rfq.case_id == case.id)))
+        if rfq_ids:
+            interaction_ids = [i for i in db.scalars(select(RfqRecipient.interaction_id).where(
+                RfqRecipient.rfq_id.in_(rfq_ids), RfqRecipient.interaction_id.is_not(None)))]
+    found = {f.id: f for f in party_interactions.open_followups_of_interactions(db, interaction_ids)} if interaction_ids else {}
+    if inquiry.party_id:
+        for f in party_interactions.list_followups(db, status="open", party_id=inquiry.party_id,
+                                                   due_to=inquiry.response_due_on, page_size=500)[0]:
+            found.setdefault(f.id, f)
+    return sorted((f for f in found.values() if f.due_on <= inquiry.response_due_on), key=lambda f: f.due_on)
+
+
+def apply_response_deadline(db: Session, inquiry_id: uuid.UUID, new_due_at: datetime, source: str,
+                            actor: str | None = None, *, origin: dict | None = None) -> dict:
+    """The owner applies a deadline changed at the source (Setad): the response deadline moves and the follow-ups
+    planned around it move by the same number of days (event on the inquiry; never applied silently)."""
+    from zoneinfo import ZoneInfo
+
+    row = get_inquiry(db, inquiry_id)
+    new_due_at = _aware(new_due_at)
+    old_at, old_on = row.response_due_at, row.response_due_on
+    new_on = new_due_at.astimezone(ZoneInfo("Asia/Tehran")).date()  # the Setad deadline day, in Iran
+    moved = []
+    if old_on is not None and new_on != old_on:
+        delta = new_on - old_on
+        for f in response_deadline_followups(db, row):
+            party_interactions.reschedule_followup(db, f.id, f.due_on + delta, DEADLINE_MOVED_NOTE, source, actor)
+            moved.append({"id": str(f.id), "old": f.due_on.isoformat(), "new": (f.due_on + delta).isoformat()})
+    row.response_due_at, row.response_due_on = new_due_at, new_on
+    flush(db, "invalid_inquiry")
+    events.record(db, "inquiry", row.id, "deadline_apply", jsonable({
+        "old": old_at, "new": new_due_at, "old_on": old_on, "new_on": new_on, "followups_moved": moved,
+        **(origin or {})}), source, actor=actor)
+    return {"inquiry_id": row.id, "response_due_at": new_due_at, "followups_moved": moved}
 
 
 CASE_DELETED_NOTE = "case deleted"

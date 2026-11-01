@@ -9,6 +9,7 @@ import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Check, CaseDetail, Decision, InquiryDetail } from "../../lib/types";
 import { PartyName } from "../parties/shared";
+import { SetadOrigin } from "../tenders/SetadOrigin";
 import { ItemsCard } from "./ItemsEditor";
 import { AttachedDocuments, CascadeDeleteCard, CurrencySelect, HistoryCard, StatusBadge, useInvalidateSourcing, usePaymentTerms } from "./shared";
 
@@ -151,7 +152,10 @@ export function InquiryDetailPage() {
           {inq.party_id && <PartyName fa={inq.party_name_fa ?? null} en={inq.party_name_en ?? null} id={inq.party_id} />}
           <span>{t(`sourcing.channels.${inq.source_channel}`)} · {t(`sourcing.inquiry.kinds.${inq.kind}`)}</span>
           <span className="tabular-nums">{f.date(inq.received_at, true)}</span>
-          {inq.response_due_on && <span>{t("sourcing.inquiry.responseDue")}: <span className="tabular-nums">{f.day(inq.response_due_on)}</span></span>}
+          {inq.response_due_at ? <span>{t("sourcing.inquiry.responseDue")}: <span className="tabular-nums">{f.date(inq.response_due_at, true)}</span></span>
+            : inq.response_due_on && <span>{t("sourcing.inquiry.responseDue")}: <span className="tabular-nums">{f.day(inq.response_due_on)}</span></span>}
+          {inq.required_price_validity && <span>{t("sourcing.inquiry.requiredValidity")}: <span className="tabular-nums">{f.day(inq.required_price_validity)}</span></span>}
+          {(inq.delivery_province || inq.delivery_city) && <span>{t("sourcing.inquiry.deliveryPlace")}: <span dir="auto">{[inq.delivery_province, inq.delivery_city].filter(Boolean).join("، ")}</span></span>}
         </span>}
         actions={<>
           {open && (
@@ -163,6 +167,7 @@ export function InquiryDetailPage() {
           {!inq.case_id && <Button variant="ghost" busy={remove.isPending} onClick={() => remove.mutate()}>{t("delete.button")}</Button>}
         </>} />
       <ErrorNote error={patch.error || remove.error} />
+      {inq.listing_id && <SetadOrigin inquiryId={inq.id} />}
       {inq.reject_reason && <p className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger" dir="auto">{t("sourcing.inquiry.rejected")}: {inq.reject_reason}</p>}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">

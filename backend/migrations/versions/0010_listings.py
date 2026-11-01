@@ -10,6 +10,8 @@ Schema ``ext`` (module ``listings``):
 ``sys.job`` gains ``lane``: the Setad agent takes only lane ``setad``, the normal worker only lane ``default``.
 ``ops.inquiry`` gains the Setad origin (listing, number, link), the exact response deadline, the buyer's required
 price validity and the delivery place; ``source_channel`` accepts ``setad``.
+Setad proforma: ``ops.quote`` gains ``validity_override_reason`` (a quote valid for less than the buyer's required
+price validity, accepted with a reason); a ``quote_terms`` template "Setad (fa)" is seeded (SetadSuite's defaults).
 
 Revision ID: 0010
 Revises: 0009
@@ -30,6 +32,22 @@ TS = """
 SOURCES = "('setad_purchase', 'setad_tender')"
 CHANNELS_OLD = "('whatsapp', 'email', 'phone', 'tender_portal', 'in_person', 'letter', 'other')"
 CHANNELS_NEW = "('whatsapp', 'email', 'phone', 'tender_portal', 'in_person', 'letter', 'other', 'setad')"
+
+
+SETAD_TERMS_NAME = "Setad (fa)"
+SETAD_TERMS = (
+    "{addressee}\n"
+    "شماره نیاز در سامانه ستاد: {setad_number}\n"
+    "این پیش‌فاکتور تا تاریخ {valid_until} معتبر است.\n"
+    "زمان تحویل: حداکثر {lead_time} کاری پس از ابلاغ سفارش\n"
+    "نحوه پرداخت: طبق شرایط اعلامی خریدار در سامانه ستاد\n"
+    "هزینه حمل: بر عهده فروشنده\n\n"
+    "مشخصات بانکی:\n{bank_details}"
+)
+
+
+def _lit(text: str | None) -> str:
+    return "NULL" if text is None else "'" + text.replace("'", "''") + "'"
 
 
 def updated_at(table: str) -> None:
@@ -244,8 +262,15 @@ def upgrade() -> None:
         op.execute(f"ALTER TABLE ops.inquiry ADD COLUMN {column}")
     op.execute("CREATE INDEX inquiry_listing_idx ON ops.inquiry (listing_id) WHERE listing_id IS NOT NULL")
 
+    op.execute("ALTER TABLE ops.quote ADD COLUMN validity_override_reason text")
+    op.execute("INSERT INTO ops.message_template (kind, language, channel, name, subject_template, body_template, "
+               f"is_default) VALUES ('quote_terms', 'fa', 'letter', {_lit(SETAD_TERMS_NAME)}, '', {_lit(SETAD_TERMS)}, "
+               "false)")
+
 
 def downgrade() -> None:
+    op.execute(f"DELETE FROM ops.message_template WHERE kind = 'quote_terms' AND name = {_lit(SETAD_TERMS_NAME)}")
+    op.execute("ALTER TABLE ops.quote DROP COLUMN validity_override_reason")
     op.execute("DROP INDEX ops.inquiry_listing_idx")
     for column in ("listing_id", "external_no", "external_url", "response_due_at", "required_price_validity",
                    "delivery_province", "delivery_city"):

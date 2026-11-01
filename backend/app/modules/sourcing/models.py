@@ -50,6 +50,14 @@ class Inquiry(Timestamps, Base):
     status: Mapped[str] = mapped_column(Text, default="new")
     source_interaction_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     reject_reason: Mapped[str | None] = mapped_column(Text)
+    # v0.5.0 (migration 0010): origin of an inquiry converted from a Setad listing
+    listing_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
+    external_no: Mapped[str | None] = mapped_column(Text)
+    external_url: Mapped[str | None] = mapped_column(Text)
+    response_due_at: Mapped[datetime | None] = mapped_column(TZ)
+    required_price_validity: Mapped[date | None] = mapped_column(Date)
+    delivery_province: Mapped[str | None] = mapped_column(Text)
+    delivery_city: Mapped[str | None] = mapped_column(Text)
 
 
 class Decision(Timestamps, Base):

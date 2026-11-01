@@ -44,6 +44,7 @@ export const WORKSPACES: Workspace[] = [
       { key: "general", path: "/settings" },
       { key: "costing", path: "/settings/costing" },
       { key: "letterhead", path: "/settings/letterhead" },
+      { key: "setad", path: "/settings/setad" },
       { key: "basedata", path: "/settings/basedata/countries" },
       { key: "events", path: "/settings/events" },
       { key: "system", path: "/settings/system" },

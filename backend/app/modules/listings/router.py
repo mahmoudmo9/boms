@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.web import request_source
-from app.modules.listings import service
-from app.modules.listings.schemas import BulkIn, CommandIn, ListingFilters, ListingQuery, ScreenIn
+from app.modules.listings import convert, service
+from app.modules.listings.schemas import BulkIn, CommandIn, ConvertIn, ListingFilters, ListingQuery, ScreenIn
 from app.modules.sourcing.common import jsonable
 from app.modules.system.auth import CurrentUser
 
@@ -28,6 +28,33 @@ def query(body: ListingQuery, _: CurrentUser, db: Db):
 @router.post("/facets/{field}")
 def facets(field: str, body: ListingFilters, _: CurrentUser, db: Db, q: str | None = None):
     return jsonable(service.facets(db, body.model_dump(), field, q))
+
+
+@router.get("/by-inquiry/{inquiry_id}")
+def inquiry_origin(inquiry_id: uuid.UUID, _: CurrentUser, db: Db):
+    """"From Setad" on an inquiry, with the deadline-change banner (null when not from Setad)."""
+    return jsonable(convert.origin_of_inquiry(db, inquiry_id))
+
+
+@router.post("/by-inquiry/{inquiry_id}/apply-deadline")
+def apply_deadline(inquiry_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    result = convert.apply_deadline(db, inquiry_id, request_source(request), user.username)
+    db.commit()
+    return jsonable(result)
+
+
+@router.get("/{listing_id}/convert")
+def convert_preview(listing_id: uuid.UUID, _: CurrentUser, db: Db):
+    result = convert.preview(db, listing_id)
+    db.commit()
+    return jsonable(result)
+
+
+@router.post("/{listing_id}/convert", status_code=201)
+def convert_listing(listing_id: uuid.UUID, body: ConvertIn, request: Request, user: CurrentUser, db: Db):
+    result = convert.convert(db, listing_id, body.model_dump(), request_source(request), user.username)
+    db.commit()
+    return jsonable(result)
 
 
 @router.get("/{listing_id}")

@@ -7,7 +7,7 @@ import { Bdi } from "../../components/Bdi";
 import { Badge, Button, Card, EmptyState, ErrorNote, Loading, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
-import type { CommandCenter, FollowupRow, SourcingSummary } from "../../lib/types";
+import type { CommandCenter, FollowupRow, SetadSummary, SourcingSummary } from "../../lib/types";
 import { useQuickLog } from "./QuickLog";
 import { FollowupActions, PartyName, stageLabel } from "./shared";
 
@@ -118,6 +118,50 @@ function SourcingSection({ s }: { s: SourcingSummary }) {
   );
 }
 
+/** v0.5.0: starred / reviewing listings due within 3 days or passed, converted listings whose deadline changed,
+ * new listings matching warn keywords, and the last fetch per source. */
+function SetadSection({ s }: { s: SetadSummary }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const listingLink = (r: { id: string; source: string }) => `/tenders?source=${r.source}&include_old=1&listing=${r.id}`;
+  const list = (rows: { key: string; to: string; label: ReactNode; extra?: ReactNode }[]) => rows.length === 0 ? <EmptyState>{t("cc.nothing")}</EmptyState> : (
+    <ul className="divide-y divide-line">{rows.map((r) => (
+      <li key={r.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
+        <Link to={r.to} className="min-w-0 truncate text-accent hover:underline" dir="auto">{r.label}</Link>{r.extra}
+      </li>
+    ))}</ul>
+  );
+  return (
+    <section className="flex flex-col gap-3" data-testid="cc-setad">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-base font-semibold">{t("cc.setad.title")}</h2>
+        {s.runs.map((r) => (
+          <span key={r.source} className={`text-xs ${r.stale ? "text-warning" : "text-muted"}`}>
+            {t(`listings.sources.${r.source}`)}: {r.at ? <span className="tabular-nums">{f.date(r.at, true)}</span> : t("setad.noRun")}
+            {r.status && ` · ${t(`setad.runStatus.${r.status}`)}`}
+            {r.stale && ` · ${t("cc.setad.stale", { days: f.num(s.stale_days) })}`}
+            {r.errors && <span className="text-danger" dir="auto"> · {r.errors.split("\n")[0]}</span>}
+          </span>
+        ))}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-3">
+        <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.setad.due")} <Badge tone={s.due.length ? "warning" : "neutral"}>{f.num(s.due.length)}</Badge></span>}>
+          {list(s.due.map((r) => ({ key: r.id, to: r.inquiry_id ? `/sourcing/inquiries/${r.inquiry_id}` : listingLink(r), label: r.title,
+            extra: <span className={`text-xs tabular-nums ${r.passed ? "text-danger" : "text-warning"}`}>{r.passed ? t("listings.passed") : f.date(r.deadline, true)}</span> })))}
+        </Card>
+        <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.setad.deadlineChanged")} <Badge tone={s.deadline_changed.length ? "danger" : "neutral"}>{f.num(s.deadline_changed.length)}</Badge></span>}>
+          {list(s.deadline_changed.map((r) => ({ key: r.listing_id, to: `/sourcing/inquiries/${r.inquiry_id}`, label: r.title,
+            extra: <span className="text-xs tabular-nums text-muted">{r.old ? f.date(r.old, true) : "—"} → {f.date(r.new, true)}</span> })))}
+        </Card>
+        <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.setad.warn")} <Badge tone={s.warn_new.length ? "warning" : "neutral"}>{f.num(s.warn_new.length)}</Badge></span>}>
+          {list(s.warn_new.map((r) => ({ key: r.id, to: listingLink(r), label: r.title,
+            extra: <span className="text-xs text-warning" dir="auto">{r.keywords.join("، ")}</span> })))}
+        </Card>
+      </div>
+    </section>
+  );
+}
+
 export function CommandCenterPage() {
   const { t } = useTranslation();
   const f = useFormat();
@@ -169,6 +213,7 @@ export function CommandCenterPage() {
         </Card>
       </div>
       <SourcingSection s={d.sourcing} />
+      {d.setad && <SetadSection s={d.setad} />}
       <div className="grid gap-4 xl:grid-cols-2">
         {FUNNELS.map((role) => (
           <Card key={role} title={t(`funnel.title.${role}`)} actions={<Link className="text-sm text-accent hover:underline" to={`/parties/funnels?role=${role}`}>{t("funnel.openBoard")}</Link>}>

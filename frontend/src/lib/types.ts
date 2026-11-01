@@ -332,6 +332,16 @@ export interface CommandCenter {
   stale_lead_days: number;
   funnel_counts: Record<string, Record<string, number>>;
   sourcing: SourcingSummary;
+  setad?: SetadSummary;
+}
+
+/** Command center section "Setad" (v0.5.0). */
+export interface SetadSummary {
+  due: { id: string; source: string; external_no: string; title: string; organization: string; status: string; inquiry_id: string | null; deadline: string; passed: boolean }[];
+  deadline_changed: { listing_id: string; inquiry_id: string; number: string; title: string; old: string | null; new: string }[];
+  warn_new: { id: string; source: string; external_no: string; title: string; organization: string; keywords: string[] }[];
+  runs: { source: string; run_id: string | null; kind: string | null; status: string | null; at: string | null; errors: string | null; stale: boolean }[];
+  stale_days: number;
 }
 
 export interface FunnelCard {
@@ -432,6 +442,14 @@ export interface Inquiry {
   status: string;
   source_interaction_id: string | null;
   reject_reason: string | null;
+  /** v0.5.0: converted from a Setad listing */
+  listing_id?: string | null;
+  external_no?: string | null;
+  external_url?: string | null;
+  response_due_at?: string | null;
+  required_price_validity?: string | null;
+  delivery_province?: string | null;
+  delivery_city?: string | null;
   created_at: string;
   updated_at: string;
   party_name_fa?: string | null;
@@ -990,8 +1008,12 @@ export interface Quote extends QuoteRow {
   cost_sheet: { id: string; version: number; status: string };
   items: QuoteItem[];
   outputs: LinkedDocument[];
-  approval: { ok: boolean; failures: GateFailure[]; max_valid_until: string | null } | null;
+  approval: { ok: boolean; failures: GateFailure[]; max_valid_until: string | null; required_valid_until?: string | null;
+    validity_override_reason?: string | null } | null;
   default_followup: { action: string; due_on: string } | null;
+  /** v0.5.0: the case's inquiry came from Setad */
+  setad: { inquiry_id: string; setad_number: string; url: string | null; required_valid_until: string | null } | null;
+  validity_override_reason?: string | null;
 }
 
 export interface CaseQuotes {

@@ -16,6 +16,7 @@ import {
 import { useFormat } from "../../lib/prefs";
 import type { ListingPage, ListingRow } from "../../lib/types";
 import { ConnectionBar } from "./ConnectionBar";
+import { ConvertDialog } from "./ConvertDialog";
 import { DismissDialog, ListingPanel } from "./ListingPanel";
 
 const PAGE_SIZES = [100, 200, 500, 1000];
@@ -94,6 +95,7 @@ export function ListingsPage() {
   const [chooser, setChooser] = useState(false);
   const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
   const [dismissing, setDismissing] = useState(false);
+  const [converting, setConverting] = useState<string | null>(null);
   const [search, setSearch] = useState(filters.q);
   useEffect(() => { setColumns(parseColumns(load(`boms.listings.columns.${filters.source}`), filters.source)); }, [filters.source]);
   useEffect(() => { setPage(1); setSelection(EMPTY_SELECTION); }, [params]);
@@ -272,8 +274,9 @@ export function ListingsPage() {
             </Select>
           </div>
         </div>
-        {panelId && <ListingPanel id={panelId} onClose={() => openPanel(null)} />}
+        {panelId && <ListingPanel id={panelId} onClose={() => openPanel(null)} onConvert={setConverting} />}
       </div>
+      {converting && <ConvertDialog id={converting} onClose={() => setConverting(null)} />}
       {dismissing && <DismissDialog onClose={() => setDismissing(false)} busy={bulk.isPending} error={bulk.error}
         onConfirm={(reason) => bulk.mutate({ action: "dismiss", reason })} />}
     </div>

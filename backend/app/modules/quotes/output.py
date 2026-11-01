@@ -52,7 +52,9 @@ LABELS = {
            "before_vat": "All prices are before VAT.", "with_vat": "Prices include VAT as shown.",
            "terms": "Terms", "incoterm": "Delivery (Incoterm)", "payment_terms": "Payment terms",
            "delivery_terms": "Delivery terms", "lead_time": "Lead time", "days": "days", "draft": "DRAFT",
-           "draft_note": "Draft - not approved", "currency": "Currency"},
+           "draft_note": "Draft - not approved", "currency": "Currency",
+           "national_id": "National ID", "economic_code": "Economic code", "setad_number": "Setad need no.",
+           "in_words": "Amount in words", "signer": "Signature"},
     "fa": {"title": "پیش‌فاکتور", "number": "شماره", "version": "نسخه", "date": "تاریخ",
            "valid_until": "اعتبار تا", "buyer": "خریدار", "attention": "عطف به", "no": "ردیف",
            "description": "شرح کالا", "quantity": "مقدار", "unit": "واحد", "unit_price": "قیمت واحد",
@@ -61,8 +63,19 @@ LABELS = {
            "with_vat": "قیمت‌ها با مالیات بر ارزش افزوده، مطابق جدول.",
            "terms": "شرایط", "incoterm": "شرایط تحویل (اینکوترمز)", "payment_terms": "شرایط پرداخت",
            "delivery_terms": "شرایط ارسال", "lead_time": "زمان تحویل", "days": "روز", "draft": "پیش‌نویس",
-           "draft_note": "پیش‌نویس - تأیید نشده", "currency": "ارز"},
+           "draft_note": "پیش‌نویس - تأیید نشده", "currency": "ارز",
+           "national_id": "شناسه ملی", "economic_code": "کد اقتصادی", "setad_number": "شماره نیاز ستاد",
+           "in_words": "مبلغ به حروف", "signer": "مهر و امضا"},
 }
+CURRENCY_WORDS_FA = {"IRR": "ریال", "IRT": "تومان", "USD": "دلار", "EUR": "یورو", "AED": "درهم", "CNY": "یوان"}
+
+
+def total_in_words(total: Decimal, currency: str) -> str:
+    """The grand total in Persian words (v0.5.0, Setad proforma; SetadSuite's ``number_words``)."""
+    from app.connectors.setad.pipeline import number_words
+
+    whole = int(total.to_integral_value())
+    return f"{number_words(whole)} {CURRENCY_WORDS_FA.get(currency, currency)}".strip()
 
 
 # ---- context (the data every output shows) --------------------------------------------------------------
@@ -112,6 +125,11 @@ def build_context(db: Session, quote: Quote, calendar: str = "gregorian", digits
     buyer = parties.get_party(db, quote.buyer_party_id) if quote.buyer_party_id else None
     contact = parties.get_contact(db, quote.contact_id) if quote.contact_id else None
     pick = (lambda fa, en: (fa or en) if lang == "fa" else (en or fa))
+    lb = LABELS[lang]
+    ids = " · ".join(f"{lb[k]}: {v}" for k, v in (("national_id", settings.get(db, "company.national_id")),
+                                                    ("economic_code", settings.get(db, "company.economic_code"))) if v)
+    signer = " — ".join(x for x in (per_lang("company.signer_name"), per_lang("company.signer_title")) if x)
+    origin = service.setad_origin(db, quote.case_id)
     logo = None
     logo_id = settings.get(db, "company.logo_document_id")
     if logo_id:
@@ -130,7 +148,9 @@ def build_context(db: Session, quote: Quote, calendar: str = "gregorian", digits
                     "address": per_lang("company.address"), "registration": per_lang("company.registration"),
                     "phone": settings.get(db, "company.phone") or "", "email": settings.get(db, "company.email") or "",
                     "website": settings.get(db, "company.website") or "", "footer": per_lang("company.footer"),
-                    "logo": logo},
+                    "logo": logo, "ids": ids, "signer": signer},
+        "setad_number": origin["setad_number"] if origin else "",
+        "total_words": total_in_words(quote.total, quote.currency) if lang == "fa" else "",
         "number": quote.number, "version": str(quote.version),
         "date": _fmt_date((quote.approved_at or quote.created_at).date(), calendar, digits),
         "valid_until": _fmt_date(quote.valid_until, calendar, digits),
@@ -222,6 +242,8 @@ table.facts {{ margin-top: 10px; }}
 table.facts th {{ text-align: start; width: 30%; padding: 2px 6px; font-weight: 400; color: #555; }}
 table.facts td {{ padding: 2px 6px; }}
 .basis {{ margin-top: 6px; font-weight: 700; }}
+.words {{ margin-top: 4px; }}
+.signer {{ margin-top: 18mm; text-align: end; }}
 .terms {{ margin-top: 12px; white-space: normal; unicode-bidi: plaintext; }}
 .watermark {{ position: fixed; top: 38%; inset-inline: 0; text-align: center; font-size: 110pt; font-weight: 700;
   color: rgba(200, 0, 0, 0.12); transform: rotate(-30deg); z-index: 0; pointer-events: none; }}
@@ -232,7 +254,8 @@ table.facts td {{ padding: 2px 6px; }}
 {watermark}
 <header class="letterhead">{logo}<div><div class="name"><bdi>{_e(c['name'])}</bdi></div>
 <div class="small">{_lines(c['address'])}</div><div class="small"><bdi>{contact_line}</bdi></div>
-<div class="small">{_lines(c['registration'])}</div></div></header>
+<div class="small">{_lines(c['registration'])}</div>
+{f"<div class='small'><bdi>{_e(c['ids'])}</bdi></div>" if c['ids'] else ''}</div></header>
 {draft_note}
 <h1>{_e(lb['title'])}</h1>
 <div class="meta">
@@ -243,14 +266,17 @@ table.facts td {{ padding: 2px 6px; }}
 <div><span>{_e(lb['buyer'])}:</span> <bdi>{_e(ctx['buyer'])}</bdi></div>
 {f"<div><span>{_e(lb['attention'])}:</span> <bdi>{_e(ctx['contact'])}</bdi></div>" if ctx['contact'] else ''}
 <div><span>{_e(lb['currency'])}:</span> <bdi>{_e(ctx['currency'])}</bdi></div>
+{f"<div><span>{_e(lb['setad_number'])}:</span> <bdi>{_e(ctx['setad_number'])}</bdi></div>" if ctx['setad_number'] else ''}
 </div>
 <table class="items"><thead><tr><th>{_e(lb['no'])}</th><th>{_e(lb['description'])}</th><th>{_e(lb['quantity'])}</th>
 <th>{_e(lb['unit'])}</th><th>{_e(lb['unit_price'])} ({_e(ctx['currency'])})</th><th>{_e(lb['total'])} ({_e(ctx['currency'])})</th></tr></thead>
 <tbody>{rows}</tbody></table>
 <table class="totals">{totals}</table>
 <p class="basis">{_e(lb['with_vat'] if ctx['with_vat'] else lb['before_vat'])}</p>
+{f"<p class='words' data-testid='total-words'><b>{_e(lb['in_words'])}:</b> {_e(ctx['total_words'])}</p>" if ctx['total_words'] else ''}
 {f'<table class="facts">{facts}</table>' if facts else ''}
 {f'<div class="terms"><b>{_e(lb["terms"])}</b><br>{_lines(ctx["terms_text"])}</div>' if ctx['terms_text'] else ''}
+{f"<div class='signer'><b>{_e(lb['signer'])}</b><br><bdi>{_e(c['signer'])}</bdi></div>" if c['signer'] else ''}
 <footer class="page-footer">{_lines(c['footer'])}</footer>
 </body></html>"""
 
@@ -380,7 +406,8 @@ def render_docx(ctx: dict) -> bytes:
         head.add_run().add_picture(io.BytesIO(c["logo"]["bytes"]), height=Mm(14))
         head.add_run("  ")
     run(head, c["name"], bold=True, size=14)
-    for value in (c["address"], " · ".join(x for x in (c["phone"], c["email"], c["website"]) if x), c["registration"]):
+    for value in (c["address"], " · ".join(x for x in (c["phone"], c["email"], c["website"]) if x), c["registration"],
+                  c["ids"]):
         if value:
             para(header, value, size=8)
     if ctx["draft"]:
@@ -396,6 +423,8 @@ def render_docx(ctx: dict) -> bytes:
     para(doc, lb["title"], bold=True, size=16)
     meta = [(lb["number"], ctx["number"]), (lb["version"], ctx["version"]), (lb["date"], ctx["date"]),
             (lb["valid_until"], ctx["valid_until"]), (lb["buyer"], ctx["buyer"])]
+    if ctx["setad_number"]:
+        meta.append((lb["setad_number"], ctx["setad_number"]))
     if ctx["contact"]:
         meta.append((lb["attention"], ctx["contact"]))
     meta.append((lb["currency"], ctx["currency"]))
@@ -432,6 +461,10 @@ def render_docx(ctx: dict) -> bytes:
         run(bidi(cells[0].paragraphs[0]), key, bold=True)
         run(bidi(cells[1].paragraphs[0]), value, bold=key == lb.get("grand_total"))
     para(doc, lb["with_vat"] if ctx["with_vat"] else lb["before_vat"], bold=True)
+    if ctx["total_words"]:
+        p = para(doc)
+        run(p, f"{lb['in_words']}: ", bold=True)
+        run(p, ctx["total_words"])
     for key in ("incoterm", "payment_terms", "delivery_terms", "lead_time"):
         if ctx[key]:
             p = para(doc)
@@ -441,6 +474,10 @@ def render_docx(ctx: dict) -> bytes:
         para(doc, lb["terms"], bold=True)
         for line in ctx["terms_text"].splitlines():
             para(doc, line)
+    if c["signer"]:
+        para(doc)
+        para(doc, lb["signer"], bold=True)
+        para(doc, c["signer"])
     buffer = io.BytesIO()
     doc.save(buffer)
     return buffer.getvalue()
@@ -457,7 +494,8 @@ def generate(db: Session, quote_id, fmt: str, calendar: str, digits: str, source
     else:
         data, mime_ext = render_docx(ctx), "docx"
     suffix = "-DRAFT" if ctx["draft"] else ""
-    filename = f"{quote.number}{suffix}.{mime_ext}"  # the number carries the revision (-v2, v0.5.0)
+    setad = f"-Setad-{ctx['setad_number']}" if ctx["setad_number"] else ""  # v0.5.0: the Setad need number
+    filename = f"{quote.number}{setad}{suffix}.{mime_ext}"  # the number carries the revision (-v2, v0.5.0)
     try:
         doc = documents.upload(db, io.BytesIO(data), filename, title=filename.rsplit(".", 1)[0],
                                language=quote.language, source=source, actor=actor)

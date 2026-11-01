@@ -9,7 +9,7 @@ from pydantic import Field, field_validator
 
 from app.core.schemas import ApiModel, InputModel
 
-SourceChannel = Literal["whatsapp", "email", "phone", "tender_portal", "in_person", "letter", "other"]
+SourceChannel = Literal["whatsapp", "email", "phone", "tender_portal", "in_person", "letter", "other", "setad"]
 InquiryKind = Literal["rfq", "tender", "direct_order", "other"]
 InquiryStatus = Literal["new", "needs_info", "ready_for_screening", "rejected", "no_reply", "converted"]
 Light = Literal["green", "yellow", "red"]
@@ -183,6 +183,14 @@ class InquiryOut(ApiModel):
     status: str
     source_interaction_id: uuid.UUID | None
     reject_reason: str | None
+    # v0.5.0: set when the inquiry was converted from a Setad listing
+    listing_id: uuid.UUID | None = None
+    external_no: str | None = None
+    external_url: str | None = None
+    response_due_at: datetime | None = None
+    required_price_validity: date | None = None
+    delivery_province: str | None = None
+    delivery_city: str | None = None
     created_at: datetime
     updated_at: datetime
 

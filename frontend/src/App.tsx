@@ -19,6 +19,7 @@ import { NotFoundPage, PlaceholderPage } from "./pages/PlaceholderPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
 import { CostingSettingsPage } from "./pages/settings/CostingSettingsPage";
 import { LetterheadPage } from "./pages/settings/LetterheadPage";
+import { SetadSettingsPage } from "./pages/settings/SetadSettingsPage";
 import { CatalogPage, ProductPage } from "./pages/sourcing/CatalogPage";
 import { InquiriesPage } from "./pages/sourcing/InquiriesPage";
 import { InquiryDetailPage } from "./pages/sourcing/InquiryDetailPage";
@@ -63,6 +64,7 @@ export function App() {
         <Route path="settings/system" element={<SystemPage />} />
         <Route path="settings/costing" element={<CostingSettingsPage />} />
         <Route path="settings/letterhead" element={<LetterheadPage />} />
+        <Route path="settings/setad" element={<SetadSettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

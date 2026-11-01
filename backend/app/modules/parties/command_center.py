@@ -83,7 +83,23 @@ def summary(db: Session) -> dict:
         "stale_lead_days": days,
         "funnel_counts": funnel_counts(db),
         "sourcing": _sourcing(db, today),
+        **_sections_of(db, today),
     }
+
+
+# later modules add their own top-level section (listings "setad", v0.5.0): key -> fn(db, today) -> dict
+_sections: dict = {}
+
+
+def register_section(key: str, fn) -> None:
+    _sections.setdefault(key, fn)
+
+
+def _sections_of(db: Session, today) -> dict:
+    from app.core.modules import load_hooks
+
+    load_hooks()
+    return {key: fn(db, today) for key, fn in _sections.items()}
 
 
 # later modules (quotes, v0.4.0) add keys to the sourcing/sales section: fn(db, today) -> dict

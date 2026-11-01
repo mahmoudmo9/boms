@@ -17,6 +17,7 @@ import { CostingTab } from "./Costing";
 import { ComparisonTab, CoverageCard, OffersTab } from "./Offers";
 import { QuotesTab } from "./Quotes";
 import { RfqsTab } from "./Rfqs";
+import { SetadOrigin } from "../tenders/SetadOrigin";
 
 const TABS = ["items", "rfqs", "offers", "comparison", "costing", "quotes", "documents", "history"] as const;
 type Tab = (typeof TABS)[number];
@@ -94,6 +95,7 @@ export function CaseDetailPage() {
           </Select>
           <Button icon="edit" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
         </>} />
+      {c.inquiry_id && <SetadOrigin inquiryId={c.inquiry_id} />}
       <ErrorNote error={setStatus.error} />
       <div className="flex gap-1 overflow-x-auto border-b border-line">
         {TABS.map((key) => (

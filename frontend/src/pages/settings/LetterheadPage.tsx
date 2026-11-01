@@ -9,8 +9,10 @@ import { useToast } from "../../components/toast";
 import { api, ApiError } from "../../lib/api";
 import type { DocumentDetail, SettingsResponse } from "../../lib/types";
 
-const SINGLE = ["company.name_fa", "company.name_en", "company.phone", "company.email", "company.website", "pdf.browser_path"] as const;
-const PER_LANG = ["company.address", "company.registration", "company.bank_details", "company.footer"] as const;
+const SINGLE = ["company.name_fa", "company.name_en", "company.phone", "company.email", "company.website", "pdf.browser_path",
+  "company.national_id", "company.economic_code"] as const;
+const PER_LANG = ["company.address", "company.registration", "company.bank_details", "company.footer",
+  "company.signer_name", "company.signer_title"] as const;
 
 export function LetterheadPage() {
   const { t } = useTranslation();
@@ -52,6 +54,7 @@ export function LetterheadPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {single("company.name_fa", "rtl")}{single("company.name_en", "ltr")}
             {single("company.phone", "ltr")}{single("company.email", "ltr")}{single("company.website", "ltr")}
+            {single("company.national_id", "ltr")}{single("company.economic_code", "ltr")}
             <Field label={t("letterhead.fields.logo")} htmlFor="lh-logo" hint={t("letterhead.logoHint")}>
               <div className="flex flex-wrap items-center gap-2">
                 <input id="lh-logo" type="file" accept="image/png,image/jpeg" className="text-sm" onChange={(e) => e.target.files?.[0] && logo.mutate(e.target.files[0])} />
@@ -67,7 +70,7 @@ export function LetterheadPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               {(["fa", "en"] as const).map((lang) => (
                 <Field key={lang} label={t(`common.languageNames.${lang}`)} htmlFor={`lh-${key}-${lang}`}>
-                  <Textarea id={`lh-${key}-${lang}`} dir={lang === "fa" ? "rtl" : "ltr"} rows={3} value={(values[key] as Record<string, string>)[lang] ?? ""}
+                  <Textarea id={`lh-${key}-${lang}`} dir={lang === "fa" ? "rtl" : "ltr"} rows={key.startsWith("company.signer") ? 1 : 3} value={(values[key] as Record<string, string>)[lang] ?? ""}
                     onChange={(e) => setValues({ ...values, [key]: { ...(values[key] as Record<string, string>), [lang]: e.target.value } })} />
                 </Field>
               ))}

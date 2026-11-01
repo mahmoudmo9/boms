@@ -55,7 +55,8 @@
       "catalog": "Catalog",
       "templates": "Message templates",
       "costing": "Costing & tax",
-      "letterhead": "Letterhead"
+      "letterhead": "Letterhead",
+      "setad": "Setad"
     }
   },
   "placeholder": {
@@ -95,7 +96,8 @@
       "offer": "Offers",
       "product": "Products",
       "cost_sheet": "Cost sheets",
-      "quote": "Quotes"
+      "quote": "Quotes",
+      "listing": "Setad listings"
     }
   },
   "date": {
@@ -531,7 +533,11 @@
     "invalid_command": "Unknown Setad command.",
     "ids_required": "Choose listings first.",
     "invalid_source": "Unknown listing source.",
-    "invalid_page_size": "Choose 100, 200, 500 or 1000 rows."
+    "invalid_page_size": "Choose 100, 200, 500 or 1000 rows.",
+    "not_screened": "Star the listing or mark it as reviewing first.",
+    "files_not_downloaded": "Some attachments are not downloaded yet.",
+    "duplicate_party": "A similar party exists.",
+    "no_deadline_change": "The deadline on Setad has not changed."
   },
   "cc": {
     "subtitle": "Follow-ups and leads for {{date}}.",
@@ -564,6 +570,13 @@
       "staleFx": "Cost sheets with old FX rates",
       "fxAge": "rates {{n}} days old",
       "passed": "validity passed"
+    },
+    "setad": {
+      "title": "Setad",
+      "stale": "no fetch in {{days}} days",
+      "due": "Starred / reviewing: deadline ≤ 3 days or passed",
+      "deadlineChanged": "Converted: deadline changed on Setad",
+      "warn": "New listings with warn keywords"
     }
   },
   "funnel": {
@@ -903,7 +916,8 @@
       "in_person": "In person",
       "letter": "Letter",
       "wechat": "WeChat",
-      "other": "Other"
+      "other": "Other",
+      "setad": "Setad"
     },
     "paymentTerms": {
       "full_prepayment": "Full prepayment",
@@ -936,7 +950,9 @@
       "cascadeHint": "For test data only: deletes this inquiry with its items, decision and document links. Files stay in Documents. The deletion is recorded in the event log.",
       "typeSubject": "Type the inquiry subject to confirm",
       "typeDelete": "Type DELETE to confirm",
-      "cascadeButton": "Delete inquiry and its items"
+      "cascadeButton": "Delete inquiry and its items",
+      "requiredValidity": "Required price validity",
+      "deliveryPlace": "Delivery"
     },
     "decision": {
       "title": "Go / no-go decision",
@@ -1506,7 +1522,8 @@
         "validity_too_long": "Validity within the FX age limit",
         "unconfirmed_parameter": "Tax parameters confirmed",
         "fx_stale": "Exchange rates are recent",
-        "buyer_required": "A buyer is chosen"
+        "buyer_required": "A buyer is chosen",
+        "validity_shorter_than_required": "Valid at least until the buyer's required price validity"
       }
     },
     "warnings": {
@@ -1679,7 +1696,11 @@
       "cost": "cost",
       "back": "Go back",
       "confirm": "Approve below cost"
-    }
+    },
+    "setadNumber": "Setad {{number}}",
+    "requiredValid": "Buyer requires: {{date}}",
+    "validityDates": "valid until {{valid}}, required {{required}}",
+    "validityOverridden": "Shorter validity accepted: {{reason}}"
   },
   "letterhead": {
     "subtitle": "Company details printed on quotes, in Persian and English.",
@@ -1695,7 +1716,11 @@
       "registration": "Registration / economic code",
       "bank_details": "Bank details",
       "footer": "Footer",
-      "logo": "Logo"
+      "logo": "Logo",
+      "national_id": "National ID",
+      "economic_code": "Economic code",
+      "signer_name": "Signer name",
+      "signer_title": "Signer title"
     },
     "logoHint": "PNG or JPEG; stored in Documents.",
     "logoSet": "Logo set",
@@ -1853,7 +1878,31 @@
       "site_state": "Status on Setad",
       "response_deadline": "Response deadline",
       "price_valid_until": "Required price validity"
-    }
+    },
+    "convertTitle": "Convert to inquiry",
+    "noDetailYet": "Details were not fetched yet: items and the exact deadline come from the detail page.",
+    "convertFields": {
+      "kind": "Type",
+      "received": "Received (published)",
+      "deadline": "Response deadline",
+      "validity": "Required price validity",
+      "delivery": "Delivery place"
+    },
+    "buyer": "Buyer",
+    "buyerMatch": "{{name}} (same name)",
+    "buyerSuggestion": "{{name}} (similar)",
+    "buyerNew": "New party: {{name}}",
+    "duplicateParty": "Similar parties exist",
+    "createAnyway": "Create a new party anyway",
+    "contactToNotes": "Buyer contact (goes to the party notes)",
+    "convertItems": "Items ({{n}})",
+    "productFor": "Product for item {{n}}",
+    "noProduct": "No catalog product",
+    "convertFiles": "Attachments: {{done}} of {{total}} downloaded",
+    "filesMissing": "{{n}} attachments are not downloaded yet.",
+    "downloadThenConvert": "Download, then convert",
+    "downloadQueued": "Download queued; convert when it finishes.",
+    "convertWithout": "Convert without the missing attachments"
   },
   "setad": {
     "connected": "Connected to Setad",
@@ -1915,6 +1964,38 @@
       "changed": "Changed",
       "duplicates": "Duplicates",
       "errors": "Errors"
-    }
+    },
+    "fromSetad": "From Setad «{{number}}»",
+    "openListing": "Open listing",
+    "openOnSetad": "Open on Setad",
+    "deadlineChanged": "Deadline changed on Setad:",
+    "applyDeadline": "Apply"
+  },
+  "setadSettings": {
+    "subtitle": "The Setad agent, screening lists and the attachments cache.",
+    "agent": "Agent and attachments",
+    "filesDir": "Attachments folder",
+    "filesDirHint": "Empty: <data folder>/setad-files. Not in the nightly backup.",
+    "idleMinutes": "Agent closes after idle minutes",
+    "retentionDays": "Keep listings (days)",
+    "retentionHint": "Older listings that are not starred, reviewing or converted can be purged.",
+    "screening": "Screening",
+    "lists": {
+      "warn_keywords": "Warn keywords",
+      "dismiss_reasons": "Dismiss reasons",
+      "checklist": "Checklist questions"
+    },
+    "onePerLine": "One per line",
+    "maintenance": "Maintenance",
+    "recordStart": "Record the site flow",
+    "recordStop": "Stop recording",
+    "recordHint": "Saves the pages the agent sees (without passwords or cookies) to the diagnostics folder, for support.",
+    "clearCache": "Clear attachments cache",
+    "clearCacheHint": "Deletes downloaded Setad files only; files of converted listings stay in the document store.",
+    "cleared": "{{n}} files removed",
+    "purge": "Purge old listings",
+    "purgeHint": "Starred, reviewing and converted listings are kept.",
+    "purgeCount": "{{n}} listings older than {{days}} days will be deleted.",
+    "purged": "{{n}} listings deleted"
   }
 }

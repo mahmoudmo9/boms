@@ -49,6 +49,7 @@ def quote_detail(db: Session, quote_id: uuid.UUID) -> dict:
                   for r in service.items_of(db, quote.id)],
         "outputs": output.outputs_of(db, quote.id),
         "approval": service.approval_check(db, quote) if quote.status == "draft" else None,
+        "setad": service.setad_origin(db, quote.case_id),
         "default_followup": service.default_followup(quote) if quote.status == "approved" else None,
     })
 
@@ -106,6 +107,13 @@ def delete_quote(quote_id: uuid.UUID, request: Request, user: CurrentUser, db: D
 @router.post("/{quote_id}/terms")
 def regenerate_terms(quote_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
     service.regenerate_terms(db, quote_id, request_source(request), user.username)
+    db.commit()
+    return quote_detail(db, quote_id)
+
+
+@router.post("/{quote_id}/validity-override")
+def override_validity(quote_id: uuid.UUID, body: ReasonIn, request: Request, user: CurrentUser, db: Db):
+    service.override_validity(db, quote_id, body.reason, request_source(request), user.username)
     db.commit()
     return quote_detail(db, quote_id)
 

@@ -650,7 +650,7 @@ def test_migrations_0007_0008_up_down_up_with_phase5_data():
             assert conn.execute(text("SELECT count(*) FROM ops.cost_template WHERE is_default")).scalar() == 3
             assert conn.execute(text("SELECT count(*) FROM ops.tax_parameter")).scalar() == 0  # no rates seeded
             assert conn.execute(text("SELECT count(*) FROM ops.tax_kind")).scalar() == 5
-            assert conn.execute(text("SELECT count(*) FROM ops.message_template WHERE kind = 'quote_terms'")).scalar() == 2
+            assert conn.execute(text("SELECT count(*) FROM ops.message_template WHERE kind = 'quote_terms' AND is_default")).scalar() == 2  # 0010 adds "Setad (fa)" (not default)
         command.downgrade(cfg, "0006")
         assert not (new_tables & tables()) and phase5_rows() == before
         command.upgrade(cfg, "head")

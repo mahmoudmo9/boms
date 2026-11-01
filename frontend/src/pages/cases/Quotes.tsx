@@ -195,7 +195,7 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
   const unitLabel = useUnitLabel();
   const quote = useQuery({ queryKey: ["quote", quoteId], queryFn: () => api<Quote>(`/api/quotes/${quoteId}`) });
   const refresh = () => { void quote.refetch(); onChanged(); };
-  const [dialog, setDialog] = useState<null | "sent" | "outcome" | "withdraw">(null);
+  const [dialog, setDialog] = useState<null | "sent" | "outcome" | "withdraw" | "validity">(null);
   const approve = useMutation({
     mutationFn: (reason?: string) => api<Quote>(`/api/quotes/${quoteId}/approve`, { method: "POST",
       body: reason ? { confirm_below_cost: true, reason } : undefined }),
@@ -207,6 +207,8 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
   const patchItem = useMutation({ mutationFn: ({ id, body }: { id: string; body: Body }) => api(`/api/quotes/items/${id}`, { method: "PATCH", body }), onSuccess: refresh });
   const action = useMutation({ mutationFn: (path: string) => api<Quote>(`/api/quotes/${quoteId}/${path}`, { method: "POST", body: path === "revise" ? {} : undefined }),
     onSuccess: (q, path) => { if (path === "revise") { onChanged(); onSelect(q.id); } else refresh(); } });
+  const overrideValidity = useMutation({ mutationFn: (reason: string) => api(`/api/quotes/${quoteId}/validity-override`, { method: "POST", body: { reason } }),
+    onSuccess: () => { setDialog(null); refresh(); } });
   const withdraw = useMutation({ mutationFn: (reason: string) => api(`/api/quotes/${quoteId}/withdraw`, { method: "POST", body: { reason } }), onSuccess: () => { setDialog(null); refresh(); } });
   const remove = useMutation({ mutationFn: () => api(`/api/quotes/${quoteId}`, { method: "DELETE" }), onSuccess: () => { onChanged(); onSelect(""); } });
   const output = useMutation({
@@ -223,7 +225,8 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
     <div className="flex flex-col gap-4" data-quote={q.id}>
       <Card title={<span className="flex flex-wrap items-center gap-2"><Bdi ltr className="font-mono">{q.number}</Bdi>
         <span className="text-xs text-muted">{t("quotes.version", { version: f.num(q.version) })}</span><StatusBadge group="quote" status={q.status} />
-        <Badge>{t(`quotes.basis.${q.price_basis}`)}</Badge></span>}
+        <Badge>{t(`quotes.basis.${q.price_basis}`)}</Badge>
+        {q.setad && <Badge tone="accent">{t("quotes.setadNumber", { number: q.setad.setad_number })}</Badge>}</span>}
         actions={<>
           {draft && <Button variant="primary" busy={approve.isPending} disabled={!q.approval?.ok} onClick={() => approve.mutate(undefined)}>{t("quotes.approve")}</Button>}
           {q.status === "approved" && <Button variant="primary" onClick={() => setDialog("sent")}>{t("quotes.markSent")}</Button>}
@@ -253,7 +256,8 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
               <option value="before_vat">{t("quotes.basis.before_vat")}</option><option value="with_vat">{t("quotes.basis.with_vat")}</option>
             </Select>
           </Field>
-          <Field label={t("quotes.validUntil")} htmlFor="q-valid" hint={q.approval?.max_valid_until ? t("quotes.maxValid", { date: f.day(q.approval.max_valid_until) }) : undefined}>
+          <Field label={t("quotes.validUntil")} htmlFor="q-valid" hint={[q.approval?.max_valid_until ? t("quotes.maxValid", { date: f.day(q.approval.max_valid_until) }) : "",
+            q.setad?.required_valid_until ? t("quotes.requiredValid", { date: f.day(q.setad.required_valid_until) }) : ""].filter(Boolean).join(" · ") || undefined}>
             <DateInput id="q-valid" value={fromDateString(q.valid_until)} onChange={(d) => draft && d && patch.mutate({ valid_until: toDateString(d) })} />
           </Field>
           <Field label={t("sourcing.incoterm")} htmlFor="q-inco">
@@ -313,9 +317,17 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
         <Card title={<span className="flex items-center gap-2">{t("quotes.approvalTitle")}{q.approval.ok ? <Badge tone="success">{t("costing.gate.ok")}</Badge> : <Badge tone="warning">{t("costing.gate.blocked")}</Badge>}</span>}>
           <ul className="flex flex-col gap-1 text-sm" data-testid="approval-checklist">
             {gateChecklist(q.approval.failures).filter((r) => !r.ok || r.code === "sheet_not_final").map((r) => (
-              <li key={r.code} className="flex items-center gap-2"><span aria-hidden className={r.ok ? "text-success" : "text-danger"}>{r.ok ? "✓" : "✗"}</span>{t(`costing.gate.conditions.${r.code}`, { defaultValue: r.code })}</li>
+              <li key={r.code} className="flex flex-wrap items-center gap-2"><span aria-hidden className={r.ok ? "text-success" : "text-danger"}>{r.ok ? "✓" : "✗"}</span>{t(`costing.gate.conditions.${r.code}`, { defaultValue: r.code })}
+                {r.code === "validity_shorter_than_required" && r.failure && <>
+                  <span className="text-xs text-muted" data-testid="validity-dates">{t("quotes.validityDates", {
+                    valid: f.day(String(r.failure.valid_until)), required: f.day(String(r.failure.required_valid_until)) })}
+                    {r.failure.max_valid_until ? ` · ${t("quotes.maxValid", { date: f.day(String(r.failure.max_valid_until)) })}` : ""}</span>
+                  {draft && <Button variant="ghost" onClick={() => setDialog("validity")}>{t("costing.gate.override")}</Button>}
+                </>}
+              </li>
             ))}
           </ul>
+          {q.validity_override_reason && <p className="mt-1 text-xs text-warning">{t("quotes.validityOverridden", { reason: q.validity_override_reason })}</p>}
           <p className="mt-2 text-xs text-muted">{t("quotes.approveHint")}</p>
         </Card>
       )}
@@ -331,6 +343,7 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
         onClose={() => approve.reset()} onConfirm={(reason) => approve.mutate(reason)} />}
       {dialog === "sent" && <MarkSentDialog quote={q} onClose={() => setDialog(null)} onDone={refresh} />}
       {dialog === "outcome" && <OutcomesDialog quote={q} onClose={() => setDialog(null)} onDone={refresh} />}
+      {dialog === "validity" && <ReasonDialog title={t("costing.gate.override")} onClose={() => setDialog(null)} onConfirm={(r) => overrideValidity.mutate(r)} busy={overrideValidity.isPending} error={overrideValidity.error} />}
       {dialog === "withdraw" && <ReasonDialog title={t("quotes.withdraw")} onClose={() => setDialog(null)} onConfirm={(r) => withdraw.mutate(r)} busy={withdraw.isPending} error={withdraw.error} />}
     </div>
   );

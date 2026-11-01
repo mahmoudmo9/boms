@@ -308,8 +308,9 @@ def spec_key_suggestions(db: Session, q: str | None = None, limit: int = 20) -> 
     """Keys used before (most used first), grouped case-insensitively after Persian normalization."""
     rows = db.execute(text(
         """
-        SELECT s->>'key' AS key FROM ops.line_item, jsonb_array_elements(specs) s
+        SELECT s->>'key' AS key FROM ops.line_item, jsonb_array_elements(specs) WITH ORDINALITY AS e(s, n)
         WHERE s->>'key' IS NOT NULL
+        ORDER BY line_item.created_at, line_item.id, n
         """
     )).scalars().all()
     counts: Counter = Counter()

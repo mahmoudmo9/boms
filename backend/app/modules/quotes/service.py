@@ -116,9 +116,38 @@ def _party_name(db: Session, party_id: uuid.UUID | None, language: str) -> str:
     return ((party.name_fa or party.name_en) if language == "fa" else (party.name_en or party.name_fa)) or ""
 
 
+SETAD_TERMS_NAME = "Setad (fa)"  # seeded by migration 0010
+
+
+def setad_origin(db: Session, case_id: uuid.UUID) -> dict | None:
+    """The Setad origin of the case's inquiry (v0.5.0): number, link and the buyer's required price validity."""
+    case = sourcing_cases.get_case(db, case_id)
+    if case.inquiry_id is None:
+        return None
+    inquiry = sourcing_cases.get_inquiry(db, case.inquiry_id)
+    if inquiry.source_channel != "setad" or not inquiry.external_no:
+        return None
+    return {"inquiry_id": inquiry.id, "setad_number": inquiry.external_no, "url": inquiry.external_url,
+            "required_valid_until": inquiry.required_price_validity}
+
+
+def terms_template(db: Session, quote: Quote):
+    """Quotes for inquiries from Setad default to the "Setad (fa)" template (Persian quotes); others to the default
+    of their language."""
+    if quote.language == "fa" and setad_origin(db, quote.case_id):
+        from app.modules.sourcing.models import MessageTemplate
+
+        row = db.scalar(select(MessageTemplate).where(
+            MessageTemplate.kind == "quote_terms", MessageTemplate.name == SETAD_TERMS_NAME,
+            MessageTemplate.status == "active"))
+        if row is not None:
+            return row
+    return sourcing_templates.default_of_kind(db, "quote_terms", quote.language)
+
+
 def render_terms(db: Session, quote: Quote) -> str:
-    """The default ``quote_terms`` template of the quote's language with this quote's values."""
-    template = sourcing_templates.default_of_kind(db, "quote_terms", quote.language)
+    """The ``quote_terms`` template of the quote (``terms_template``) with this quote's values."""
+    template = terms_template(db, quote)
     if template is None:
         return ""
     lang = quote.language
@@ -128,7 +157,13 @@ def render_terms(db: Session, quote: Quote) -> str:
         lead = sourcing_templates.localize_digits(str(quote.lead_time_days), lang, digits) + " " + (
             "روز" if lang == "fa" else "days")
     bank = (settings.get(db, "company.bank_details") or {}).get(lang) or ""
-    values = {"buyer_name": _party_name(db, quote.buyer_party_id, lang),
+    origin = setad_origin(db, quote.case_id)
+    buyer_name = _party_name(db, quote.buyer_party_id, lang)
+    addressee = ""
+    if buyer_name:
+        addressee = f"مدیریت محترم امور تدارکات {buyer_name}" if lang == "fa" else f"To the procurement department of {buyer_name}"
+    values = {"buyer_name": buyer_name, "addressee": addressee,
+              "setad_number": sourcing_templates.localize_digits(origin["setad_number"], lang, digits) if origin else "",
               "valid_until": sourcing_templates.format_date(quote.valid_until, lang, digits),
               "payment_terms": quote.payment_terms or "", "lead_time": lead, "bank_details": bank,
               "incoterm": " ".join(x for x in (quote.incoterm, quote.incoterm_place) if x)}
@@ -180,6 +215,12 @@ def create_quote(db: Session, data: dict, calendar: str, source: str, actor: str
     """A draft quote from the case's final cost sheet (or the given one), only when the sheet passes the gate."""
     case = sourcing_cases.get_case(db, data["case_id"])
     sheet = _sheet_for(db, case.id, data.get("cost_sheet_id"))
+    origin = setad_origin(db, case.id)
+    if data.get("valid_until") is None and origin and origin["required_valid_until"]:
+        # Setad (v0.5.0): valid until the buyer's required price validity, but never beyond the offers / FX limit
+        limit = costing.gate(db, sheet)["max_valid_until"]
+        required = origin["required_valid_until"]
+        data["valid_until"] = min(required, date.fromisoformat(limit)) if limit else required
     gate = _gate_or_fail(db, sheet, data.get("valid_until"))
     buyer = data.get("buyer_party_id") or case.party_id
     if buyer:
@@ -333,7 +374,37 @@ def approval_check(db: Session, quote: Quote) -> dict:
     failures += jsonable(_minimums(db, quote))
     if quote.buyer_party_id is None:
         failures.append({"code": "buyer_required"})
-    return {"ok": not failures, "failures": failures, "max_valid_until": gate["max_valid_until"]}
+    shorter = validity_shorter_than_required(db, quote, gate["max_valid_until"])
+    if shorter and not quote.validity_override_reason:
+        failures.append(shorter)
+    return {"ok": not failures, "failures": failures, "max_valid_until": gate["max_valid_until"],
+            "required_valid_until": shorter["required_valid_until"] if shorter else None,
+            "validity_override_reason": quote.validity_override_reason}
+
+
+def validity_shorter_than_required(db: Session, quote: Quote, max_valid_until: str | None = None) -> dict | None:
+    """Setad (v0.5.0): the quote must stay valid at least until the buyer's required price validity. Reports both
+    dates (and the offers / FX limit) so a conflict is visible."""
+    origin = setad_origin(db, quote.case_id)
+    required = origin["required_valid_until"] if origin else None
+    if required is None or quote.valid_until >= required:
+        return None
+    return jsonable({"code": "validity_shorter_than_required", "valid_until": quote.valid_until,
+                     "required_valid_until": required, "max_valid_until": max_valid_until})
+
+
+def override_validity(db: Session, quote_id: uuid.UUID, reason: str, source: str, actor: str | None = None) -> Quote:
+    """Accept a validity shorter than the buyer's required one, with a reason (event)."""
+    quote = get_quote(db, quote_id)
+    _draft(quote)
+    reason = (reason or "").strip()
+    if not reason:
+        raise AppError("reason_required", "An override needs a reason", status=422)
+    quote.validity_override_reason = reason
+    flush(db, "invalid_quote")
+    events.record(db, "quote", quote.id, "gate_override", {"kind": "validity_shorter_than_required",
+                                                          "reason": reason}, source, actor=actor)
+    return quote
 
 
 def below_cost(db: Session, quote: Quote) -> list[dict]:

@@ -60,3 +60,14 @@ class CommandIn(InputModel):
     listing_id: uuid.UUID | None = None
     listing_ids: list[uuid.UUID] | None = None
     confirmed: bool | None = None
+
+
+class ConvertIn(InputModel):
+    """Convert to inquiry: the buyer (an existing party, the exact name match, or a new party) and, per item
+    position, the product picked from the suggestions."""
+    party_id: uuid.UUID | None = None
+    create_party: bool = False
+    party_name: Text300 | None = None
+    confirm_duplicate: bool = False
+    products: dict[int, uuid.UUID] = {}
+    without_missing_files: bool = False
