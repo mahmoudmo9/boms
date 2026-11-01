@@ -1,0 +1,381 @@
+<form name="PurchaseNeedViewForm" method="post" action="/eproc/purchaseNeedView.do">
+                                        <input type="hidden" name="urlProhibition" value="">
+                                        <input type="hidden" name="method" value="showNeedDetailInfo">
+                                        
+
+
+
+
+
+
+
+
+
+<div id="showLicenseInfoDiv" style="display:none">
+    <iframe src="" frameborder="0" style="width:800px;height:400px" id="showLicenseInfoFrame"></iframe>
+</div>
+                                        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div id="esbConfirmDiv" style="display:none;">
+    <div style="height:100px;width:600px;background:#cccccc;font-size:12px;padding:20px;font-family:Tahoma;" dir="rtl">
+        
+        
+        <br>
+        <br>
+        <input type="button" onclick="esbYes()" value="بلی">
+        <input type="button" onclick="esbNo()" value="خیر">
+    </div>
+</div>
+                                        <table cellpadding="0" cellspacing="5" width="100%">
+                                            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<tbody><tr>
+    <td colspan="" style="color:white;background-color:#8F6D40;border:solid 1px black;padding:10px;direction:rtl">
+        &nbsp;&nbsp;&nbsp;&nbsp;جزئيات اطلاعات نياز
+        
+        
+        
+    </td>
+    
+</tr>
+                                            <tr>
+                                                <td>
+        <span class="errorMsg">
+            
+        </span>
+                                                </td>
+                                            </tr>
+                                            
+
+
+
+
+
+
+
+
+
+<tr>
+    <td colspan="">
+        <a name="errorBoxLink"></a>
+        <table cellspacing="6" id="clientErrorBox"></table>
+    </td>
+</tr>
+                                            <tr>
+                                                <td>
+                                                    <fieldset>
+                                                        <table>
+                                                            <tbody><tr>
+                                                                <td width="300px">
+                                                                    شماره نياز:
+                                                                </td>
+                                                                <td>
+                                                                    <input type="text" name="purchaseNeedDto.needNo" value="1105092378001168" readonly="readonly" style="width:150px;text-align:center">
+                                                                </td>
+                                                                <td>
+                                                                    &nbsp;
+                                                                </td>
+                                                                <td align="left" width="300px" colspan="3">
+                                                                    تاريخ و ساعت اعلان عمومي:
+                                                                </td>
+
+                                                                <td>
+                                                                    <bdo dir="ltr">
+                                                                        <input type="text" name="sendDate" value="1405/07/28 - 14:00" readonly="readonly" style="width:150px;text-align:center">
+                                                                    </bdo>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>
+                                                                    نام دستگاه خريدار:
+                                                                </td>
+                                                                <td colspan="9">
+                                                                    <input type="text" name="purchaseNeedDto.purchaseRequestDto.organization.name" value="بیمارستان البرز کرج" readonly="readonly" style="width:450px;">
+                                                                </td>
+                                                            </tr>
+
+                                                            <tr>
+                                                                <td>
+                                                                    ايجاد کننده درخواست:
+                                                                </td>
+                                                                <td colspan="5">
+                                                                    <input type="text" name="purchaseNeedDto.creatorInfo" value="امیررضا ایمانی کارپرداز بیمارستان البرز کرج" readonly="readonly" style="width:400px;">
+                                                                </td>
+                                                                <td colspan="2" align="right">
+                                                                    
+                                                                    <a class="hyperlink" href="javascript:openUniquedWindow('buyerConnectionInfo.do?method=printBuyerDetailInfo&amp;organizationId='+
+                           15600 + '&amp;userId=' + 1546028,
+                           'buyerConnectionInfoWindow',700, 450);">
+
+                                                                        اطلاعات تماس خريدار
+                                                                    </a>
+                                                                </td>
+                                                            </tr>
+
+
+                                                           <tr>
+                                                                <td>
+                                                                    مهلت ارسال پاسخ: تا تاریخ:
+                                                                </td>
+                                                                <td>
+                                                                    <bdo dir="ltr">
+                                                                        <input type="text" name="deadlineDurationDateStr" value="1405/07/30" readonly="readonly" style="width:150px;text-align:center">
+                                                                    </bdo>
+                                                                </td>
+                                                                <td>
+                                                                    ساعت
+                                                                </td>
+                                                                <td>
+                                                                    <input type="text" name="deadlineDurationTimeStr" value="14:00" readonly="readonly" style="width:70px;text-align:center">
+                                                                </td>
+                                                                <td width="30px">&nbsp;</td>
+                                                                <td width="100">
+                                                                    <input type="text" name="durationDto.day" value="1" readonly="readonly" id="dayId" style="width:70px;text-align:center">
+                                                                    روز و
+
+                                                                </td>
+
+                                                                <td width="300px" align="right">
+                                                                    <input type="hidden" name="durationDto.second" value="53" disabled="disabled" id="secId" style="width:20px;">
+                                                                    <input type="hidden" name="durationDto.minute" value="5" disabled="disabled" id="minId" style="width:20px;">
+                                                                    <input type="hidden" name="durationDto.hour" value="18" disabled="disabled" id="hourId" style="width:20px;">
+
+                                                                    <input id="remainTime" style="width:70px;;text-align:center" disabled="disabled">
+                                                                    ساعت باقي مانده
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td>
+                                                                    حداقل تاریخ اعتبار قیمت: تا تاریخ:
+                                                                </td>
+                                                                <td>
+                                                                    <bdo dir="ltr">
+                                                                        <input type="text" name="purchaseNeedDto.priceValidDurationDate" value="1405/08/28" readonly="readonly" style="width:150px;text-align:center">
+                                                                    </bdo>
+                                                                </td>
+                                                                <td>
+                                                                    ساعت
+                                                                </td>
+                                                                <td>
+                                                                    <input type="text" name="purchaseNeedDto.priceValidDurationTime" value="11:00" readonly="readonly" style="width:70px;text-align:center">
+
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td>
+                                                                    استان محل تحويل:
+                                                                </td>
+                                                                <td>
+                                                                    
+                                                                    <input type="text" name="purchaseNeedDto.purchaseRequestDto.deliveryLocation.parentLocation.name" value="البرز" readonly="readonly" style="width:150px;">
+                                                                    
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>
+                                                                    شهر محل تحويل:
+                                                                </td>
+                                                                <td>
+                                                                    <input type="text" name="purchaseNeedDto.purchaseRequestDto.deliveryLocation.name" value="کرج" readonly="readonly" style="width:150px;">
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                        <table>
+                                                            <tbody><tr>
+                                                                <td>
+                                                                    طبقه بندی موضوعی:
+                                                                </td>
+                                                                <td width="10px">&nbsp;</td>
+                                                                <td>
+                                                                    <input type="radio" name="purchaseNeedDto.needType" value="ITEM" checked="checked" disabled="disabled" id="radio1">
+                                                                    کالا
+                                                                    &nbsp;&nbsp;
+                                                                    <input type="radio" name="purchaseNeedDto.needType" value="SERVICE" disabled="disabled" id="radio2">
+                                                                    خدمت
+                                                                    &nbsp;&nbsp;
+                                                                    <input type="radio" name="purchaseNeedDto.needType" value="ITEM_SERVICE" disabled="disabled" id="radio3">
+                                                                    کالا/خدمت
+
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                        <table>
+                                                            <tbody><tr>
+                                                                <td>
+                                                                    نوع فرآيند خريد :
+                                                                </td>
+                                                                <td width="10px">&nbsp;</td>
+                                                                <td>
+                                                                    <input type="radio" name="purchaseNeedDto.purchaseRequestDto.purchaseType" value="581" checked="checked" disabled="disabled" id="radio12">
+                                                                    جزيي
+                                                                    &nbsp;
+                                                                    <input type="radio" name="purchaseNeedDto.purchaseRequestDto.purchaseType" value="582" disabled="disabled" id="radio22">
+                                                                    متوسط
+                                                                </td>
+
+                                                                <td width="10px">&nbsp;</td>
+                                                                <td>
+                                                                    <input type="checkbox" name="islamicTreasury" value="on" disabled="disabled" id="islamicTreasury">
+                                                                    پرداخت تمام یا بخشی از مبلغ خرید،از محل "اسناد خزانه اسلامی" خواهد بود. 
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                        </tbody></table>
+                                                    </fieldset>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <fieldset>
+
+                                                        <table>
+                                                            <tbody><tr>
+                                                                <td style="font-weight:bold;" valign="center">
+                                                                    شرح کلي نياز:
+                                                                </td>
+                                                                <td>
+                                                                    <textarea name="purchaseNeedDto.needName" readonly="readonly" id="purchaseNeedDto.needName" style="width:550px;">کارتریج پلاسما تعداد 150 عدد</textarea>
+                                                                </td>
+
+                                                            </tr>
+                                                        </tbody></table>
+
+                                                        
+                                                        <table>
+                                                            <tbody><tr>
+                                                                <td style="font-weight:bold;">
+                                                                    اطلاعات کالاهاي مورد نياز
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                        <table>
+                                                            <tbody><tr style="height: 10px"></tr>
+                                                            <tr>
+                                                                <td style="font-weight:bold;" width="80px">
+                                                                    گروه کالا:
+
+                                                                </td>
+                                                                <td>
+                                                                    <textarea name="purchaseNeedDto.itemClassifyDto.name" readonly="readonly" style="width:550px;"> تجهیزات پزشکی و سلامت</textarea>
+                                                                </td>
+                                                            </tr>
+                                                            <tr style="height: 10px"></tr>
+                                                        </tbody></table>
+                                                        <table>
+                                                            <tbody><tr>
+                                                                <td>
+                                                                    <span class="pagebanner"><bdo dir="rtl"></bdo></span>
+<table class="grid" style="direction: rtl;width: 100%" id="aList">
+<thead>
+<tr>
+<th>رديف</th>
+<th>کد کالا</th>
+<th>نام کالا</th>
+<th>واحد شمارش</th>
+<th>گروه کالا</th>
+<th>تعداد / مقدار</th>
+<th>تاريخ نياز</th></tr></thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">1</td>
+<td style="text-align: center;width:100px">--</td>
+<td style="width:300px">استریلایزر پلاسما</td>
+<td style="text-align: center;width:100px">دستگاه</td>
+<td style="text-align: center;width:100px">تجهیزات پزشکی و سلامت</td>
+<td style="text-align: center;width:100px">150</td>
+<td style="text-align: center;width:100px"><span dir="ltr">1405/08/05</span></td></tr></tbody></table>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+
+
+                                                        
+
+                                                        
+
+
+
+                                                        <table>
+                                                            <tbody><tr>
+                                                                <td style="font-weight:bold;">
+                                                                    توضيحات خريدار:
+                                                                </td>
+                                                                <td>
+                                                                    <textarea name="purchaseNeedDto.description" cols="100" rows="4" readonly="readonly" id="buyerDesc">پیش فاکتور دارای کد IRC کالا ضمیمه شود/کالا و شرکت در آیمد باشد/ عدم تایید کارشناس مرکز عودت کالا/دارای لات نامبر، کد IRC و برچسب اصالت کالا باشد/هزینه ارسال کالا و نمونه بعهده فروشنده/تسویه سه ماهه/در صورت تکمیل سفارش قیمت گذاری گردد</textarea>
+                                                                </td>
+                                                            </tr>
+
+                                                        </tbody></table>
+                                                    </fieldset>
+                                                </td>
+                                            </tr>
+                                            
+                                        </tbody></table>
+                                        <table width="100%">
+                                            <tbody><tr>
+                                                <td align="center">
+
+                                                    
+                                                    
+                                                    <input type="button" name="" value="پاسخ به نياز" onclick="callReady()" id="readyId" style="width:100" class="positive-btn">
+                                                    
+                                                    
+
+                                                    
+
+                                                    &nbsp;&nbsp;
+
+
+
+
+                                                    <input type="button" name="" value="مشاهده مدارک پيوستي (0)" onclick="return anonymousShowAppendix()" style="width:180px" class="positive-btn">
+
+
+                                                    &nbsp;&nbsp;
+                                                    <input type="button" name="" value="چاپ" onclick="callPrint()" class="positive-btn">
+
+                                                    
+                                                    &nbsp;&nbsp;
+                                                    <input type="button" name="" value="بازگشت" onclick="window.history.back(1)" class="negative-btn">
+                                                    &nbsp;&nbsp;
+                                                    <input type="button" name="" value="خروج" onclick="window.location = 'home.do'" class="negative-btn">
+                                                    
+                                                </td>
+                                            </tr>
+                                        </tbody></table>
+                                    </form>
