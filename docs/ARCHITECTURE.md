@@ -663,3 +663,83 @@ required price validity, capped by the offers / FX limit; the approval gate fail
 outputs write the total in words (SetadSuite's `number_words`); the file name carries the Setad number
 (`PI-1405-0001-Setad-<number>.pdf`); the letterhead shows the national ID, economic code and signer
 (Settings → Letterhead). The owner uploads the file to Setad by hand.
+
+### Carry-over fixes (v0.6.0 section 0, migration `0011_listing_fixes`)
+
+- Setad list rows: the guarantee and estimate are read from the real keys (`guarantyPrice`, `guarantyPriceCurrency`,
+  `guarantyDescription`; `financialEstimatePrice`, `tndaFinancialEstimatesPrice`, `elvFinancialEstimatePrice`) with
+  the older keys as fallbacks; a row without an amount never clears a value taken from the detail page, and the
+  detail page fills the guarantee from a «مبلغ…» label or a value in ریال/تومان. New `ext.listing` columns
+  `guarantee_currency`, `guarantee_description`, `estimate_currency`.
+- Agent jobs: one queued job per listing and command, one full / quick fetch per source (`already_queued` in the
+  bulk answer); `GET /api/setad/jobs/{id}` (per-listing results), `GET /api/setad/log` (the agent log, rotated
+  5 MB × 3, every line tagged with the job id and command); `ext.agent_status.listing_id`, `files_done`,
+  `files_total` drive the per-row progress in the screening table.
+- Quote outputs: the fixed footer is drawn in the `@page` bottom margin box (no blank second page).
+
+## Tenders (Phase 7b, v0.6.0, migration `0012_tenders`)
+
+Module `app/modules/tenders/` (all tables in `ops`, audited by `core.audit_row`). A **tender** is the tender part of
+a case (one per case): it is created automatically when an inquiry of kind `tender` becomes a case (hook below), or
+by *Make this a tender* on any case (`POST /api/cases/{id}/tender`).
+
+| Table | Content |
+|---|---|
+| `tender` | one per case: Setad number, type, stages, document price, estimate (amount + currency pairs), stage (screening → documents → pricing → guarantee → envelopes → submitted → opening → result → closed), participation (undecided / yes / no + reason), financial mode (`buyer_form` summary or `letterhead` quote), proposal validity days, submission (at, channel, note, override reason), result (won / lost / cancelled / no_result, reason, winner, price, rank), `appendix_seen` and `setad_dates_seen` (what the tender last saw on Setad) |
+| `tender_date` | one per kind (documents / proposal / questions / quality-docs deadline, briefing, site visit, opening, offer valid until) plus any number of `other` with a label; `remind_days_before int[]`; source setad / manual / addendum |
+| `tender_date_change` | every change of a date: old, new, reason (required), addendum |
+| `tender_addendum` | addenda, Q&A and extensions; a cancellation needs `confirm_cancellation` |
+| `company_document` | the company documents library (title, category, file in the document store, issued / expires, archived) |
+| `envelope_template`, `envelope_template_line` | envelope checklists; the default «SetadSuite» template (14 lines, A/B/C) is seeded |
+| `envelope_item` | the tender's checklist: envelope A (bid bond) / B (documents) / C (price), kind document / bid_bond / price_form, status not_ready → in_progress → needs_signature → ready → submitted, optional company document or guarantee |
+| `guarantee`, `guarantee_event` | bid / performance / advance-payment / retention guarantees: form, amount, fee, blocked deposit, bank, number, valid until, beneficiary; status to_request → requested → issued → ready_to_upload → submitted → extended → released / claimed / cancelled with one event per step |
+| `tender_followup` | links from the tender to the parties follow-ups it created (purpose date_reminder, guarantee_expiry, guarantee_release, opening, contract) |
+| `tender_cost` | documents purchase, guarantee fee, deposit, travel, other; refundable flag, paid / refunded dates |
+| `tender_proposal`, `tender_proposal_line` | the financial proposal (summary mode): versions from the final cost sheet, lines with unit prices, totals, VAT, total in words |
+| `tender_result_reason` | the lost-reason list (8 seeded, editable in Settings → Tenders) |
+
+**Setad prefill.** A case from a Setad tender listing gets the number, type, stages, document price, estimate, the
+Setad dates (source `setad`), a draft bid bond with the Setad guarantee amount, a documents-purchase cost and the
+default envelope template. *Refresh from Setad* lists every difference to the listing (nothing is applied without
+the owner ticking it). The **dates banner** lists only dates Setad changed after the tender last saw them
+(`setad_dates_seen`): a date the owner moved on purpose (an addendum, a manual change) is not offered back; *Apply*
+changes the date with the reason «تمدید/تغییر در ستاد», *Keep my dates* (`POST /api/tenders/{id}/setad-dates/keep`)
+marks the Setad values as seen. Grown Setad addenda counters show «new addenda on Setad» until an addendum is
+recorded or the banner is dismissed.
+
+**Reminders.** All reminders are ordinary parties follow-ups (so they appear in the command center and the party
+pages), created through the parties public service and linked in `tender_followup`. Date reminders: N days before
+each date (`tenders.reminder_days`, default [3, 1], per date editable); guarantee expiry: `tenders.guarantee_reminder_days`
+(default [30, 7]) before *valid until*; release: `tenders.release_followup_days` (default 7) after a lost or
+cancelled result, or after a won tender's performance guarantee is submitted; opening: on the opening day after
+submission; contract: 3 days after a won result. A changed date or validity moves its open reminders; a result, a
+cancelled case or a deleted case cancels them.
+
+**Submission.** `GET /api/tenders/{id}/blockers` lists everything that is not ready (participation not «yes»,
+empty or incomplete envelopes, bid bond not issued, bond validity shorter than the proposal validity, proposal not
+approved, deadline passed, expired company documents). *Mark as submitted* refuses with 422 `blockers_remain`
+unless an override reason is given (kept on the tender and in the event).
+
+**Result.** *Lost* needs a reason; the case becomes won / lost / cancelled (or stays open for *no result*); a won
+tender marks the case items sold through the registered sold check; the result can be revised (both kept in events).
+
+**Financial proposal.** `buyer_form` mode: a proposal version is built from the final cost sheet (prices editable
+while draft); approval refuses prices below the landed cost without a reason (422 `below_cost`, the v0.5.0 rule);
+outputs as print view, PDF (Edge headless) and Word, named `Tender-<number>-proposal-v<n>[-DRAFT].<ext>`.
+`letterhead` mode uses Phase 6 quotes with the seeded «Tender (fa)» terms and the tender number.
+
+Hooks registered in `tenders/hooks.py` (new registries in earlier modules are marked *new*):
+- `sourcing.inquiries.register_case_converted` (*new*) — the tender part of a converted tender inquiry;
+- `sourcing.inquiries.register_case_status_changed` (*new*) — a cancelled case cancels the tender's open reminders;
+- `sourcing.inquiries.register_case_cleanup(5, …)` — deleting a case removes its tender rows and cancels reminders,
+  before the quotes (10) and cost sheets (20);
+- `sourcing.items.register_sold_check` — a won tender sells the case's items;
+- `quotes.service.register_terms_source` (*new*) — letterhead mode uses «Tender (fa)» with the tender number;
+- `quotes.service.register_product_quote_rows` (*new*) — approved proposals appear in a product's quote history;
+- `parties.command_center.register_section("tenders", …)` — dates within 3 days, incomplete envelopes near the
+  deadline, guarantees expiring or awaiting release, company documents expiring, Setad changes not applied,
+  submitted tenders waiting for the result;
+- `tenders/searchable.py` — global search for tenders, guarantees and company documents.
+
+Validation convention as elsewhere: a CHECK violation is 422 with the constraint name; a unique or still-referenced
+row is 409 (an issued guarantee cannot be deleted: 409 `guarantee_issued`).

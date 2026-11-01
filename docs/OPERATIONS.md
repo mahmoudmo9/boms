@@ -313,3 +313,47 @@ uploads anything to Setad.
 **Cache and backup**
 - [ ] Settings → Setad → *Clear attachments cache*: the Setad files folder is emptied; the converted inquiry's documents still open.
 - [ ] *Back up now*: the backup log and the file backup do not include `setad-files` or `connectors\setad` (only the document store `files`).
+
+## Manual checks for v0.6.0 (tenders)
+
+Run once on the Windows PC after `update.bat` from 0.5.0 (not yet run there). Nothing here pays, submits an offer or
+uploads anything to Setad; BOMS only records what you did on Setad.
+
+**Update**
+- [ ] Run the 0.6.0 `scripts\update.bat`: it prints `0.5.0 -> 0.6.0`, a `pre_update` backup appears, the migrations `0011` and `0012` run, and *Run restore test* passes afterwards (now 69 tables).
+- [ ] The menu shows *Cases → Guarantees*; Settings shows *Tenders* and *Company documents*. A tender case converted in 0.5.0 shows *Make this a tender* on its *Tender* tab and is prefilled from Setad when pressed.
+
+**A real Setad tender, converted and prefilled**
+- [ ] Tenders tab: *Full fetch* with the ETEND role; the guarantee amount and estimate columns are filled for tenders that have one (compare two rows with the Setad site).
+- [ ] Star one real tender, *Fetch details*, *Convert to inquiry*, decision → case. The case has a **Tender** tab: the Setad number and type, the documents and proposal deadlines (and opening, if Setad gives it) with source «ستاد», a draft bid bond with the Setad amount, a documents-purchase cost, and the 14-line envelope checklist.
+- [ ] The case header shows the next date with the days left, «n of 14 ready» and the bid bond status.
+
+**Dates, reminders and addenda**
+- [ ] Each date shows its reminders (default 3 and 1 days before); the command center (*Follow-ups due*) lists them on their days.
+- [ ] Edit the proposal deadline by hand: a reason is required, the reminders move, the change appears in the date history.
+- [ ] *Record addendum* of kind *Extension* that moves the proposal deadline: the date moves with source «الحاقیه», no «dates changed on Setad» banner offers the old date back.
+- [ ] After Setad extends a deadline of a converted tender (or after a *Quick fetch* that shows a changed date), the yellow banner appears on the Tender tab; *Apply* moves the date with the reason «تمدید/تغییر در ستاد»; *Keep my dates* hides the banner without changing anything.
+
+**Envelope items from the library**
+- [ ] Settings → Company documents: add three documents with their scanned files and expiry dates (one expiring within 30 days); the quick-add titles from SetadSuite are offered.
+- [ ] On the Tender tab, *Use library document* on envelope items attaches them; an expired document shows in red and blocks submission.
+- [ ] Change item statuses; the per-envelope counters and «n of 14 ready» follow.
+
+**Bid bond**
+- [ ] On the bid bond: *Requested*, then *Issued* with the bank, number and valid-until date (fee and blocked deposit if any). The bid-bond envelope item becomes ready; expiry reminders appear 30 and 7 days before the end.
+- [ ] A valid-until date earlier than the proposal deadline + validity days is flagged in red and is a submission blocker.
+- [ ] *Cases → Guarantees* lists it; filter on *expiring within 60 days*; the money tied up per currency appears on the Tender tab.
+
+**Financial proposal (summary mode)**
+- [ ] Cost sheet from the offers; *Add to cost sheet* adds the non-refundable tender costs to the draft sheet; finalize.
+- [ ] *Create summary*: lines from the final sheet; change one unit price while draft; *Approve* (a price below cost asks for a reason).
+- [ ] **PDF via Edge** opens, named `Tender-<number>-proposal-v1.pdf`, Persian letterhead, totals and the amount in words; **Word opens the `.docx` without a repair prompt**.
+- [ ] Switch *Financial proposal* to *Our letterhead (quote)*: the Quotes tab uses the «Tender (fa)» terms with the tender number.
+
+**Submit and result**
+- [ ] The submission card lists every blocker together; *Mark as submitted* needs an override reason while any remains; the envelope items become *submitted*; an opening follow-up appears for the opening day.
+- [ ] Record *Lost* with a reason (required), winner and price: the case becomes lost, the date reminders are cancelled, and **«پیگیری آزادسازی تضمین» appears 7 days later** on the bid bond and in the command center (*Guarantees expiring or awaiting release*).
+- [ ] On another tender record *Won*: the items become sold, a contract follow-up appears in 3 days; after the performance guarantee is *Submitted*, the bid bond release follow-up appears.
+
+**Command center**
+- [ ] The *Tenders* section shows dates within 3 days, incomplete envelopes near the deadline, guarantees expiring or awaiting release, company documents expiring, Setad changes not applied and tenders waiting for the result; each row opens the right case tab.

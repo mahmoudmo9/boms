@@ -100,9 +100,14 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       step = `${lang} library`;
       await page.goto(`${BASE}/settings/company-documents`);
       await page.locator('[data-testid=add-doc]').waitFor();
+      await page.waitForLoadState('networkidle');
       const quick = page.locator('button', { hasText: '+ ' }).first();
-      await quick.click();
-      await page.locator('[data-testid=doc-dialog]').waitFor();
+      if (await quick.count()) { await quick.click(); await page.locator('[data-testid=doc-dialog]').waitFor(); } else {
+        // every quick-add title is already in the library (repeated runs): add one by hand
+        await page.locator('[data-testid=add-doc]').click();
+        await page.locator('[data-testid=doc-dialog]').waitFor();
+        await page.locator('#cd-title').fill(`${lang === 'fa' ? 'گواهی' : 'Certificate'} ${Date.now() % 100000}`);
+      }
       await page.locator('#cd-expires').fill(await typed(lang, 400)); await page.locator('#cd-expires').blur();
       const docTitle = await page.locator('#cd-title').inputValue();
       await page.locator('[data-testid=doc-save]').click();
