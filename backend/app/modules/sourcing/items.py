@@ -210,6 +210,27 @@ def register_sold_check(fn) -> None:
         _sold_checks.append(fn)
 
 
+# "delivered" is decided by the execution module (v0.7.0) from delivery quantities through these checks:
+# ``fn(db, line_item_id) -> True`` (fully delivered), ``False`` (on a sales order, not fully delivered) or ``None``
+# (no delivery data: an item marked delivered before v0.7.0 stays frozen)
+_delivered_checks: list = []
+
+
+def register_delivered_check(fn) -> None:
+    if fn not in _delivered_checks:
+        _delivered_checks.append(fn)
+
+
+def _delivered(db: Session, item_id: uuid.UUID) -> bool | None:
+    from app.core.modules import load_hooks
+
+    load_hooks()
+    verdicts = [check(db, item_id) for check in _delivered_checks]
+    if any(v is True for v in verdicts):
+        return True
+    return False if any(v is False for v in verdicts) else None
+
+
 def _is_sold(db: Session, item_id: uuid.UUID) -> bool:
     from app.core.modules import load_hooks
 
@@ -236,14 +257,25 @@ def recompute_item_status(db: Session, item: LineItem, source: str, actor: str |
                           exclude_offer_items: set[uuid.UUID] | None = None) -> str:
     """The ONLY place that derives an item's coverage status (v0.3.1), in this order:
 
-    cancelled / sold / delivered / closed are never touched; a still-valid selected offer row -> selected;
+    cancelled / closed are never touched; delivered follows the delivery quantities (v0.7.0; an item marked
+    delivered without delivery data stays as it is); sold is never touched otherwise; a still-valid selected offer row -> selected;
     any valid available offer row -> has_offer; any RFQ (not cancelled) that includes the item and has a
     recipient that is not ``draft`` (sent, replied, declined, no_response, expired; v0.3.2) -> rfq_sent;
     otherwise uncovered. A selection that is no longer valid is cleared
     (event ``selection_lost``). ``exclude_offer_items`` treats rows about to be deleted as gone.
     ``no_coverage_confirmed`` is a separate flag and is not changed here.
     """
-    if item.status in FROZEN_STATUSES:
+    if item.status in ("cancelled", "closed"):
+        return item.status
+    delivered = _delivered(db, item.id)
+    if delivered is True:  # v0.7.0: set and cleared only from delivery quantities
+        if item.status != "delivered":
+            old_status, item.status = item.status, "delivered"
+            db.flush()
+            events.record(db, "line_item", item.id, "status", {"old_status": old_status, "new_status": "delivered",
+                                                               "reason": cause or "delivered"}, source, actor=actor)
+        return "delivered"
+    if item.status == "delivered" and delivered is None:
         return item.status
     if _is_sold(db, item.id):  # sold (quote accepted): nothing else touches the item, not even its selection
         if item.status != "sold":

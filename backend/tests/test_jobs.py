@@ -150,7 +150,8 @@ def _tick(at: datetime, hourly: bool = False) -> list[str]:
     with new_session() as db:
         names = scheduler.tick(db, at)
     # the hourly sourcing expiry (v0.3.0) is checked in its own test
-    return names if hourly else [n for n in names if n not in ("sourcing_expiry_hourly", "quotes_expiry_hourly")]
+    return names if hourly else [n for n in names if n not in ("sourcing_expiry_hourly", "quotes_expiry_hourly",
+                                                                  "execution_claims_hourly")]
 
 
 def test_due_time_calculation():
@@ -175,7 +176,8 @@ def test_scheduler_runs_each_due_slot_once_and_catches_up(fresh_scheduler):
     # new month
     assert _tick(datetime(2026, 11, 1, 3, 0, tzinfo=TZ)) == ["backup_nightly", "restore_test_monthly"]
     with new_session() as db:
-        queued = db.execute(select(Job.type).where(Job.status == "queued", Job.type.not_in(("sourcing.expire", "quotes.expire")))).scalars().all()
+        queued = db.execute(select(Job.type).where(Job.status == "queued", Job.type.not_in(("sourcing.expire", "quotes.expire",
+                                                                                      "execution.claim_followups")))).scalars().all()
     assert Counter(queued) == {"backup.run": 4, "backup.restore_test": 2}
 
 

@@ -280,3 +280,184 @@ class StepIn(InputModel):
 
 class StepOrderIn(InputModel):
     step_ids: list[uuid.UUID]
+
+
+# ---- shipments, inspections, receipts (M3) ------------------------------------------------------------------------------
+
+Mode = Literal["sea", "air", "road", "rail", "courier", "domestic_truck", "other"]
+DocKind = Literal["bl", "awb", "cmr", "waybill", "other"]
+ShipmentStatus = Literal["planned", "booked", "in_transit", "arrived", "at_customs", "cleared", "delivered", "cancelled"]
+ShipmentDocKind = Literal["commercial_invoice", "packing_list", "bl", "awb", "cmr", "certificate_of_origin",
+                          "inspection_certificate", "insurance_policy", "customs_declaration", "other"]
+
+
+class ShipmentItemIn(InputModel):
+    purchase_order_item_id: uuid.UUID | None = None
+    sales_order_item_id: uuid.UUID | None = None
+    quantity: Positive
+
+
+class ShipmentBase(InputModel):
+    mode: Mode | None = None
+    carrier_party_id: uuid.UUID | None = None
+    forwarder_party_id: uuid.UUID | None = None
+    transport_doc_kind: DocKind | None = None
+    transport_doc_no: Text300 | None = None
+    containers: Annotated[list[Annotated[str, Field(max_length=40)]], Field(max_length=200)] | None = None
+    vessel_or_flight: Text300 | None = None
+    origin: Text300 | None = None
+    destination: Text300 | None = None
+    incoterm: Text300 | None = None
+    etd: date | None = None
+    eta: date | None = None
+    atd: date | None = None
+    ata: date | None = None
+    status: ShipmentStatus | None = None
+    insurer_party_id: uuid.UUID | None = None
+    policy_no: Text300 | None = None
+    insured_amount: Amount | None = None
+    insured_amount_currency: Currency | None = None
+    notes: LongText | None = None
+    items: list[ShipmentItemIn] | None = None
+
+
+class ShipmentIn(ShipmentBase):
+    case_id: uuid.UUID | None = None
+    purchase_order_id: uuid.UUID | None = None
+    sales_order_id: uuid.UUID | None = None
+    direction: Literal["inbound", "outbound"] | None = None
+
+
+class ShipmentPatch(ShipmentBase):
+    pass
+
+
+class ShipmentEventIn(InputModel):
+    kind: Annotated[str, Field(min_length=1, max_length=60)]
+    at: datetime | None = None
+    note: Text2000 | None = None
+    document_id: uuid.UUID | None = None
+
+
+class ShipmentDocumentIn(InputModel):
+    kind: ShipmentDocKind
+    document_id: uuid.UUID
+    number: Text300 | None = None
+    issued_on: date | None = None
+
+
+class InspectionItem(InputModel):
+    description: Text300 | None = None
+    purchase_order_item_id: uuid.UUID | None = None
+    quantity: Amount | None = None
+    result: Literal["pass", "fail", "conditional", "pending"] | None = None
+    note: Text300 | None = None
+
+
+class InspectionIn(InputModel):
+    case_id: uuid.UUID | None = None
+    shipment_id: uuid.UUID | None = None
+    purchase_order_id: uuid.UUID | None = None
+    kind: Literal["pre_shipment", "on_arrival", "third_party", "internal"]
+    inspector_party_id: uuid.UUID | None = None
+    planned_on: date | None = None
+    done_on: date | None = None
+    result: Literal["pass", "fail", "conditional", "pending"] | None = None
+    report_document_id: uuid.UUID | None = None
+    items: list[InspectionItem] | None = None
+    notes: LongText | None = None
+
+
+class InspectionPatch(InputModel):
+    kind: Literal["pre_shipment", "on_arrival", "third_party", "internal"] | None = None
+    inspector_party_id: uuid.UUID | None = None
+    planned_on: date | None = None
+    done_on: date | None = None
+    result: Literal["pass", "fail", "conditional", "pending"] | None = None
+    report_document_id: uuid.UUID | None = None
+    items: list[InspectionItem] | None = None
+    notes: LongText | None = None
+
+
+class ReceiptLine(InputModel):
+    purchase_order_item_id: uuid.UUID
+    quantity: Amount
+    condition: Literal["ok", "damaged", "short"] = "ok"
+    note: Text300 | None = None
+
+
+class ReceiptIn(InputModel):
+    purchase_order_id: uuid.UUID
+    shipment_id: uuid.UUID | None = None
+    received_on: date
+    document_id: uuid.UUID | None = None
+    note: Text2000 | None = None
+    items: list[ReceiptLine]
+
+
+# ---- claims and deliveries (M3) --------------------------------------------------------------------------------------------
+
+ClaimKind = Literal["defect", "shortage", "delay", "damage", "wrong_item", "documents", "other"]
+ClaimDirection = Literal["against_supplier", "against_carrier", "against_insurer", "from_customer"]
+
+
+class ClaimItem(InputModel):
+    description: Text300 | None = None
+    purchase_order_item_id: uuid.UUID | None = None
+    sales_order_item_id: uuid.UUID | None = None
+    quantity: Amount | None = None
+    condition: Text300 | None = None
+    result: Text300 | None = None
+    note: Text300 | None = None
+
+
+class ClaimIn(InputModel):
+    case_id: uuid.UUID | None = None
+    direction: ClaimDirection
+    counterparty_id: uuid.UUID | None = None
+    kind: ClaimKind
+    purchase_order_id: uuid.UUID | None = None
+    shipment_id: uuid.UUID | None = None
+    receipt_id: uuid.UUID | None = None
+    delivery_id: uuid.UUID | None = None
+    inspection_id: uuid.UUID | None = None
+    items: list[ClaimItem] | None = None
+    claimed_amount: Amount | None = None
+    claimed_amount_currency: Currency | None = None
+    opened_on: date | None = None
+    notes: LongText | None = None
+
+
+class ClaimPatch(InputModel):
+    counterparty_id: uuid.UUID | None = None
+    kind: ClaimKind | None = None
+    items: list[ClaimItem] | None = None
+    claimed_amount: Amount | None = None
+    claimed_amount_currency: Currency | None = None
+    opened_on: date | None = None
+    notes: LongText | None = None
+
+
+class ClaimStatusIn(InputModel):
+    status: Literal["open", "submitted", "negotiating", "resolved", "rejected", "withdrawn"]
+    note: Text2000 | None = None
+    resolution: Literal["replacement", "credit_note", "refund", "discount", "repair", "none"] | None = None
+    resolution_amount: Amount | None = None
+    resolution_amount_currency: Currency | None = None
+    resolved_on: date | None = None
+
+
+class DeliveryLine(InputModel):
+    sales_order_item_id: uuid.UUID
+    quantity: Positive
+
+
+class DeliveryIn(InputModel):
+    sales_order_id: uuid.UUID
+    shipment_id: uuid.UUID | None = None
+    delivered_on: date
+    delivery_place: Text300 | None = None
+    receiver_name: Text300 | None = None
+    receipt_document_id: uuid.UUID | None = None
+    note: Text2000 | None = None
+    items: list[DeliveryLine]

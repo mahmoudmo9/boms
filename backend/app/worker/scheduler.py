@@ -62,6 +62,8 @@ SCHEDULES = [
     Schedule("sourcing_expiry_hourly", "sourcing.expire", {}, hourly_due),
     # quotes: sent quotes past valid_until -> expired (status only; v0.4.0)
     Schedule("quotes_expiry_hourly", "quotes.expire", {}, hourly_due),
+    # execution: one open «پیگیری ادعا» per open claim, the next after the previous is done (v0.7.0)
+    Schedule("execution_claims_hourly", "execution.claim_followups", {}, hourly_due),
 ]
 
 

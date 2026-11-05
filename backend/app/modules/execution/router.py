@@ -16,7 +16,9 @@ from app.modules.execution.schemas import (AmendIn, ConfirmIn, MilestoneIn, Mile
                                            ProcessTemplateIn, ProcessTemplatePatch, PurchaseOrderItemPatch,
                                            PurchaseOrderPatch, ReasonIn, SalesOrderFromProposal, SalesOrderFromQuote,
                                            SalesOrderItemPatch, SalesOrderManual, SalesOrderPatch, StepIn, StepOrderIn,
-                                           StepPatch)
+                                           StepPatch, ShipmentIn, ShipmentPatch, ShipmentEventIn, ShipmentDocumentIn,
+                                           InspectionIn, InspectionPatch, ReceiptIn, ClaimIn, ClaimPatch, ClaimStatusIn,
+                                           DeliveryIn)
 from app.modules.sourcing.common import jsonable, row_snapshot
 from app.modules.system.auth import CurrentUser
 
@@ -434,6 +436,235 @@ def step_delete(step_id: uuid.UUID, request: Request, user: CurrentUser, db: Db)
     process.remove_step(db, step_id, request_source(request), user.username)
     db.commit()
     return process.process_out(db, get(db, Process, process_id, "Process"))
+
+
+# ---- shipments, inspections, receipts (M3) ---------------------------------------------------------------------------------
+
+def _items(body) -> list[dict] | None:
+    return None if body.items is None else [i.model_dump(exclude_unset=True) for i in body.items]
+
+
+@router.post("/shipments", status_code=201)
+def sh_create(body: ShipmentIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    data = body.model_dump(exclude_unset=True)
+    data["items"] = _items(body) or []
+    row = logistics.create_shipment(db, data, request_source(request), user.username)
+    db.commit()
+    return logistics.shipment_out(db, row)
+
+
+@router.get("/shipments/{shipment_id}")
+def sh_get(shipment_id: uuid.UUID, _: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    return logistics.shipment_out(db, logistics.get_shipment(db, shipment_id))
+
+
+@router.patch("/shipments/{shipment_id}")
+def sh_patch(shipment_id: uuid.UUID, body: ShipmentPatch, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    data = body.model_dump(exclude_unset=True)
+    if body.items is not None:
+        data["items"] = _items(body)
+    row = logistics.update_shipment(db, shipment_id, data, request_source(request), user.username)
+    db.commit()
+    return logistics.shipment_out(db, row)
+
+
+@router.delete("/shipments/{shipment_id}", status_code=204)
+def sh_delete(shipment_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    logistics.delete_shipment(db, shipment_id, request_source(request), user.username)
+    db.commit()
+    return Response(status_code=204)
+
+
+@router.post("/shipments/{shipment_id}/events", status_code=201)
+def sh_event(shipment_id: uuid.UUID, body: ShipmentEventIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    logistics.add_event(db, shipment_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
+    db.commit()
+    return logistics.shipment_out(db, logistics.get_shipment(db, shipment_id))
+
+
+@router.get("/shipment-event-kinds")
+def sh_event_kinds(_: CurrentUser):
+    from app.modules.execution import logistics
+
+    return list(logistics.EVENT_SUGGESTIONS)
+
+
+@router.post("/shipments/{shipment_id}/documents", status_code=201)
+def sh_document(shipment_id: uuid.UUID, body: ShipmentDocumentIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    logistics.add_document(db, shipment_id, body.model_dump(), request_source(request), user.username)
+    db.commit()
+    return logistics.shipment_out(db, logistics.get_shipment(db, shipment_id))
+
+
+@router.delete("/shipment-documents/{row_id}")
+def sh_document_delete(row_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    shipment_id = logistics.remove_document(db, row_id, request_source(request), user.username)
+    db.commit()
+    return logistics.shipment_out(db, logistics.get_shipment(db, shipment_id))
+
+
+@router.get("/cases/{case_id}/delay-warnings")
+def delay_warnings(case_id: uuid.UUID, _: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    return logistics.delay_warnings(db, case_id)
+
+
+@router.post("/inspections", status_code=201)
+def insp_create(body: InspectionIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    data = body.model_dump(exclude_unset=True)
+    if body.items is not None:
+        data["items"] = jsonable(_items(body))
+    row = logistics.create_inspection(db, data, request_source(request), user.username)
+    db.commit()
+    return logistics.inspection_out(db, row)
+
+
+@router.patch("/inspections/{inspection_id}")
+def insp_patch(inspection_id: uuid.UUID, body: InspectionPatch, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    data = body.model_dump(exclude_unset=True)
+    if body.items is not None:
+        data["items"] = jsonable(_items(body))
+    row = logistics.update_inspection(db, inspection_id, data, request_source(request), user.username)
+    db.commit()
+    return logistics.inspection_out(db, row)
+
+
+@router.delete("/inspections/{inspection_id}", status_code=204)
+def insp_delete(inspection_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    logistics.delete_inspection(db, inspection_id, request_source(request), user.username)
+    db.commit()
+    return Response(status_code=204)
+
+
+@router.post("/receipts", status_code=201)
+def rc_create(body: ReceiptIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    data = body.model_dump(exclude_unset=True)
+    data["items"] = _items(body)
+    row = logistics.create_receipt(db, data, request_source(request), user.username)
+    db.commit()
+    return logistics.receipt_out(db, row)
+
+
+@router.post("/receipts/{receipt_id}/reverse", status_code=204)
+def rc_reverse(receipt_id: uuid.UUID, body: ReasonIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import logistics
+
+    logistics.delete_receipt(db, receipt_id, body.reason, request_source(request), user.username)
+    db.commit()
+    return Response(status_code=204)
+
+
+# ---- claims and deliveries (M3) --------------------------------------------------------------------------------------------
+
+@router.post("/claims", status_code=201)
+def cl_create(body: ClaimIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import claims
+
+    data = body.model_dump(exclude_unset=True)
+    if body.items is not None:
+        data["items"] = jsonable(_items(body))
+    row = claims.create(db, data, request_source(request), user.username)
+    db.commit()
+    return claims.claim_out(db, row)
+
+
+@router.get("/claims/{claim_id}")
+def cl_get(claim_id: uuid.UUID, _: CurrentUser, db: Db):
+    from app.modules.execution import claims
+
+    return claims.claim_out(db, claims.get_claim(db, claim_id))
+
+
+@router.patch("/claims/{claim_id}")
+def cl_patch(claim_id: uuid.UUID, body: ClaimPatch, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import claims
+
+    data = body.model_dump(exclude_unset=True)
+    if body.items is not None:
+        data["items"] = jsonable(_items(body))
+    row = claims.update(db, claim_id, data, request_source(request), user.username)
+    db.commit()
+    return claims.claim_out(db, row)
+
+
+@router.post("/claims/{claim_id}/status")
+def cl_status(claim_id: uuid.UUID, body: ClaimStatusIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import claims
+
+    row = claims.set_status(db, claim_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
+    db.commit()
+    return claims.claim_out(db, row)
+
+
+@router.delete("/claims/{claim_id}", status_code=204)
+def cl_delete(claim_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import claims
+
+    claims.delete(db, claim_id, request_source(request), user.username)
+    db.commit()
+    return Response(status_code=204)
+
+
+@router.post("/deliveries", status_code=201)
+def dl_create(body: DeliveryIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import deliveries
+
+    data = body.model_dump(exclude_unset=True)
+    data["items"] = _items(body)
+    row = deliveries.create_delivery(db, data, request_source(request), user.username)
+    db.commit()
+    return _so(db, row.sales_order_id)
+
+
+@router.post("/deliveries/{delivery_id}/reverse")
+def dl_reverse(delivery_id: uuid.UUID, body: ReasonIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import deliveries
+
+    order = deliveries.reverse(db, delivery_id, body.reason, request_source(request), user.username)
+    db.commit()
+    return _so(db, order.id)
+
+
+@router.get("/parties/{party_id}/execution")
+def party_execution(party_id: uuid.UUID, _: CurrentUser, db: Db):
+    """Read-only lists for the party page: its sales orders (customer), POs (supplier) and claims."""
+    from sqlalchemy import select
+
+    from app.modules.execution import claims
+    from app.modules.execution.models import PurchaseOrder, SalesOrder
+
+    sos = db.scalars(select(SalesOrder).where(SalesOrder.customer_party_id == party_id).order_by(SalesOrder.created_at.desc()))
+    pos = db.scalars(select(PurchaseOrder).where(PurchaseOrder.supplier_party_id == party_id)
+                     .order_by(PurchaseOrder.created_at.desc()))
+    keep = ("id", "case_id", "number", "status", "currency", "total", "created_at")
+    return jsonable({"sales_orders": [{k: getattr(x, k) for k in keep + ("customer_ref", "delivery_due_on")} for x in sos],
+                     "purchase_orders": [{k: getattr(x, k) for k in keep + ("supplier_ref", "ready_due_on")} for x in pos],
+                     "claims": [{k: getattr(c, k) for k in ("id", "case_id", "kind", "direction", "status", "opened_on",
+                                                            "claimed_amount", "claimed_amount_currency")}
+                                for c in claims.claims_of(db, party_id=party_id)]})
 
 
 ROUTERS = [router]

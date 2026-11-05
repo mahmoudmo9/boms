@@ -263,7 +263,7 @@ def test_party_delete_with_sourcing_records_is_409_with_counts(client):
 
     r = client.delete(f"/api/contacts/{c['id']}")
     assert r.status_code == 409
-    assert r.json()["error"]["details"] == {"interactions": 2, "rfq_recipients": 1, "offers": 1, "quotes": 0}
+    assert r.json()["error"]["details"] == {"interactions": 2, "rfq_recipients": 1, "offers": 1, "quotes": 0, "sales_orders": 0, "purchase_orders": 0}
 
 
 def test_party_with_only_capability_tags_deletes_them(client, db):
