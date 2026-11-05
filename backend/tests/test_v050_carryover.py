@@ -185,7 +185,8 @@ def test_persian_digits_follow_the_user_setting(client):
         assert not any(d in text for d in "0123456789"), text
         client.patch("/api/me", json={"digits": "latin"})
         latin = new_quote(client, ready_case(client, country="IR")[0], lead_time_days=45)
-        assert "45 روز" in latin["terms_text"]
+        # v0.7.0 section 0: a Persian quote (an output document) uses Persian digits whatever the user chose
+        assert "۴۵ روز" in latin["terms_text"]
     finally:
         client.patch("/api/me", json={"digits": "latin"})
 

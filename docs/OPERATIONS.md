@@ -357,3 +357,10 @@ uploads anything to Setad; BOMS only records what you did on Setad.
 
 **Command center**
 - [ ] The *Tenders* section shows dates within 3 days, incomplete envelopes near the deadline, guarantees expiring or awaiting release, company documents expiring, Setad changes not applied and tenders waiting for the result; each row opens the right case tab.
+
+## Manual checks for v0.7.0 (execution and shipping)
+
+Run once on the Windows PC after `update.bat` from 0.6.0 (not yet run there).
+
+**Update**
+- [ ] After updating from 0.5.0, run one full tender fetch so guarantee amounts are filled.

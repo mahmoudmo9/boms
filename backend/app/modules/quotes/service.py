@@ -181,7 +181,7 @@ def render_terms(db: Session, quote: Quote) -> str:
     if template is None:
         return ""
     lang = quote.language
-    digits = sourcing_templates.owner_digits(db)
+    digits = "fa" if lang == "fa" else "latin"  # v0.7.0: Persian outputs always use Persian digits
     lead = ""
     if quote.lead_time_days is not None:
         lead = sourcing_templates.localize_digits(str(quote.lead_time_days), lang, digits) + " " + (

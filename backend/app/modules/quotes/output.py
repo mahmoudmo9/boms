@@ -80,6 +80,12 @@ def total_in_words(total: Decimal, currency: str) -> str:
 
 # ---- context (the data every output shows) --------------------------------------------------------------
 
+def output_style(language: str) -> tuple[str, str]:
+    """Calendar and digits of an output document (v0.7.0): Persian documents always use Jalali dates and Persian
+    digits, English ones Gregorian dates and Latin digits, whatever the user's own settings (the UI follows those)."""
+    return ("jalali", "fa") if language == "fa" else ("gregorian", "latin")
+
+
 def _fmt_date(value: date | None, calendar: str, digits: str) -> str:
     if value is None:
         return ""
@@ -105,7 +111,7 @@ def _fmt_qty(value: Decimal, digits: str) -> str:
 
 def build_context(db: Session, quote: Quote, calendar: str = "gregorian", digits: str = "latin") -> dict:
     lang = quote.language
-    digits = digits if lang == "fa" else "latin"
+    calendar, digits = output_style(lang)  # v0.7.0: the document's language decides, not the user's settings
     decimals = costing.currency_decimals(db, quote.currency)
     units = sourcing_coverage.unit_index(db)
     names = {i.id: i.name for i in sourcing_items.items_of(db, case_id=quote.case_id)}

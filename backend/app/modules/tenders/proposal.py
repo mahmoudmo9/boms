@@ -193,7 +193,7 @@ def approve(db: Session, proposal_id: uuid.UUID, source: str, actor: str | None 
 def build_context(db: Session, row: TenderProposal, calendar: str = "jalali", digits: str = "fa", language: str = "fa") -> dict:
     tender = get_tender(db, row.tender_id)
     lb = LABELS[language]
-    digits = digits if language == "fa" else "latin"
+    calendar, digits = quote_output.output_style(language)  # v0.7.0: always Jalali / Persian digits in fa
     decimals = costing.currency_decimals(db, row.currency)
     units = sourcing_coverage.unit_index(db)
     names = {i.id: i.name for i in sourcing_items.items_of(db, case_id=tender.case_id)}
