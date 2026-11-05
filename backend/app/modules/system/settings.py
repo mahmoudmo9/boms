@@ -60,6 +60,13 @@ def _day_offsets(value: Any) -> list[int]:
     return sorted(set(value), reverse=True)
 
 
+def _percent(value: Any) -> float:
+    """A percentage 0..100 (v0.7.0 PO price tolerance), whole or decimal."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 100:
+        raise ValueError("expected a percentage 0..100")
+    return value
+
+
 def _short_text(value: Any) -> str:
     if not isinstance(value, str) or len(value) > 300:
         raise ValueError("expected text (up to 300 characters)")
@@ -158,6 +165,14 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "tenders.reminder_days": ([3, 1], _day_offsets),             # reminders before each tender date
     "tenders.guarantee_reminder_days": ([30, 7], _day_offsets),  # before a guarantee's valid_until
     "tenders.release_followup_days": (7, _int_range(0, 365)),    # bid bond release follow-up after the result
+    # Execution and shipping (v0.7.0)
+    "execution.po_price_tolerance_percent": (0, _percent),       # PO price above the cost sheet's purchase price
+    "execution.po_confirm_days": (3, _int_range(0, 90)),         # «پیگیری تأیید سفارش» after a PO is sent
+    "execution.ready_followup_days_before": (2, _int_range(0, 90)),  # «پیگیری آماده شدن» before the ready date
+    "execution.step_reminder_days": ([3, 1], _day_offsets),      # reminders before a process step's due date
+    "execution.delay_warning_days": (3, _int_range(0, 365)),     # ETA later than the first ETA by more than this
+    "execution.claim_followup_days": (7, _int_range(1, 90)),     # «پیگیری ادعا» while a claim is open
+    "execution.invoice_followup_days": (3, _int_range(0, 90)),   # «صدور فاکتور و پیگیری تسویه» after delivery
 }
 
 
