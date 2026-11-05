@@ -743,3 +743,94 @@ Hooks registered in `tenders/hooks.py` (new registries in earlier modules are ma
 
 Validation convention as elsewhere: a CHECK violation is 422 with the constraint name; a unique or still-referenced
 row is 409 (an issued guarantee cannot be deleted: 409 `guarantee_issued`).
+
+## Execution and shipping (Phase 8, v0.7.0, migration `0013_execution`)
+
+**Section 0.** Output documents follow their own language, not the user's settings: Persian quotes (and Setad
+proformas), quote terms text, tender proposal summaries and the order documents below always use Jalali dates and
+Persian digits; English outputs use Gregorian dates and Latin digits (`quotes.output.output_style`). The UI still
+follows the user.
+
+Module `app/modules/execution/` (all tables in `ops`, audited by `core.audit_row`).
+
+| Table | Content |
+|---|---|
+| `sales_order_sequence`, `purchase_order_sequence` | gap-free numbers per year of the user's calendar (`SO-1405-0001`, `PO-1405-0001`), handed out under a row lock like quote numbers |
+| `sales_order` (+ `sales_order_item`, `sales_order_change`) | the customer's order: source quote / tender proposal / manual, customer and contact, customer ref, contract date, signed document, currency, price basis, Incoterm, payment and delivery terms, delivery due date and place, warranty months, performance guarantee; status draft → confirmed → in_progress → delivered → closed (Phase 9) / cancelled; amendments after confirmation (field, old, new, reason, document) |
+| `purchase_order` (+ `purchase_order_item`, `purchase_order_change`) | one per supplier (and currency): number with `-v2` revisions (`supersedes_id`), language, terms text (`po_terms` templates), ready date, `direct_to_customer`; status draft → approved → sent → confirmed → in_production → ready → shipped → received → closed / cancelled / superseded; ready-date history |
+| `payment_milestone` (+ `payment_record`) | money in (customer, on a sales order) or out (supplier or other, on a PO or the case): percent of the order or amount + currency, due date or event; status expected / partly / done derived from the payment records; cancelled with a reason |
+| `process_template` (+ `process_template_step`), `process` (+ `process_step`) | checklists per deal type (import, export, domestic; three seeded, editable as data): group, code, labels fa/en, the reference a step produces, needs-a-document, default offset days; per case one process per deal type with status, reference, started / done / due dates, document (or a reason), remind days |
+| `shipment` (+ `shipment_item`, `shipment_event`, `shipment_document`) | inbound / outbound, mode, carrier / forwarder / insurer, transport document kind and number, containers, ETD / ETA / ATD / ATA, `first_eta`, status; events (an ETA / ETD change writes one), documents by kind |
+| `inspection` | pre-shipment / on arrival / third party / internal; result; items checked (jsonb) |
+| `receipt` (+ `receipt_item`) | goods received from a supplier: quantity and condition ok / damaged / short per PO item |
+| `delivery` (+ `delivery_item`) | deliveries to the customer with the receipt document («رسید انبار» / «صورتجلسه تحویل») |
+| `claim` | against supplier / carrier / insurer or from the customer: kind, links (PO, shipment, receipt, delivery, inspection), items (jsonb), claimed and resolved amounts (informational until Phase 9), status open → submitted → negotiating → resolved / rejected / withdrawn |
+| `execution_followup` | which parties follow-up BOMS created for which order / step / claim (purposes po_confirm, po_ready, step_reminder, claim, invoice, warranty_end) |
+
+**Sales order.** Created from an accepted or partially accepted quote (its accepted items only, with prices and
+terms; the case offers a «Create sales order» prompt, nothing is created automatically), from a won tender's approved
+proposal (organizer as customer, performance guarantee linked) or by hand from the case's `sold` items. One open order
+per quote / proposal (409 `order_exists` with its id). Confirmation needs the signed document or the reason
+«بدون سند امضاشده» (kept and in the event); confirming creates the process checklist of the deal type of the current
+cost sheet (hook). After confirmation, quantities, prices, delivery dates and terms change only through an amendment
+(`POST /api/sales-orders/{id}/amend`); a quantity never goes below what was delivered. The order acknowledgement is
+printed / PDF / Word in fa or en with a DRAFT mark until confirmed.
+
+**Payment milestones and cash.** A percent resolves against the order total. Payment records derive the status; a
+paid milestone is never deleted (reverse the record with a reason, or cancel). The case's cash position (received,
+paid, net tied up per currency, still expected) is shown next to the Phase 6 computed exposure. Ordering gate: sending
+a PO while the order's customer prepayment milestone is still `expected` gives 409 `customer_prepayment_missing`
+unless `confirm_without_prepayment` with a reason (kept on the PO and in the event; the Phase 5 wording).
+
+**Purchase orders.** "Create POs" groups a confirmed order's items by the supplier and currency of each item's
+selected offer, prefilled from the offer (the cost sheet's own purchase-price rule) and the `po_terms` template of the
+PO language (supplier in Iran → fa); items without a selected offer are listed. Approval locks the numbers and checks
+the price against the current cost sheet's purchase price of the item (same currency) plus
+`execution.po_price_tolerance_percent`; above it, 409 `po_above_cost_sheet` unless confirmed with a reason. Mark sent
+records an outgoing interaction with the follow-up «پیگیری تأیید سفارش» after `execution.po_confirm_days`; the
+supplier's confirmation closes it, keeps a changed ready date in the history and creates «پیگیری آماده شدن»
+`execution.ready_followup_days_before` the ready date. Production statuses are set by hand; `received` follows the
+receipts.
+
+**Process checklists.** Due dates are the confirmation day plus each step's offset; reminders (default
+`execution.step_reminder_days`, per step editable) are parties follow-ups that move with the date and are cancelled
+when the step is done or not applicable or the case is lost / cancelled / closed. A step that needs a document is not
+done without one unless a reason is given (CHECK `process_step_document`, 422 `document_required` before it). On a
+domestic checklist «PO sent» and «goods ready» follow the PO.
+
+**Shipments and receipts.** Shipped quantities of a PO item never exceed its ordered quantity (422 `over_shipped`).
+Delay warnings: ETA passed without ATA; ETA later than the first ETA by more than `execution.delay_warning_days`; a
+PO ready date passed while the PO is not ready. A failed inspection, and a receipt with damaged or short lines, offer a
+prefilled claim. A PO delivered directly to the customer takes no receipt.
+
+**Claims.** Each status change is an event; while open there is always one open «پیگیری ادعا» on the counterparty,
+the next created `execution.claim_followup_days` after the previous is done (hourly job `execution.claim_followups`).
+
+**Deliveries and item status.** The delivered quantity of an order item never exceeds the ordered one
+(422 `over_delivered`). `recompute_item_status` stays the only place that derives item status: `cancelled` and
+`closed` are frozen; `delivered` is set and cleared only from delivery quantities through a registered delivered
+check (an item marked delivered before v0.7.0 without delivery data stays as it is); otherwise `sold` as Phases 6 / 7b
+set it. When every item is delivered the order becomes `delivered` and BOMS creates «صدور فاکتور و پیگیری تسویه»
+(`execution.invoice_followup_days`), the warranty end as a follow-up on its date and, with a linked performance
+guarantee, its release reminder (Phase 7b). Reversing a delivery (reason required, while the order is not closed)
+recomputes everything and cancels those follow-ups.
+
+Hooks and registries (new ones marked *new*):
+- `sourcing.items.register_delivered_check` (*new*) — `delivered` from delivery quantities;
+- `sourcing.inquiries.register_case_status_changed` — a lost / cancelled / closed case cancels step reminders;
+- `sourcing.inquiries.register_case_cleanup(1, …)` — the case cascade delete removes every execution row and cancels
+  its follow-ups, before tenders (5), quotes (10) and cost sheets (20); files stay in the store;
+- `execution.sales_orders.register_order_confirmed` (*new*) — the checklist on confirmation;
+- `execution.purchase_orders.register_process_hook` (*new*) — PO events that tick domestic steps;
+- `parties.command_center.register_section("execution", …)` — «اجرا»: POs sent and not confirmed after
+  `execution.po_confirm_days`, ready dates passed, shipments late or delayed, steps due within 3 days or overdue,
+  payments past due (in and out), open claims, sales orders with delivery due within 7 days or overdue;
+- `parties.references` — sales orders, POs, claims, shipments, inspections and milestones count against a party delete;
+- `execution/searchable.py` — orders and POs (number, customer / supplier, refs), shipments (transport document,
+  containers), process step references (order registration, kotaj), claims;
+- `sourcing.templates` — template kind `po_terms` with its placeholders (`supplier_name`, `contact_name`,
+  `payment_terms`, `incoterm`, `ready_due_on`, `delivery_place`, `delivery_terms`, `case_title`, `signature`).
+
+A confirmed sales order, an approved or sent PO, a delivery of a closed order and a paid milestone are never deleted
+one by one (cancel or reverse). Validation convention as elsewhere: CHECK violations 422 with the constraint name,
+unique / still referenced 409.

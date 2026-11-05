@@ -362,5 +362,30 @@ uploads anything to Setad; BOMS only records what you did on Setad.
 
 Run once on the Windows PC after `update.bat` from 0.6.0 (not yet run there).
 
+Nothing here pays, ships or contacts anyone: BOMS records what you did.
+
 **Update**
+- [ ] Run the 0.7.0 `scripts\update.bat`: it prints `0.6.0 -> 0.7.0`, a `pre_update` backup appears, the migration `0013` runs, and *Run restore test* passes afterwards (now 94 tables).
 - [ ] After updating from 0.5.0, run one full tender fetch so guarantee amounts are filled.
+- [ ] A case has the tabs *Order*, *Purchase*, *Logistics*, *Delivery and claims*; the menu *Execution & Shipping* opens its overview; Settings shows *Execution*.
+
+**One real deal from the accepted quote to delivery**
+- [ ] Record the customer's acceptance of a real quote (all or some items): the *Order* tab offers «Create sales order»; the order has only the accepted items with the quote's prices and terms.
+- [ ] Attach the signed contract (or confirm «بدون سند امضاشده» with a reason) and confirm: the *Logistics* tab now has the checklist of the deal type (import / export / domestic) with due dates.
+- [ ] Add «پیش‌پرداخت ٪» (e.g. 30 %) and record the customer's payment with its reference and receipt; the cash position shows it next to the planned exposure.
+- [ ] *Purchase* → «Create POs»: one PO per supplier; an Iranian supplier's PO is in Persian, a foreign one in English. Approve (a price above the cost sheet asks for a reason).
+- [ ] **PO PDF via Edge** opens on the letterhead, one page for a short order, the amount in words in Persian; **Word opens the `.docx` without a repair prompt**.
+- [ ] Mark one PO sent before the customer's prepayment: BOMS asks for the "ordering before payment" approval line. A «پیگیری تأیید سفارش» follow-up appears for the supplier.
+- [ ] Record the supplier's confirmation with its reference and ready date: the follow-up is closed and «پیگیری آماده شدن» appears before the ready date. Move the ready date once with a reason: the history shows both.
+- [ ] Record your own prepayment to the supplier on the PO.
+- [ ] Checklist: enter the order registration number «ثبت سفارش» and the kotaj number with their documents; a step that needs a document asks for one or a reason; reminders appear in the command center on their days and move with the due date.
+- [ ] Shipment: B/L number, containers, ETA; move the ETA later by more than 3 days: an event and a delay warning appear.
+- [ ] Inspection (pass), then a goods receipt with one short line: «Open claim» creates a claim against the supplier with «پیگیری ادعا» every 7 days while it is open.
+- [ ] Two partial deliveries with the warehouse receipt («رسید انبار»): each item shows «n از m تحویل شد»; when all is delivered the order is *Delivered*, the items are *delivered*, and «صدور فاکتور و پیگیری تسویه» appears (plus the warranty end and the performance guarantee release when set).
+- [ ] Reverse the last delivery with a reason: the order goes back to *In progress* and the item to *sold*; record it again.
+
+**Persian outputs**
+- [ ] With your own settings on Gregorian dates and Latin digits, print a Persian quote, a tender proposal, a Persian PO and a Persian order acknowledgement: all show Jalali dates and Persian digits. English outputs show Gregorian dates and Latin digits. The screens still follow your settings.
+
+**Command center «اجرا»**
+- [ ] The *Execution* section lists POs sent and not confirmed, ready dates passed, delayed shipments, checklist steps due, payments past due, open claims and deliveries due; each row opens the right case tab. The *Execution & Shipping* menu shows the same.
