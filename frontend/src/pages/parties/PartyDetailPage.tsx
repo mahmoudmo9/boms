@@ -20,7 +20,7 @@ import { CountrySelect } from "./PartiesPage";
 import { PartyPicker, useQuickLog } from "./QuickLog";
 import { CancelFollowupButton, CHANNELS, DeleteButton, FollowupActions, InUseNote, METHOD_TYPES, PartyName, ROLES, SharedNumberPrompt, StageSelect, stageLabel } from "./shared";
 
-const TABS = ["overview", "contacts", "interactions", "documents", "quotes", "history"] as const;
+const TABS = ["overview", "contacts", "interactions", "documents", "quotes", "orders", "history"] as const;
 type Tab = (typeof TABS)[number];
 
 function useParty(id: string) {
@@ -638,6 +638,36 @@ function Quotes({ partyId }: { partyId: string }) {
   );
 }
 
+/** v0.7.0: this party's sales orders (customer), purchase orders (supplier) and claims, read-only. */
+function Orders({ partyId }: { partyId: string }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  type Row = { id: string; case_id: string; number: string; status: string; currency: string; total: string; created_at: string; customer_ref?: string | null; supplier_ref?: string | null };
+  const list = useQuery({ queryKey: ["party-execution", partyId], queryFn: () => api<{ sales_orders: Row[]; purchase_orders: Row[];
+    claims: { id: string; case_id: string; kind: string; direction: string; status: string; opened_on: string }[] }>(`/api/parties/${partyId}/execution`) });
+  if (list.isLoading) return <Loading />;
+  if (list.error || !list.data) return <ErrorNote error={list.error} />;
+  const table = (rows: Row[], tab: string, ref: "customer_ref" | "supplier_ref", testId: string) => rows.length === 0 ? <EmptyState>{t("execution.party.none")}</EmptyState> : (
+    <div className="overflow-x-auto" data-testid={testId}><table className="w-full text-sm"><tbody>{rows.map((r) => (
+      <tr key={r.id} className="border-b border-line">
+        <td className="p-2"><Link to={`/cases/${r.case_id}?tab=${tab}`} className="text-accent hover:underline"><Bdi ltr>{r.number}</Bdi></Link></td>
+        <td className="p-2">{t(`execution.${tab === "order" ? "order" : "purchase"}.statuses.${r.status}`)}</td>
+        <td className="p-2"><Money amount={r.total} currency={r.currency} /></td>
+        <td className="p-2"><Bdi ltr>{r[ref] ?? ""}</Bdi></td><td className="p-2 tabular-nums text-muted">{f.date(r.created_at)}</td>
+      </tr>))}</tbody></table></div>
+  );
+  return (
+    <div className="flex flex-col gap-4">
+      <Card padded={false} title={t("execution.party.salesOrders")}>{table(list.data.sales_orders, "order", "customer_ref", "party-sales-orders")}</Card>
+      <Card padded={false} title={t("execution.party.purchaseOrders")}>{table(list.data.purchase_orders, "purchase", "supplier_ref", "party-purchase-orders")}</Card>
+      <Card padded={false} title={t("execution.party.claims")}>{list.data.claims.length === 0 ? <EmptyState>{t("execution.party.none")}</EmptyState> : (
+        <ul className="divide-y divide-line">{list.data.claims.map((c) => (
+          <li key={c.id} className="flex flex-wrap gap-2 px-4 py-2 text-sm"><Link to={`/cases/${c.case_id}?tab=delivery`} className="text-accent hover:underline">{t(`execution.claims.kinds.${c.kind}`)}</Link>
+            <span>{t(`execution.claims.statuses.${c.status}`)}</span><span className="tabular-nums text-muted">{f.day(c.opened_on)}</span></li>))}</ul>)}</Card>
+    </div>
+  );
+}
+
 function History({ partyId }: { partyId: string }) {
   const events = useQuery({
     queryKey: ["events", "party", partyId],
@@ -688,6 +718,7 @@ export function PartyDetailPage() {
       {tab === "interactions" && <Interactions party={p} highlight={params.get("interaction")} />}
       {tab === "documents" && <Documents party={p} />}
       {tab === "quotes" && <Quotes partyId={p.id} />}
+      {tab === "orders" && <Orders partyId={p.id} />}
       {tab === "history" && <History partyId={p.id} />}
     </div>
   );

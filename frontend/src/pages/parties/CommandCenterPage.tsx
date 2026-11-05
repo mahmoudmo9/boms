@@ -8,7 +8,7 @@ import { TimeLeftBadge } from "../../components/TimeLeft";
 import { Badge, Button, Card, EmptyState, ErrorNote, Loading, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
-import type { CommandCenter, FollowupRow, SetadSummary, SourcingSummary, TendersSummary } from "../../lib/types";
+import type { CommandCenter, ExecutionSummary, FollowupRow, SetadSummary, SourcingSummary, TendersSummary } from "../../lib/types";
 import { useQuickLog } from "./QuickLog";
 import { FollowupActions, PartyName, stageLabel } from "./shared";
 
@@ -203,6 +203,45 @@ function TendersSection({ s }: { s: TendersSummary }) {
   );
 }
 
+/** v0.7.0 «اجرا»: POs sent but not confirmed, supplier ready dates passed, shipments delayed, process steps due,
+ * payments past due (in and out), open claims, sales orders with delivery due within 7 days or overdue. */
+export function ExecutionSection({ s }: { s: ExecutionSummary }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const list = (rows: { key: string; to: string; label: ReactNode; extra?: ReactNode }[]) => rows.length === 0 ? <EmptyState>{t("cc.nothing")}</EmptyState> : (
+    <ul className="divide-y divide-line">{rows.map((r) => (
+      <li key={r.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
+        <Link to={r.to} className="min-w-0 truncate text-accent hover:underline" dir="auto">{r.label}</Link>{r.extra}
+      </li>
+    ))}</ul>
+  );
+  const card = (key: string, n: number, tone: "warning" | "danger", body: ReactNode) => (
+    <Card padded={false} title={<span className="flex items-center gap-2">{t(`cc.execution.${key}`)} <Badge tone={n ? tone : "neutral"}>{f.num(n)}</Badge></span>}>{body}</Card>
+  );
+  const to = (caseId: string, tab: string) => `/cases/${caseId}?tab=${tab}`;
+  return (
+    <section className="flex flex-col gap-3" data-testid="cc-execution">
+      <h2 className="text-base font-semibold">{t("cc.execution.title")}</h2>
+      <div className="grid gap-4 xl:grid-cols-3">
+        {card("unconfirmed", s.pos_unconfirmed.length, "warning", list(s.pos_unconfirmed.map((r) => ({ key: r.purchase_order_id, to: to(r.case_id, "purchase"), label: r.case_title,
+          extra: <span className="text-xs text-warning"><bdi dir="ltr">{r.number}</bdi> · {t("cc.execution.daysAgo", { n: f.num(r.days) })}</span> }))))}
+        {card("readyPassed", s.ready_passed.length, "danger", list(s.ready_passed.map((r) => ({ key: r.purchase_order_id ?? r.number ?? "", to: to(r.case_id, "purchase"), label: r.case_title ?? "",
+          extra: <span className="text-xs text-danger"><bdi dir="ltr">{r.number}</bdi> · {r.ready_due_on ? f.day(r.ready_due_on) : ""}</span> }))))}
+        {card("shipments", s.shipments_delayed.length, "danger", list(s.shipments_delayed.map((r) => ({ key: `${r.shipment_id}-${r.kind}`, to: to(r.case_id, "logistics"), label: r.case_title ?? "",
+          extra: <span className="text-xs text-danger">{t(`execution.warnings.${r.kind}`, { days: f.num(r.days) })}</span> }))))}
+        {card("steps", s.steps_due.length, "warning", list(s.steps_due.map((r) => ({ key: r.step_id, to: to(r.case_id, "logistics"), label: r.case_title,
+          extra: <span className={`text-xs ${r.overdue ? "text-danger" : "text-warning"}`} dir="auto">{f.lang === "fa" ? r.label_fa : r.label_en} · {f.day(r.due_on)}</span> }))))}
+        {card("payments", s.payments_overdue.length, "danger", list(s.payments_overdue.map((r) => ({ key: r.milestone_id, to: to(r.case_id, r.direction === "in" ? "order" : "purchase"), label: r.case_title,
+          extra: <span className="text-xs text-danger">{t(`cc.execution.direction.${r.direction}`)} · {f.num(r.amount)} {r.currency} · {f.day(r.due_on)}</span> }))))}
+        {card("claims", s.claims_open.length, "warning", list(s.claims_open.map((r) => ({ key: r.claim_id, to: to(r.case_id, "delivery"), label: r.case_title,
+          extra: <span className="text-xs text-warning">{t(`execution.claims.kinds.${r.kind}`)} · {t(`execution.claims.statuses.${r.status}`)}</span> }))))}
+        {card("deliveries", s.deliveries_due.length, "warning", list(s.deliveries_due.map((r) => ({ key: r.sales_order_id, to: to(r.case_id, "delivery"), label: r.case_title,
+          extra: <span className={`text-xs ${r.overdue ? "text-danger" : "text-warning"}`}><bdi dir="ltr">{r.number}</bdi> · {f.day(r.delivery_due_on)}</span> }))))}
+      </div>
+    </section>
+  );
+}
+
 export function CommandCenterPage() {
   const { t } = useTranslation();
   const f = useFormat();
@@ -256,6 +295,7 @@ export function CommandCenterPage() {
       <SourcingSection s={d.sourcing} />
       {d.setad && <SetadSection s={d.setad} />}
       {d.tenders && <TendersSection s={d.tenders} />}
+      {d.execution && <ExecutionSection s={d.execution} />}
       <div className="grid gap-4 xl:grid-cols-2">
         {FUNNELS.map((role) => (
           <Card key={role} title={t(`funnel.title.${role}`)} actions={<Link className="text-sm text-accent hover:underline" to={`/parties/funnels?role=${role}`}>{t("funnel.openBoard")}</Link>}>

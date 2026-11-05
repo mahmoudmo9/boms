@@ -8,8 +8,11 @@ import type { ComparisonItem, ComparisonRow, Rfq } from "./types";
 export const PLACEHOLDERS = ["supplier_name", "contact_name", "case_title", "items_table", "respond_by", "signature"] as const;
 /** Placeholders of quote terms templates (Phase 6); the server checks the same list per template kind. */
 export const QUOTE_PLACEHOLDERS = ["buyer_name", "valid_until", "payment_terms", "incoterm", "lead_time", "bank_details"] as const;
-export type TemplateKind = "rfq" | "quote_terms";
-export const PLACEHOLDERS_BY_KIND: Record<TemplateKind, readonly string[]> = { rfq: PLACEHOLDERS, quote_terms: QUOTE_PLACEHOLDERS };
+export type TemplateKind = "rfq" | "quote_terms" | "po_terms";
+/** v0.7.0: purchase order terms (module execution), the same as the backend's PO_PLACEHOLDERS */
+export const PO_PLACEHOLDERS = ["supplier_name", "contact_name", "payment_terms", "incoterm", "ready_due_on", "delivery_place",
+  "delivery_terms", "case_title", "signature"] as const;
+export const PLACEHOLDERS_BY_KIND: Record<TemplateKind, readonly string[]> = { rfq: PLACEHOLDERS, quote_terms: QUOTE_PLACEHOLDERS, po_terms: PO_PLACEHOLDERS };
 const TOKEN = /\{\{|\}\}|\{([^{}]*)\}|[{}]/g;
 
 /** Placeholder names used in a template; "unbalanced" when a single brace has no partner. */

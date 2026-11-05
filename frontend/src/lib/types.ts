@@ -334,6 +334,7 @@ export interface CommandCenter {
   sourcing: SourcingSummary;
   setad?: SetadSummary;
   tenders?: TendersSummary;
+  execution?: ExecutionSummary;
 }
 
 /** Command center section "Setad" (v0.5.0). */
@@ -1220,4 +1221,102 @@ export interface TendersSummary {
   documents_expiring: CompanyDocumentRow[];
   setad_changes: { tender_id: string; case_id: string; case_title: string; tender_no: string | null; date_changes: number; new_appendices: Record<string, number> }[];
   waiting_result: { tender_id: string; case_id: string; case_title: string; tender_no: string | null; opening: string }[];
+}
+
+
+// ---- execution (v0.7.0) ------------------------------------------------------------------------------------------------
+export interface PartyRef { id: string; name_fa: string | null; name_en: string | null }
+export interface OutputLink { link_id: string; document_id: string; title: string | null; original_filename: string; mime_type: string; linked_at: string }
+export interface PaymentRecordRow { id: string; milestone_id: string; amount: string; amount_currency: string; paid_on: string; method: string | null; reference: string | null; document_id: string | null; note: string | null }
+export interface MilestoneRow {
+  id: string; case_id: string; direction: "in" | "out"; sales_order_id: string | null; purchase_order_id: string | null; party_id: string;
+  kind: string; label: string | null; position: number; percent: string | null; amount: string | null; amount_currency: string | null;
+  due_on: string | null; due_event: string | null; status: "expected" | "partly" | "done" | "cancelled"; actual_amount: string | null;
+  actual_amount_currency: string | null; actual_on: string | null; method: string | null; reference: string | null;
+  receipt_document_id: string | null; note: string | null; expected_amount: string; expected_currency: string; party: PartyRef; records: PaymentRecordRow[];
+}
+export interface SalesOrderItemRow { id: string; line_item_id: string; position: number; description: string; quantity: string; unit: string | null; unit_price: string; total: string; vat_amount: string; delivery_due_on: string | null; delivered: string }
+export interface OrderChangeRow { id: string; sales_order_item_id?: string | null; field: string; old_value: string | null; new_value: string | null; reason: string; document_id: string | null; created_at: string }
+export interface SalesOrderRow {
+  id: string; case_id: string; number: string; customer_party_id: string; contact_id: string | null; source: string; quote_id: string | null;
+  tender_proposal_id: string | null; customer_ref: string | null; contract_date: string | null; signed_document_id: string | null;
+  currency: string; price_basis: string; incoterm: string | null; incoterm_place: string | null; payment_terms: string | null;
+  delivery_terms: string | null; delivery_due_on: string | null; delivery_place: string | null; warranty_months: number | null;
+  performance_guarantee_id: string | null; status: string; subtotal: string; vat_amount: string; total: string; confirmed_at: string | null;
+  no_document_reason: string | null; delivered_at: string | null; cancel_reason: string | null; notes: string | null; updated_at: string;
+  customer: PartyRef; items: SalesOrderItemRow[]; changes: OrderChangeRow[]; milestones: MilestoneRow[]; outputs: OutputLink[];
+  progress: { items: { sales_order_item_id: string; ordered: string; delivered: string; complete: boolean }[]; items_total: number; items_delivered: number };
+}
+export interface PurchaseOrderItemRow { id: string; line_item_id: string; sales_order_item_id: string | null; position: number; description: string; quantity: string; unit: string | null; unit_price: string; total: string; received_quantity: string }
+export interface PurchaseOrderRow {
+  id: string; case_id: string; sales_order_id: string | null; number: string; version: number; supersedes_id: string | null;
+  supplier_party_id: string; contact_id: string | null; offer_id: string | null; language: "fa" | "en"; currency: string;
+  incoterm: string | null; incoterm_place: string | null; payment_terms: string | null; delivery_terms: string | null;
+  ready_due_on: string | null; delivery_place: string | null; direct_to_customer: boolean; status: string; subtotal: string; total: string;
+  approved_at: string | null; price_override_reason: string | null; sent_at: string | null; prepayment_override_reason: string | null;
+  confirmed_at: string | null; supplier_ref: string | null; confirmed_ready_on: string | null; confirmation_document_id: string | null;
+  ready_on: string | null; status_note: string | null; terms_text: string | null; cancel_reason: string | null; notes: string | null;
+  supplier: PartyRef; items: PurchaseOrderItemRow[]; changes: OrderChangeRow[]; offer_payment_terms: string | null;
+  above_cost_sheet: { purchase_order_item_id: string; description: string; unit_price: string; cost_sheet_price: string; tolerance_percent: string; currency: string }[];
+  milestones: MilestoneRow[]; followups: { id: string; purpose: string; due_on: string; action: string }[]; outputs: OutputLink[];
+}
+export interface ProcessStepRow {
+  id: string; process_id: string; position: number; group: string | null; code: string; label_fa: string; label_en: string;
+  reference_label: string | null; requires_document: boolean; status: "pending" | "in_progress" | "done" | "not_applicable";
+  reference: string | null; started_on: string | null; done_on: string | null; due_on: string | null; remind_days_before: number[];
+  document_id: string | null; no_document_reason: string | null; shipment_id: string | null; note: string | null; updated_at: string;
+  reminders: { id: string; due_on: string; days_before: number | null }[];
+}
+export interface ProcessRow {
+  id: string; case_id: string; deal_type: "import" | "export" | "domestic"; template_id: string | null; name: string; base_date: string | null;
+  steps: ProcessStepRow[];
+  progress: { done: number; total: number; next: { id: string; code: string; label_fa: string; label_en: string; due_on: string | null; overdue: boolean } | null };
+}
+export interface ProcessTemplateRow {
+  id: string; deal_type: "import" | "export" | "domestic"; name: string; is_default: boolean; status: string;
+  steps: { id: string; position: number; group: string | null; code: string; label_fa: string; label_en: string; reference_label: string | null; requires_document: boolean; default_offset_days: number | null }[];
+}
+export interface ShipmentRow {
+  id: string; case_id: string; direction: "inbound" | "outbound"; purchase_order_id: string | null; sales_order_id: string | null; mode: string;
+  carrier_party_id: string | null; forwarder_party_id: string | null; transport_doc_kind: string | null; transport_doc_no: string | null;
+  containers: string[]; vessel_or_flight: string | null; origin: string | null; destination: string | null; incoterm: string | null;
+  etd: string | null; eta: string | null; first_eta: string | null; atd: string | null; ata: string | null; status: string;
+  policy_no: string | null; notes: string | null;
+  items: { id: string; purchase_order_item_id: string | null; sales_order_item_id: string | null; quantity: string }[];
+  events: { id: string; at: string; kind: string; note: string | null; document_id: string | null }[];
+  documents: { id: string; kind: string; document_id: string; number: string | null; issued_on: string | null }[];
+}
+export interface ClaimSuggestion { case_id: string; direction: string; kind: string; counterparty_id: string | null; purchase_order_id: string | null; shipment_id: string | null; inspection_id?: string; receipt_id?: string; items: Record<string, unknown>[]; opened_on: string; notes?: string | null }
+export interface InspectionRow { id: string; case_id: string; shipment_id: string | null; purchase_order_id: string | null; kind: string; inspector_party_id: string | null; planned_on: string | null; done_on: string | null; result: string; report_document_id: string | null; notes: string | null; claim_suggestion: ClaimSuggestion | null }
+export interface ReceiptRow { id: string; purchase_order_id: string; shipment_id: string | null; received_on: string; document_id: string | null; note: string | null; items: { id: string; purchase_order_item_id: string; quantity: string; condition: string; note: string | null }[]; claim_suggestion: ClaimSuggestion | null }
+export interface ClaimRow {
+  id: string; case_id: string; direction: string; counterparty_id: string; kind: string; purchase_order_id: string | null; shipment_id: string | null;
+  receipt_id: string | null; delivery_id: string | null; inspection_id: string | null; claimed_amount: string | null; claimed_amount_currency: string | null;
+  opened_on: string; status: string; resolution: string | null; resolution_amount: string | null; resolution_amount_currency: string | null;
+  resolved_on: string | null; notes: string | null; counterparty: PartyRef; followups: { id: string; due_on: string; action: string }[];
+}
+export interface DeliveryRow { id: string; sales_order_id: string; shipment_id: string | null; delivered_on: string; delivery_place: string | null; receiver_name: string | null; receipt_document_id: string | null; note: string | null; items: { id: string; sales_order_item_id: string; quantity: string }[] }
+export interface CashPosition {
+  actual: Record<string, { received: string; paid: string; net_tied_up: string }>;
+  outstanding: Record<string, { in: string; out: string }>;
+  plan: { exposure: string; currency: string } | null;
+}
+export interface DelayWarning { kind: "eta_passed" | "eta_moved" | "ready_passed"; case_id: string; shipment_id?: string; purchase_order_id?: string; number?: string; eta?: string; first_eta?: string; ready_due_on?: string; days: number; transport_doc_no?: string | null; case_title?: string }
+export interface ExecutionHeader {
+  order: { id: string; number: string; status: string; warranty_ends_on: string | null } | null; items_delivered: number; items_total: number;
+  next: { kind: "step" | "delivery_due"; due_on: string | null; label_fa?: string; label_en?: string; number?: string; overdue?: boolean } | null;
+  cash: CashPosition["actual"]; warnings: number;
+}
+export interface CaseExecution {
+  sales_orders: SalesOrderRow[]; candidates: { source: "quote" | "tender_proposal"; quote_id?: string; tender_proposal_id?: string; number: string | null; status?: string; version?: number; total: string; currency: string }[];
+  cash: CashPosition; milestones_out: MilestoneRow[]; purchase_orders: PurchaseOrderRow[]; processes: ProcessRow[]; shipments: ShipmentRow[];
+  inspections: InspectionRow[]; receipts: ReceiptRow[]; claims: ClaimRow[]; deliveries: DeliveryRow[]; warnings: DelayWarning[]; header: ExecutionHeader | null;
+}
+export interface ExecutionSummary {
+  pos_unconfirmed: { purchase_order_id: string; case_id: string; number: string; sent_at: string; days: number; case_title: string }[];
+  ready_passed: DelayWarning[]; shipments_delayed: DelayWarning[];
+  steps_due: { step_id: string; case_id: string; label_fa: string; label_en: string; due_on: string; overdue: boolean; case_title: string }[];
+  payments_overdue: { milestone_id: string; case_id: string; direction: "in" | "out"; kind: string; due_on: string; amount: string; currency: string; case_title: string }[];
+  claims_open: { claim_id: string; case_id: string; kind: string; direction: string; status: string; opened_on: string; case_title: string }[];
+  deliveries_due: { sales_order_id: string; case_id: string; number: string; delivery_due_on: string; overdue: boolean; case_title: string }[];
 }

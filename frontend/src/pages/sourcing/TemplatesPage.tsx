@@ -13,7 +13,7 @@ type Draft = Pick<MessageTemplate, "language" | "channel" | "name" | "subject_te
 
 function TemplateDialog({ kind, template, onClose, onSaved }: { kind: TemplateKind; template: MessageTemplate | null; onClose: () => void; onSaved: () => void }) {
   const { t } = useTranslation();
-  const [form, setForm] = useState<Draft>(template ?? { language: "en", channel: kind === "quote_terms" ? "letter" : "email", name: "", subject_template: "", body_template: "", is_default: false });
+  const [form, setForm] = useState<Draft>(template ?? { language: "en", channel: kind === "rfq" ? "email" : "letter", name: "", subject_template: "", body_template: "", is_default: false });
   const unknown = unknownPlaceholdersOf(kind, form.subject_template, form.body_template);
   const unbalanced = placeholdersIn(form.subject_template).unbalanced || placeholdersIn(form.body_template).unbalanced;
   const preview = useQuery({
@@ -72,7 +72,7 @@ function TemplateDialog({ kind, template, onClose, onSaved }: { kind: TemplateKi
 export function TemplatesPage() {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
-  const kind: TemplateKind = params.get("kind") === "quote_terms" ? "quote_terms" : "rfq";
+  const kind: TemplateKind = params.get("kind") === "quote_terms" ? "quote_terms" : params.get("kind") === "po_terms" ? "po_terms" : "rfq";
   const [editing, setEditing] = useState<MessageTemplate | "new" | null>(null);
   const list = useQuery({ queryKey: ["templates", kind], queryFn: () => api<{ items: MessageTemplate[] }>("/api/message-templates", { query: { include_archived: true, kind } }) });
   const archive = useMutation({
@@ -86,7 +86,7 @@ export function TemplatesPage() {
         actions={<Button variant="primary" icon="plus" onClick={() => setEditing("new")}>{t("sourcing.templates.new")}</Button>} />
       <div className="mb-3">
         <Segmented value={kind} onChange={(v) => setParams(v === "rfq" ? {} : { kind: v }, { replace: true })}
-          options={(["rfq", "quote_terms"] as const).map((k) => ({ value: k, label: t(`sourcing.templates.kinds.${k}`) }))} />
+          options={(["rfq", "quote_terms", "po_terms"] as const).map((k) => ({ value: k, label: t(`sourcing.templates.kinds.${k}`) }))} />
       </div>
       <Card padded={false}>
         <ErrorNote error={list.error || archive.error || remove.error} />

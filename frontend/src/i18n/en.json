@@ -60,7 +60,8 @@
       "casesList": "Cases",
       "guarantees": "Guarantees",
       "tenderSettings": "Tenders",
-      "companyDocuments": "Company documents"
+      "companyDocuments": "Company documents",
+      "executionSettings": "Execution"
     }
   },
   "placeholder": {
@@ -104,7 +105,12 @@
       "listing": "Setad listings",
       "tender": "Tenders",
       "guarantee": "Guarantees",
-      "company_document": "Company documents"
+      "company_document": "Company documents",
+      "sales_order": "Sales order",
+      "purchase_order": "Purchase order",
+      "shipment": "Shipment",
+      "process_step": "Process step",
+      "claim": "Claim"
     }
   },
   "date": {
@@ -563,7 +569,28 @@
     "tender_has_result": "The tender already has a result.",
     "tender_closed": "The tender is closed.",
     "summary_required": "The addendum needs a summary.",
-    "invalid_order": "Give every item once."
+    "invalid_order": "Give every item once.",
+    "order_exists": "An open sales order already exists for this.",
+    "quote_not_accepted": "The quote is not accepted yet.",
+    "tender_not_won": "The tender is not won.",
+    "signed_document_required": "Attach the signed document, or confirm without one with a reason.",
+    "amend_required": "After confirmation this changes only through an amendment.",
+    "nothing_to_amend": "The amendment changes nothing.",
+    "below_delivered": "The quantity is below what was delivered.",
+    "no_sold_items": "The case has no sold items.",
+    "sales_order_not_confirmed": "Confirm the sales order first.",
+    "po_above_cost_sheet": "The price is above the cost sheet; approve with a reason.",
+    "customer_prepayment_missing": "The customer's prepayment has not been received. Ordering before payment needs your explicit approval line.",
+    "document_required": "This step needs its document or a reason.",
+    "over_shipped": "More than the PO quantity would be shipped.",
+    "over_received": "More than the ordered quantity would be received.",
+    "over_delivered": "More than the ordered quantity would be delivered.",
+    "direct_to_customer": "This PO goes directly to the customer; record the delivery.",
+    "resolution_required": "Give the claim's resolution.",
+    "currency_mismatch": "Record the payment in the milestone's currency.",
+    "milestone_paid": "Payments were recorded for this milestone.",
+    "process_exists": "The case already has this checklist.",
+    "link_not_of_case": "A linked record belongs to another case."
   },
   "cc": {
     "subtitle": "Follow-ups and leads for {{date}}.",
@@ -615,6 +642,21 @@
       "awaitingRelease": "awaiting release",
       "dateChanges": "{{n}} date changes",
       "newAddenda": "new addenda"
+    },
+    "execution": {
+      "title": "Execution",
+      "unconfirmed": "POs sent, not confirmed",
+      "readyPassed": "Supplier ready dates passed",
+      "shipments": "Shipments late or delayed",
+      "steps": "Process steps due ≤ 3 days or overdue",
+      "payments": "Payments past due",
+      "claims": "Open claims",
+      "deliveries": "Deliveries due ≤ 7 days or overdue",
+      "daysAgo": "{{n}} days ago",
+      "direction": {
+        "in": "In",
+        "out": "Out"
+      }
     }
   },
   "funnel": {
@@ -734,7 +776,8 @@
       "interactions": "Interactions",
       "documents": "Documents",
       "history": "History",
-      "quotes": "Quotes"
+      "quotes": "Quotes",
+      "orders": "Orders and claims"
     },
     "archiveTitle": "Archive party",
     "archiveOpenFollowups": "This party has {{count}} open follow-up(s).",
@@ -1054,7 +1097,11 @@
         "history": "History",
         "costing": "Costing",
         "quotes": "Quotes",
-        "tender": "Tender"
+        "tender": "Tender",
+        "order": "Order",
+        "purchase": "Purchase",
+        "logistics": "Logistics",
+        "delivery": "Delivery and claims"
       },
       "cascadeHint": "For test data only: deletes this case with its items, RFQs, recipients, offers and document links. Files stay in Documents and interactions stay in the parties' history. The deletion is recorded in the event log.",
       "typeTitle": "Type the case title to confirm",
@@ -1361,7 +1408,8 @@
       },
       "kinds": {
         "rfq": "RFQ messages",
-        "quote_terms": "Quote terms"
+        "quote_terms": "Quote terms",
+        "po_terms": "PO terms"
       }
     },
     "capabilities": {
@@ -2496,6 +2544,417 @@
       "lines": "{{n}} lines",
       "reasons": "Result reasons",
       "active": "Active"
+    }
+  },
+  "execution": {
+    "fileSet": "File attached",
+    "outputs": "{{n}} output(s)",
+    "reason": "Reason",
+    "page": {
+      "subtitle": "What needs attention in order execution; the work is done on each case's Order, Purchase, Logistics and Delivery tabs."
+    },
+    "dealTypes": {
+      "import": "Import",
+      "export": "Export",
+      "domestic": "Domestic"
+    },
+    "header": {
+      "next": "Next",
+      "deliveryDue": "Delivery due",
+      "warnings": "{{n}} delay warning(s)"
+    },
+    "fields": {
+      "delivery_due_on": "Delivery due",
+      "quantity": "Quantity",
+      "unit_price": "Unit price",
+      "payment_terms": "Payment terms",
+      "delivery_terms": "Delivery terms",
+      "incoterm": "Incoterm",
+      "incoterm_place": "Incoterm place",
+      "price_basis": "Price basis",
+      "ready_due_on": "Ready date"
+    },
+    "order": {
+      "title": "Sales order",
+      "create": "Create sales order",
+      "fromQuote": "Accepted quote",
+      "fromTender": "Won tender",
+      "createButton": "Create sales order",
+      "manual": "Create by hand from the sold items",
+      "noCandidate": "No accepted quote or won tender without an order.",
+      "none": "No sales order yet.",
+      "customerRef": "Customer contract / PO no.",
+      "contractDate": "Contract date",
+      "deliveryDue": "Delivery due",
+      "deliveryPlace": "Delivery place",
+      "warranty": "Warranty (months)",
+      "paymentTerms": "Payment terms",
+      "deliveryTerms": "Delivery terms",
+      "signedDocument": "Signed contract / proforma",
+      "confirm": "Confirm order",
+      "withoutDocument": "Confirm without a signed document",
+      "withoutReason": "Reason (no signed document)",
+      "confirmedWithout": "Confirmed without a signed document",
+      "amend": "Amend",
+      "amendReason": "Reason for the amendment",
+      "amendDocument": "Amendment document (optional)",
+      "amendments": "Amendments ({{n}})",
+      "cancel": "Cancel",
+      "description": "Description",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price",
+      "total": "Total",
+      "delivered": "Delivered",
+      "received": "Received",
+      "subtotal": "Subtotal",
+      "vat": "VAT",
+      "acknowledgement": "Order acknowledgement:",
+      "language": "Language",
+      "itemsDelivered": "{{done}} of {{total}} items delivered",
+      "statuses": {
+        "draft": "Draft",
+        "confirmed": "Confirmed",
+        "in_progress": "In progress",
+        "delivered": "Delivered",
+        "closed": "Closed",
+        "cancelled": "Cancelled"
+      }
+    },
+    "cash": {
+      "title": "Cash position (actual so far)",
+      "plan": "Cost sheet exposure (plan)",
+      "none": "No payments recorded yet.",
+      "received": "Received from the customer",
+      "paid": "Paid to suppliers and others",
+      "net": "Cash tied up (paid − received)",
+      "outstanding": "Still expected: in {{in}} · out {{out}} {{cur}}"
+    },
+    "milestones": {
+      "in": "Payments from the customer",
+      "out": "Payments to the supplier",
+      "add": "Add milestone",
+      "none": "No payment milestones.",
+      "quickPrepayment": "Prepayment %",
+      "quickBalance": "Balance on delivery",
+      "kind": "Kind",
+      "label": "Label",
+      "valueMode": "Based on",
+      "percent": "Percent of the order",
+      "amount": "Amount",
+      "dueOn": "Due",
+      "dueEvent": "Due event",
+      "record": "Record payment",
+      "paid": "Paid",
+      "paidOn": "Paid on",
+      "method": "Method",
+      "reference": "Reference",
+      "receipt": "Receipt",
+      "offerTerms": "Supplier offer payment terms",
+      "kinds": {
+        "prepayment": "Prepayment",
+        "on_order_confirmation": "On order confirmation",
+        "on_shipment": "On shipment",
+        "on_delivery": "On delivery",
+        "balance": "Balance",
+        "retention": "Retention",
+        "other": "Other"
+      },
+      "statuses": {
+        "expected": "Expected",
+        "partly": "Partly",
+        "done": "Done",
+        "cancelled": "Cancelled"
+      }
+    },
+    "purchase": {
+      "title": "Purchase order",
+      "create": "Create POs for {{number}}",
+      "createHint": "One PO per supplier of the selected offers",
+      "needOrder": "Confirm the sales order first.",
+      "unresolved": "Items without a selected offer",
+      "approve": "Approve",
+      "markSent": "Mark as sent",
+      "confirm": "Supplier confirmation",
+      "revise": "Revise",
+      "language": "Document language",
+      "incoterm": "Incoterm",
+      "readyDue": "Ready date",
+      "moveReady": "Move the ready date",
+      "directToCustomer": "Direct to the customer",
+      "directHint": "No goods receipt",
+      "supplierRef": "Supplier reference",
+      "confirmedReady": "Confirmed ready date",
+      "confirmationDocument": "Confirmation document",
+      "terms": "PO terms",
+      "aboveCost": "{{n}} price(s) above the cost sheet's purchase price",
+      "aboveCostTitle": "Price above the cost sheet",
+      "aboveCostReason": "Why approve at this price",
+      "priceOverride": "Approved above the cost sheet",
+      "prepaymentOverride": "Sent before the customer's prepayment",
+      "prepaymentMissing": "The customer's prepayment has not been received. Ordering before payment needs your explicit approval line.",
+      "prepaymentReason": "Reason for ordering before payment",
+      "channel": "Sent by",
+      "channels": {
+        "email": "Email",
+        "whatsapp": "WhatsApp",
+        "phone": "Phone",
+        "in_person": "In person",
+        "letter": "Letter",
+        "other": "Other"
+      },
+      "statuses": {
+        "draft": "Draft",
+        "approved": "Approved",
+        "sent": "Sent",
+        "confirmed": "Confirmed",
+        "in_production": "In production",
+        "ready": "Ready",
+        "shipped": "Shipped",
+        "received": "Received",
+        "closed": "Closed",
+        "cancelled": "Cancelled",
+        "superseded": "Superseded"
+      }
+    },
+    "receipts": {
+      "title": "Goods receipt",
+      "add": "Record goods receipt",
+      "receivedOn": "Received on",
+      "document": "Document",
+      "quantity": "Quantity",
+      "condition": "Condition",
+      "conditions": {
+        "ok": "OK",
+        "damaged": "Damaged",
+        "short": "Short"
+      }
+    },
+    "process": {
+      "title": "Checklist",
+      "progress": "{{done}} of {{total}}",
+      "next": "Next",
+      "status": "Status",
+      "dueOn": "Due",
+      "document": "Document",
+      "noDocumentReason": "Why there is no document",
+      "needDocument": "This step needs its document; attach it or give a reason.",
+      "reminders": "Reminders: {{list}}",
+      "doneOn": "Done on",
+      "addByHand": "Add a checklist",
+      "statuses": {
+        "pending": "Pending",
+        "in_progress": "In progress",
+        "done": "Done",
+        "not_applicable": "Not applicable"
+      },
+      "states": {
+        "done": "Done",
+        "na": "N/A",
+        "current": "In progress",
+        "overdue": "Overdue",
+        "todo": "To do"
+      },
+      "groups": {
+        "supplier_order": "Supplier and order",
+        "shipping": "Shipping",
+        "customs": "Customs",
+        "domestic": "Domestic",
+        "contract": "Contract and preparation",
+        "customs_shipping": "Customs and shipping",
+        "currency": "Currency"
+      }
+    },
+    "shipments": {
+      "title": "Shipment",
+      "add": "Add shipment",
+      "none": "No shipments yet.",
+      "po": "Purchase order",
+      "outbound": "Outbound",
+      "mode": "Mode",
+      "docKind": "Transport document",
+      "docNo": "Transport document no.",
+      "containers": "Containers",
+      "containersHint": "Separate with spaces or commas",
+      "vessel": "Vessel / flight",
+      "origin": "Origin",
+      "destination": "Destination",
+      "quantity": "Quantity",
+      "status": "Status",
+      "firstEta": "First ETA",
+      "eventKind": "Event",
+      "eventNote": "Note",
+      "docKindFull": "Document kind",
+      "docNumber": "Number",
+      "file": "File",
+      "modes": {
+        "sea": "Sea",
+        "air": "Air",
+        "road": "Road",
+        "rail": "Rail",
+        "courier": "Courier",
+        "domestic_truck": "Domestic truck",
+        "other": "Other"
+      },
+      "docKinds": {
+        "bl": "B/L",
+        "awb": "AWB",
+        "cmr": "CMR",
+        "waybill": "Waybill",
+        "other": "Other"
+      },
+      "statuses": {
+        "planned": "Planned",
+        "booked": "Booked",
+        "in_transit": "In transit",
+        "arrived": "Arrived",
+        "at_customs": "At customs",
+        "cleared": "Cleared",
+        "delivered": "Delivered",
+        "cancelled": "Cancelled"
+      },
+      "events": {
+        "booked": "Booked",
+        "loaded": "Loaded",
+        "departed": "Departed",
+        "transshipment": "Transshipment",
+        "arrived": "Arrived",
+        "customs_entry": "Customs entry",
+        "released": "Released",
+        "delivered": "Delivered",
+        "delay": "Delay",
+        "other": "Other",
+        "etd_change": "ETD changed",
+        "eta_change": "ETA changed"
+      },
+      "documents": {
+        "commercial_invoice": "Commercial invoice",
+        "packing_list": "Packing list",
+        "bl": "B/L",
+        "awb": "AWB",
+        "cmr": "CMR",
+        "certificate_of_origin": "Certificate of origin",
+        "inspection_certificate": "Inspection certificate",
+        "insurance_policy": "Insurance policy",
+        "customs_declaration": "Customs declaration",
+        "other": "Other"
+      }
+    },
+    "warnings": {
+      "eta_passed": "ETA passed without arrival ({{days}} days)",
+      "eta_moved": "ETA moved {{days}} days later than the first ETA",
+      "ready_passed": "Ready date of {{number}} passed, not ready ({{days}} days)"
+    },
+    "inspections": {
+      "title": "Inspections",
+      "target": "For",
+      "kind": "Kind",
+      "result": "Result",
+      "none": "No inspections yet.",
+      "kinds": {
+        "pre_shipment": "Pre-shipment",
+        "on_arrival": "On arrival",
+        "third_party": "Third party",
+        "internal": "Internal"
+      },
+      "results": {
+        "pending": "Pending",
+        "pass": "Pass",
+        "conditional": "Conditional",
+        "fail": "Fail"
+      }
+    },
+    "claims": {
+      "title": "Claims",
+      "add": "New claim",
+      "open": "Open claim",
+      "none": "No claims.",
+      "direction": "Direction",
+      "kind": "Kind",
+      "counterparty": "Counterparty",
+      "po": "Purchase order",
+      "amount": "Claimed amount",
+      "notes": "Notes",
+      "status": "Status",
+      "resolution": "Resolution",
+      "resolutionAmount": "Settled amount",
+      "directions": {
+        "against_supplier": "Against the supplier",
+        "against_carrier": "Against the carrier",
+        "against_insurer": "Against the insurer",
+        "from_customer": "From the customer"
+      },
+      "kinds": {
+        "defect": "Defect",
+        "shortage": "Shortage",
+        "delay": "Delay",
+        "damage": "Damage",
+        "wrong_item": "Wrong item",
+        "documents": "Documents",
+        "other": "Other"
+      },
+      "statuses": {
+        "open": "Open",
+        "submitted": "Submitted",
+        "negotiating": "Negotiating",
+        "resolved": "Resolved",
+        "rejected": "Rejected",
+        "withdrawn": "Withdrawn"
+      },
+      "resolutions": {
+        "replacement": "Replacement",
+        "credit_note": "Credit note",
+        "refund": "Refund",
+        "discount": "Discount",
+        "repair": "Repair",
+        "none": "None"
+      }
+    },
+    "delivery": {
+      "title": "Deliveries",
+      "add": "Record delivery",
+      "none": "No deliveries yet.",
+      "needOrder": "Confirm the sales order first.",
+      "itemProgress": "{{done}} of {{total}} delivered",
+      "on": "Delivered on",
+      "receiver": "Receiver",
+      "place": "Delivery place",
+      "receipt": "Warehouse receipt / delivery record",
+      "quantity": "Quantity",
+      "note": "Note",
+      "reverse": "Reverse delivery"
+    },
+    "party": {
+      "salesOrders": "Sales orders",
+      "purchaseOrders": "Purchase orders",
+      "claims": "Claims",
+      "none": "Nothing here."
+    },
+    "settings": {
+      "subtitle": "Checklist templates, PO terms and day settings",
+      "numbers": "Settings",
+      "tolerance": "PO price tolerance above the cost sheet (%)",
+      "confirmDays": "Follow up a PO confirmation after (days)",
+      "readyDays": "Follow up readiness before the ready date (days)",
+      "delayDays": "ETA delay warning after (days)",
+      "claimDays": "Follow up a claim every (days)",
+      "invoiceDays": "Invoice follow-up after delivery (days)",
+      "stepReminders": "Step reminders (days before due)",
+      "poTerms": "PO terms",
+      "poTermsHint": "The PO terms texts (Persian and English) are edited with the templates.",
+      "poTermsLink": "PO terms templates",
+      "templates": "Checklist templates",
+      "newTemplate": "New template",
+      "dealType": "Deal type",
+      "templateName": "Template name",
+      "default": "Default",
+      "steps": "{{n}} steps",
+      "group": "Group",
+      "labelFa": "Persian label",
+      "labelEn": "English label",
+      "referenceLabel": "Reference this step produces",
+      "offset": "Days",
+      "requiresDocument": "Needs a document",
+      "addStep": "Add step"
     }
   }
 }

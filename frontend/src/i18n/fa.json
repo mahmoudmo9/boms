@@ -60,7 +60,8 @@
       "casesList": "پرونده‌ها",
       "guarantees": "تضمین‌ها",
       "tenderSettings": "مناقصات",
-      "companyDocuments": "مدارک شرکت"
+      "companyDocuments": "مدارک شرکت",
+      "executionSettings": "اجرا"
     }
   },
   "placeholder": {
@@ -104,7 +105,12 @@
       "listing": "آگهی‌های ستاد",
       "tender": "مناقصه‌ها",
       "guarantee": "تضمین‌ها",
-      "company_document": "مدارک شرکت"
+      "company_document": "مدارک شرکت",
+      "sales_order": "سفارش فروش",
+      "purchase_order": "سفارش خرید",
+      "shipment": "محموله",
+      "process_step": "مرحلهٔ فرایند",
+      "claim": "ادعا"
     }
   },
   "date": {
@@ -563,7 +569,28 @@
     "tender_has_result": "مناقصه نتیجه دارد.",
     "tender_closed": "مناقصه بسته شده است.",
     "summary_required": "الحاقیه خلاصه لازم دارد.",
-    "invalid_order": "هر مورد را یک‌بار بدهید."
+    "invalid_order": "هر مورد را یک‌بار بدهید.",
+    "order_exists": "برای این مورد سفارش فروش باز وجود دارد.",
+    "quote_not_accepted": "پیش‌فاکتور هنوز پذیرفته نشده است.",
+    "tender_not_won": "مناقصه برنده نشده است.",
+    "signed_document_required": "سند امضاشده را پیوست کنید یا «بدون سند امضاشده» را با دلیل تأیید کنید.",
+    "amend_required": "پس از تأیید، این تغییر فقط با اصلاحیه ممکن است.",
+    "nothing_to_amend": "اصلاحیه چیزی را تغییر نمی‌دهد.",
+    "below_delivered": "مقدار کمتر از مقدار تحویل‌شده است.",
+    "no_sold_items": "پرونده قلم فروخته‌شده ندارد.",
+    "sales_order_not_confirmed": "ابتدا سفارش فروش را تأیید کنید.",
+    "po_above_cost_sheet": "قیمت بالاتر از قیمت خرید برگهٔ بها است؛ با دلیل تصویب کنید.",
+    "customer_prepayment_missing": "پیش‌پرداخت مشتری هنوز دریافت نشده است. سفارش پیش از پرداخت نیاز به تأیید صریح شما دارد.",
+    "document_required": "این مرحله سند لازم دارد یا دلیل نبود سند.",
+    "over_shipped": "بیش از مقدار سفارش حمل می‌شود.",
+    "over_received": "بیش از مقدار سفارش دریافت می‌شود.",
+    "over_delivered": "بیش از مقدار سفارش تحویل می‌شود.",
+    "direct_to_customer": "این سفارش مستقیم به مشتری تحویل می‌شود؛ تحویل را ثبت کنید.",
+    "resolution_required": "نحوهٔ حل ادعا را مشخص کنید.",
+    "currency_mismatch": "پرداخت را به ارز همان مرحله ثبت کنید.",
+    "milestone_paid": "برای این مرحله پرداخت ثبت شده است.",
+    "process_exists": "فرایند این نوع معامله برای پرونده وجود دارد.",
+    "link_not_of_case": "سند مرتبط به پروندهٔ دیگری تعلق دارد."
   },
   "cc": {
     "subtitle": "پیگیری‌ها و سرنخ‌های {{date}}.",
@@ -615,6 +642,21 @@
       "awaitingRelease": "منتظر آزادسازی",
       "dateChanges": "{{n}} تغییر تاریخ",
       "newAddenda": "الحاقیهٔ جدید"
+    },
+    "execution": {
+      "title": "اجرا",
+      "unconfirmed": "سفارش‌های خرید تأییدنشده",
+      "readyPassed": "تاریخ آمادگی گذشته",
+      "shipments": "محموله‌های دیرکرد",
+      "steps": "مراحل سررسید ≤ ۳ روز یا عقب‌افتاده",
+      "payments": "پرداخت‌های سررسیدگذشته",
+      "claims": "ادعاهای باز",
+      "deliveries": "تحویل ≤ ۷ روز یا عقب‌افتاده",
+      "daysAgo": "{{n}} روز پیش",
+      "direction": {
+        "in": "دریافت",
+        "out": "پرداخت"
+      }
     }
   },
   "funnel": {
@@ -734,7 +776,8 @@
       "interactions": "تعاملات",
       "documents": "اسناد",
       "history": "تاریخچه",
-      "quotes": "پیش‌فاکتورها"
+      "quotes": "پیش‌فاکتورها",
+      "orders": "سفارش‌ها و ادعاها"
     },
     "archiveTitle": "بایگانی طرف",
     "archiveOpenFollowups": "این طرف {{count}} پیگیری باز دارد.",
@@ -1054,7 +1097,11 @@
         "history": "تاریخچه",
         "costing": "بهای تمام‌شده",
         "quotes": "پیش‌فاکتورها",
-        "tender": "مناقصه"
+        "tender": "مناقصه",
+        "order": "سفارش",
+        "purchase": "خرید",
+        "logistics": "لجستیک",
+        "delivery": "تحویل و ادعا"
       },
       "cascadeHint": "فقط برای داده‌های آزمایشی: این پرونده را با اقلام، استعلام‌ها، گیرندگان، پیشنهادها و پیوند اسناد حذف می‌کند. فایل‌ها در اسناد و تعامل‌ها در سابقهٔ طرف‌ها می‌مانند. حذف در گزارش رویدادها ثبت می‌شود.",
       "typeTitle": "برای تأیید، عنوان پرونده را بنویسید",
@@ -1361,7 +1408,8 @@
       },
       "kinds": {
         "rfq": "پیام‌های استعلام",
-        "quote_terms": "شرایط پیش‌فاکتور"
+        "quote_terms": "شرایط پیش‌فاکتور",
+        "po_terms": "شرایط سفارش خرید"
       }
     },
     "capabilities": {
@@ -2496,6 +2544,417 @@
       "lines": "{{n}} ردیف",
       "reasons": "دلایل نتیجه",
       "active": "فعال"
+    }
+  },
+  "execution": {
+    "fileSet": "فایل ثبت شد",
+    "outputs": "{{n}} خروجی",
+    "reason": "دلیل",
+    "page": {
+      "subtitle": "آنچه در اجرای سفارش‌ها نیاز به اقدام دارد؛ کار روی زبانه‌های سفارش، خرید، لجستیک و تحویل هر پرونده انجام می‌شود."
+    },
+    "dealTypes": {
+      "import": "واردات",
+      "export": "صادرات",
+      "domestic": "داخلی"
+    },
+    "header": {
+      "next": "بعدی",
+      "deliveryDue": "موعد تحویل",
+      "warnings": "{{n}} هشدار تأخیر"
+    },
+    "fields": {
+      "delivery_due_on": "موعد تحویل",
+      "quantity": "مقدار",
+      "unit_price": "قیمت واحد",
+      "payment_terms": "نحوه پرداخت",
+      "delivery_terms": "شرایط تحویل",
+      "incoterm": "اینکوترمز",
+      "incoterm_place": "محل اینکوترمز",
+      "price_basis": "مبنای قیمت",
+      "ready_due_on": "تاریخ آمادگی"
+    },
+    "order": {
+      "title": "سفارش فروش",
+      "create": "ایجاد سفارش فروش",
+      "fromQuote": "پیش‌فاکتور پذیرفته‌شده",
+      "fromTender": "مناقصهٔ برنده‌شده",
+      "createButton": "ایجاد سفارش فروش",
+      "manual": "ایجاد دستی از اقلام فروخته‌شده",
+      "noCandidate": "پیش‌فاکتور پذیرفته‌شده یا مناقصهٔ برنده‌شده‌ای بدون سفارش نیست.",
+      "none": "هنوز سفارشی نیست.",
+      "customerRef": "شماره قرارداد / سفارش خریدار",
+      "contractDate": "تاریخ قرارداد",
+      "deliveryDue": "موعد تحویل",
+      "deliveryPlace": "محل تحویل",
+      "warranty": "گارانتی (ماه)",
+      "paymentTerms": "نحوه پرداخت",
+      "deliveryTerms": "شرایط تحویل",
+      "signedDocument": "قرارداد / پیش‌فاکتور امضاشده",
+      "confirm": "تأیید سفارش",
+      "withoutDocument": "بدون سند امضاشده تأیید شود",
+      "withoutReason": "دلیل (بدون سند امضاشده)",
+      "confirmedWithout": "تأییدشده بدون سند امضاشده",
+      "amend": "اصلاحیه",
+      "amendReason": "دلیل اصلاحیه",
+      "amendDocument": "سند اصلاحیه (اختیاری)",
+      "amendments": "اصلاحیه‌ها ({{n}})",
+      "cancel": "لغو",
+      "description": "شرح",
+      "quantity": "مقدار",
+      "unitPrice": "قیمت واحد",
+      "total": "جمع",
+      "delivered": "تحویل",
+      "received": "دریافت‌شده",
+      "subtotal": "جمع اقلام",
+      "vat": "مالیات بر ارزش افزوده",
+      "acknowledgement": "تأیید سفارش برای مشتری:",
+      "language": "زبان",
+      "itemsDelivered": "{{done}} از {{total}} قلم تحویل شد",
+      "statuses": {
+        "draft": "پیش‌نویس",
+        "confirmed": "تأییدشده",
+        "in_progress": "در جریان",
+        "delivered": "تحویل‌شده",
+        "closed": "بسته",
+        "cancelled": "لغوشده"
+      }
+    },
+    "cash": {
+      "title": "وضعیت نقدی (واقعی تاکنون)",
+      "plan": "برآورد برگهٔ بها (برنامه)",
+      "none": "هنوز پرداختی ثبت نشده است.",
+      "received": "دریافت از مشتری",
+      "paid": "پرداخت به تأمین‌کنندگان و دیگران",
+      "net": "نقدینگی درگیر (پرداخت − دریافت)",
+      "outstanding": "مانده انتظار: دریافت {{in}} · پرداخت {{out}} {{cur}}"
+    },
+    "milestones": {
+      "in": "مراحل دریافت از مشتری",
+      "out": "مراحل پرداخت به تأمین‌کننده",
+      "add": "افزودن مرحلهٔ پرداخت",
+      "none": "مرحلهٔ پرداختی نیست.",
+      "quickPrepayment": "پیش‌پرداخت ٪",
+      "quickBalance": "مانده هنگام تحویل",
+      "kind": "نوع",
+      "label": "عنوان",
+      "valueMode": "بر اساس",
+      "percent": "درصد سفارش",
+      "amount": "مبلغ",
+      "dueOn": "موعد",
+      "dueEvent": "رویداد موعد",
+      "record": "ثبت پرداخت",
+      "paid": "پرداخت‌شده",
+      "paidOn": "تاریخ پرداخت",
+      "method": "روش",
+      "reference": "شماره پیگیری",
+      "receipt": "رسید",
+      "offerTerms": "شرایط پرداخت پیشنهاد تأمین‌کننده",
+      "kinds": {
+        "prepayment": "پیش‌پرداخت",
+        "on_order_confirmation": "هنگام تأیید سفارش",
+        "on_shipment": "هنگام حمل",
+        "on_delivery": "هنگام تحویل",
+        "balance": "مانده",
+        "retention": "حسن انجام کار",
+        "other": "سایر"
+      },
+      "statuses": {
+        "expected": "در انتظار",
+        "partly": "بخشی",
+        "done": "کامل",
+        "cancelled": "لغوشده"
+      }
+    },
+    "purchase": {
+      "title": "سفارش خرید",
+      "create": "ایجاد سفارش‌های خرید برای {{number}}",
+      "createHint": "یک سفارش برای هر تأمین‌کنندهٔ پیشنهادهای انتخاب‌شده",
+      "needOrder": "ابتدا سفارش فروش را تأیید کنید.",
+      "unresolved": "اقلام بدون پیشنهاد انتخاب‌شده",
+      "approve": "تصویب",
+      "markSent": "ثبت ارسال",
+      "confirm": "تأیید تأمین‌کننده",
+      "revise": "نسخهٔ جدید",
+      "language": "زبان سند",
+      "incoterm": "اینکوترمز",
+      "readyDue": "تاریخ آمادگی",
+      "moveReady": "تغییر تاریخ آمادگی",
+      "directToCustomer": "تحویل مستقیم به مشتری",
+      "directHint": "بدون رسید انبار",
+      "supplierRef": "شماره تأیید تأمین‌کننده",
+      "confirmedReady": "تاریخ آمادگی تأییدشده",
+      "confirmationDocument": "سند تأیید",
+      "terms": "شرایط سفارش",
+      "aboveCost": "{{n}} قیمت بالاتر از قیمت خرید برگهٔ بها",
+      "aboveCostTitle": "قیمت بالاتر از برگهٔ بها",
+      "aboveCostReason": "دلیل تصویب با این قیمت",
+      "priceOverride": "تصویب با قیمت بالاتر",
+      "prepaymentOverride": "ارسال پیش از پیش‌پرداخت مشتری",
+      "prepaymentMissing": "پیش‌پرداخت مشتری هنوز دریافت نشده است. سفارش پیش از پرداخت نیاز به تأیید صریح شما دارد.",
+      "prepaymentReason": "دلیل سفارش پیش از پرداخت",
+      "channel": "روش ارسال",
+      "channels": {
+        "email": "ایمیل",
+        "whatsapp": "واتساپ",
+        "phone": "تلفن",
+        "in_person": "حضوری",
+        "letter": "نامه",
+        "other": "سایر"
+      },
+      "statuses": {
+        "draft": "پیش‌نویس",
+        "approved": "تصویب‌شده",
+        "sent": "ارسال‌شده",
+        "confirmed": "تأییدشده",
+        "in_production": "در حال تولید",
+        "ready": "آماده",
+        "shipped": "حمل‌شده",
+        "received": "دریافت‌شده",
+        "closed": "بسته",
+        "cancelled": "لغوشده",
+        "superseded": "جایگزین‌شده"
+      }
+    },
+    "receipts": {
+      "title": "رسید کالا",
+      "add": "ثبت رسید کالا",
+      "receivedOn": "تاریخ دریافت",
+      "document": "سند",
+      "quantity": "مقدار",
+      "condition": "وضعیت",
+      "conditions": {
+        "ok": "سالم",
+        "damaged": "آسیب‌دیده",
+        "short": "کسری"
+      }
+    },
+    "process": {
+      "title": "فرایند",
+      "progress": "{{done}} از {{total}}",
+      "next": "بعدی",
+      "status": "وضعیت",
+      "dueOn": "موعد",
+      "document": "سند",
+      "noDocumentReason": "دلیل نبود سند",
+      "needDocument": "این مرحله سند لازم دارد؛ سند را پیوست کنید یا دلیل بنویسید.",
+      "reminders": "یادآوری‌ها: {{list}}",
+      "doneOn": "انجام‌شده",
+      "addByHand": "افزودن فرایند",
+      "statuses": {
+        "pending": "در انتظار",
+        "in_progress": "در جریان",
+        "done": "انجام‌شده",
+        "not_applicable": "موردی ندارد"
+      },
+      "states": {
+        "done": "انجام‌شده",
+        "na": "موردی ندارد",
+        "current": "در جریان",
+        "overdue": "عقب‌افتاده",
+        "todo": "در انتظار"
+      },
+      "groups": {
+        "supplier_order": "تأمین‌کننده و سفارش",
+        "shipping": "حمل",
+        "customs": "گمرک",
+        "domestic": "داخلی",
+        "contract": "قرارداد و آماده‌سازی",
+        "customs_shipping": "گمرک و حمل",
+        "currency": "ارز"
+      }
+    },
+    "shipments": {
+      "title": "محموله",
+      "add": "ثبت محموله",
+      "none": "محموله‌ای ثبت نشده است.",
+      "po": "سفارش خرید",
+      "outbound": "ارسال به مشتری",
+      "mode": "نحوهٔ حمل",
+      "docKind": "نوع بارنامه",
+      "docNo": "شماره بارنامه",
+      "containers": "کانتینرها",
+      "containersHint": "با فاصله یا ویرگول جدا کنید",
+      "vessel": "کشتی / پرواز",
+      "origin": "مبدأ",
+      "destination": "مقصد",
+      "quantity": "مقدار",
+      "status": "وضعیت",
+      "firstEta": "نخستین ETA",
+      "eventKind": "رویداد",
+      "eventNote": "توضیح",
+      "docKindFull": "نوع سند",
+      "docNumber": "شماره",
+      "file": "فایل",
+      "modes": {
+        "sea": "دریایی",
+        "air": "هوایی",
+        "road": "جاده‌ای",
+        "rail": "ریلی",
+        "courier": "پیک",
+        "domestic_truck": "کامیون داخلی",
+        "other": "سایر"
+      },
+      "docKinds": {
+        "bl": "بارنامهٔ دریایی (B/L)",
+        "awb": "بارنامهٔ هوایی (AWB)",
+        "cmr": "بارنامهٔ جاده‌ای (CMR)",
+        "waybill": "بارنامه",
+        "other": "سایر"
+      },
+      "statuses": {
+        "planned": "برنامه‌ریزی",
+        "booked": "رزرو شده",
+        "in_transit": "در راه",
+        "arrived": "رسیده",
+        "at_customs": "در گمرک",
+        "cleared": "ترخیص‌شده",
+        "delivered": "تحویل‌شده",
+        "cancelled": "لغوشده"
+      },
+      "events": {
+        "booked": "رزرو",
+        "loaded": "بارگیری",
+        "departed": "حرکت",
+        "transshipment": "تعویض کشتی",
+        "arrived": "رسیدن",
+        "customs_entry": "ورود به گمرک",
+        "released": "ترخیص",
+        "delivered": "تحویل",
+        "delay": "تأخیر",
+        "other": "سایر",
+        "etd_change": "تغییر ETD",
+        "eta_change": "تغییر ETA"
+      },
+      "documents": {
+        "commercial_invoice": "فاکتور تجاری",
+        "packing_list": "لیست عدل‌بندی",
+        "bl": "بارنامهٔ دریایی",
+        "awb": "بارنامهٔ هوایی",
+        "cmr": "بارنامهٔ جاده‌ای",
+        "certificate_of_origin": "گواهی مبدأ",
+        "inspection_certificate": "گواهی بازرسی",
+        "insurance_policy": "بیمه‌نامه",
+        "customs_declaration": "اظهارنامهٔ گمرکی",
+        "other": "سایر"
+      }
+    },
+    "warnings": {
+      "eta_passed": "ETA گذشته و هنوز نرسیده ({{days}} روز)",
+      "eta_moved": "ETA نسبت به نخستین ETA {{days}} روز عقب رفته است",
+      "ready_passed": "تاریخ آمادگی {{number}} گذشته و هنوز آماده نیست ({{days}} روز)"
+    },
+    "inspections": {
+      "title": "بازرسی‌ها",
+      "target": "برای",
+      "kind": "نوع",
+      "result": "نتیجه",
+      "none": "بازرسی‌ای ثبت نشده است.",
+      "kinds": {
+        "pre_shipment": "پیش از حمل",
+        "on_arrival": "هنگام ورود",
+        "third_party": "شخص ثالث",
+        "internal": "داخلی"
+      },
+      "results": {
+        "pending": "در انتظار",
+        "pass": "قبول",
+        "conditional": "مشروط",
+        "fail": "رد"
+      }
+    },
+    "claims": {
+      "title": "ادعاها",
+      "add": "ثبت ادعا",
+      "open": "ثبت ادعا",
+      "none": "ادعایی نیست.",
+      "direction": "طرف ادعا",
+      "kind": "نوع",
+      "counterparty": "طرف مقابل",
+      "po": "سفارش خرید",
+      "amount": "مبلغ ادعا",
+      "notes": "توضیح",
+      "status": "وضعیت",
+      "resolution": "نحوهٔ حل",
+      "resolutionAmount": "مبلغ توافق",
+      "directions": {
+        "against_supplier": "علیه تأمین‌کننده",
+        "against_carrier": "علیه حمل‌کننده",
+        "against_insurer": "علیه بیمه‌گر",
+        "from_customer": "از سوی مشتری"
+      },
+      "kinds": {
+        "defect": "عیب",
+        "shortage": "کسری",
+        "delay": "تأخیر",
+        "damage": "آسیب",
+        "wrong_item": "کالای اشتباه",
+        "documents": "اسناد",
+        "other": "سایر"
+      },
+      "statuses": {
+        "open": "باز",
+        "submitted": "ارسال‌شده",
+        "negotiating": "در مذاکره",
+        "resolved": "حل‌شده",
+        "rejected": "ردشده",
+        "withdrawn": "پس‌گرفته"
+      },
+      "resolutions": {
+        "replacement": "تعویض",
+        "credit_note": "یادداشت بستانکاری",
+        "refund": "بازپرداخت",
+        "discount": "تخفیف",
+        "repair": "تعمیر",
+        "none": "هیچ"
+      }
+    },
+    "delivery": {
+      "title": "تحویل به مشتری",
+      "add": "ثبت تحویل",
+      "none": "تحویلی ثبت نشده است.",
+      "needOrder": "ابتدا سفارش فروش را تأیید کنید.",
+      "itemProgress": "{{done}} از {{total}} تحویل شد",
+      "on": "تاریخ تحویل",
+      "receiver": "تحویل‌گیرنده",
+      "place": "محل تحویل",
+      "receipt": "رسید انبار / صورتجلسه تحویل",
+      "quantity": "مقدار",
+      "note": "توضیح",
+      "reverse": "برگشت تحویل"
+    },
+    "party": {
+      "salesOrders": "سفارش‌های فروش",
+      "purchaseOrders": "سفارش‌های خرید",
+      "claims": "ادعاها",
+      "none": "موردی نیست."
+    },
+    "settings": {
+      "subtitle": "الگوهای فرایند، شرایط سفارش خرید و تنظیمات روزها",
+      "numbers": "تنظیمات",
+      "tolerance": "حد مجاز قیمت سفارش بالاتر از برگهٔ بها (٪)",
+      "confirmDays": "پیگیری تأیید سفارش پس از (روز)",
+      "readyDays": "پیگیری آماده شدن پیش از تاریخ آمادگی (روز)",
+      "delayDays": "هشدار تأخیر ETA پس از (روز)",
+      "claimDays": "پیگیری ادعا هر (روز)",
+      "invoiceDays": "پیگیری فاکتور پس از تحویل (روز)",
+      "stepReminders": "یادآوری مراحل (روز پیش از موعد)",
+      "poTerms": "شرایط سفارش خرید",
+      "poTermsHint": "متن شرایط سفارش خرید به فارسی و انگلیسی در قالب‌ها ویرایش می‌شود.",
+      "poTermsLink": "قالب‌های شرایط سفارش خرید",
+      "templates": "الگوهای فرایند",
+      "newTemplate": "الگوی جدید",
+      "dealType": "نوع معامله",
+      "templateName": "نام الگو",
+      "default": "پیش‌فرض",
+      "steps": "{{n}} مرحله",
+      "group": "گروه",
+      "labelFa": "عنوان فارسی",
+      "labelEn": "عنوان انگلیسی",
+      "referenceLabel": "شماره‌ای که این مرحله می‌دهد",
+      "offset": "روز",
+      "requiresDocument": "سند لازم",
+      "addStep": "افزودن مرحله"
     }
   }
 }

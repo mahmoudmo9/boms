@@ -18,9 +18,11 @@ import { ComparisonTab, CoverageCard, OffersTab } from "./Offers";
 import { QuotesTab } from "./Quotes";
 import { RfqsTab } from "./Rfqs";
 import { TenderHeaderFacts, TenderTab } from "./Tender";
+import { DeliveryTab, ExecutionHeaderFacts, LogisticsTab, OrderTab, PurchaseTab } from "./execution";
 import { SetadOrigin } from "../tenders/SetadOrigin";
 
-const TABS = ["items", "tender", "rfqs", "offers", "comparison", "costing", "quotes", "documents", "history"] as const;
+const TABS = ["items", "tender", "rfqs", "offers", "comparison", "costing", "quotes", "order", "purchase", "logistics", "delivery", "documents",
+  "history"] as const;
 type Tab = (typeof TABS)[number];
 
 function EditCaseDialog({ c, onClose, onSaved }: { c: CaseDetail; onClose: () => void; onSaved: () => void }) {
@@ -90,6 +92,7 @@ export function CaseDetailPage() {
           {quotes.data?.summary.latest && <span className="inline-flex items-center gap-1">{t("quotes.latest")}: <Bdi ltr>{quotes.data.summary.latest.number}</Bdi> <StatusBadge group="quote" status={quotes.data.summary.latest.status} /></span>}
           <span className="tabular-nums">{f.date(c.created_at)}</span>
           <TenderHeaderFacts caseId={c.id} />
+          <ExecutionHeaderFacts caseId={c.id} />
         </span>}
         actions={<>
           <Select className="w-36" aria-label={t("sourcing.status.label")} value={c.status} onChange={(e) => setStatus.mutate(e.target.value)}>
@@ -120,6 +123,10 @@ export function CaseDetailPage() {
       {tab === "comparison" && <ComparisonTab caseData={c} />}
       {tab === "costing" && <CostingTab caseData={c} />}
       {tab === "quotes" && <QuotesTab caseData={c} />}
+      {tab === "order" && <OrderTab caseData={c} />}
+      {tab === "purchase" && <PurchaseTab caseData={c} />}
+      {tab === "logistics" && <LogisticsTab caseData={c} />}
+      {tab === "delivery" && <DeliveryTab caseData={c} />}
       {tab === "documents" && <AttachedDocuments documents={c.documents} linkPath={`/api/cases/${c.id}/documents`} onChanged={refresh} />}
       {tab === "history" && <>
         <HistoryCard entityType="case" entityId={c.id} />

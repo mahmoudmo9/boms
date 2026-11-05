@@ -22,6 +22,8 @@ import { LetterheadPage } from "./pages/settings/LetterheadPage";
 import { SetadSettingsPage } from "./pages/settings/SetadSettingsPage";
 import { TendersSettingsPage } from "./pages/settings/TendersSettingsPage";
 import { CompanyDocumentsPage } from "./pages/settings/CompanyDocumentsPage";
+import { ExecutionSettingsPage } from "./pages/settings/ExecutionSettingsPage";
+import { ExecutionPage } from "./pages/cases/ExecutionPage";
 import { GuaranteesPage } from "./pages/cases/GuaranteesPage";
 import { CatalogPage, ProductPage } from "./pages/sourcing/CatalogPage";
 import { InquiriesPage } from "./pages/sourcing/InquiriesPage";
@@ -71,6 +73,8 @@ export function App() {
         <Route path="settings/setad" element={<SetadSettingsPage />} />
         <Route path="settings/tenders" element={<TendersSettingsPage />} />
         <Route path="settings/company-documents" element={<CompanyDocumentsPage />} />
+        <Route path="settings/execution" element={<ExecutionSettingsPage />} />
+        <Route path="execution" element={<ExecutionPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
