@@ -24,6 +24,10 @@ def case_execution(db: Session, case_id: uuid.UUID) -> dict:
            "cash": milestones.cash_position(db, case_id),
            "milestones_out": [milestones.milestone_out(db, m) for m in milestones.milestones_of(db, case_id=case_id,
                                                                                                direction="out")]}
+    from app.modules.execution import process, purchase_orders
+
+    out["purchase_orders"] = [purchase_orders.po_out(db, po) for po in purchase_orders.orders_of(db, case_id)]
+    out["processes"] = [process.process_out(db, p) for p in process.processes_of(db, case_id)]
     for name, fn in _sections.items():
         out[name] = fn(db, case_id)
     return jsonable(out)

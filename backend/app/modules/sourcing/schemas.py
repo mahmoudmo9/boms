@@ -348,7 +348,7 @@ class ConfirmSubjectIn(InputModel):
 
 
 class TemplateIn(InputModel):
-    kind: Literal["rfq", "quote_terms"] = "rfq"
+    kind: Literal["rfq", "quote_terms", "po_terms"] = "rfq"
     language: Lang
     channel: TemplateChannel
     name: Annotated[str, Field(min_length=1, max_length=200)]
@@ -368,7 +368,7 @@ class TemplatePatch(InputModel):
 
 
 class TemplatePreviewIn(InputModel):
-    kind: Literal["rfq", "quote_terms"] = "rfq"
+    kind: Literal["rfq", "quote_terms", "po_terms"] = "rfq"
     subject_template: Text500 = ""
     body_template: Annotated[str, Field(min_length=1, max_length=20000)]
     language: Lang = "en"

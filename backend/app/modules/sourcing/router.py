@@ -575,7 +575,7 @@ templates_router = APIRouter(prefix="/api/message-templates", tags=["sourcing"])
 
 @templates_router.get("")
 def list_templates(_: CurrentUser, db: Db, include_archived: bool = False,
-                   kind: Literal["rfq", "quote_terms"] = "rfq"):
+                   kind: Literal["rfq", "quote_terms", "po_terms"] = "rfq"):
     return {"placeholders": list(templates.PLACEHOLDERS_BY_KIND[kind]),
             "items": [jsonable(row_snapshot(t)) for t in templates.list_templates(db, include_archived, kind)]}
 
@@ -590,6 +590,13 @@ def create_template(body: TemplateIn, request: Request, user: CurrentUser, db: D
 @templates_router.post("/preview")
 def preview_template(body: TemplatePreviewIn, _: CurrentUser, db: Db):
     templates.validate_template(body.subject_template, body.body_template, body.kind)
+    if body.kind == "po_terms":
+        values = {"supplier_name": "ACME Trading", "contact_name": "Mr. Smith", "payment_terms": "30% advance",
+                  "incoterm": "FOB Shanghai", "ready_due_on": templates.format_date(date.today(), body.language),
+                  "delivery_place": "Bandar Abbas", "delivery_terms": "", "case_title": "Sample case",
+                  "signature": rfq.signature(db, body.language)}
+        return {"subject": templates.render(body.subject_template, values),
+                "body": templates.render(body.body_template, values, drop_empty_lines=True)}
     if body.kind == "quote_terms":
         values = {"buyer_name": "ACME Trading", "valid_until": templates.format_date(date.today(), body.language),
                   "payment_terms": "30% advance, 70% before shipment", "incoterm": "CIF Bandar Abbas",

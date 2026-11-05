@@ -11,9 +11,12 @@ from app.core.db import get_db
 from app.core.web import request_source
 from app.modules.execution import milestones, output, sales_orders
 from app.modules.execution.common import get_sales_order
-from app.modules.execution.schemas import (AmendIn, ConfirmIn, MilestoneIn, MilestonePatch, OutputIn, PaymentIn, ReasonIn,
-                                           SalesOrderFromProposal, SalesOrderFromQuote, SalesOrderItemPatch,
-                                           SalesOrderManual, SalesOrderPatch)
+from app.modules.execution.schemas import (AmendIn, ConfirmIn, MilestoneIn, MilestonePatch, OutputIn, PaymentIn,
+                                           PoApproveIn, PoConfirmIn, PoReadyDateIn, PoSentIn, PoStatusIn, ProcessIn,
+                                           ProcessTemplateIn, ProcessTemplatePatch, PurchaseOrderItemPatch,
+                                           PurchaseOrderPatch, ReasonIn, SalesOrderFromProposal, SalesOrderFromQuote,
+                                           SalesOrderItemPatch, SalesOrderManual, SalesOrderPatch, StepIn, StepOrderIn,
+                                           StepPatch)
 from app.modules.sourcing.common import jsonable, row_snapshot
 from app.modules.system.auth import CurrentUser
 
@@ -188,6 +191,249 @@ def ms_reverse(record_id: uuid.UUID, body: ReasonIn, request: Request, user: Cur
     row = milestones.reverse_record(db, record_id, body.reason, request_source(request), user.username)
     db.commit()
     return milestones.milestone_out(db, row)
+
+
+# ---- purchase orders (M2) ------------------------------------------------------------------------------------------------
+
+def _po(db: Session, po_id: uuid.UUID) -> dict:
+    from app.modules.execution import purchase_orders
+    from app.modules.execution.common import get_purchase_order
+
+    return purchase_orders.po_out(db, get_purchase_order(db, po_id))
+
+
+@router.post("/sales-orders/{order_id}/purchase-orders", status_code=201)
+def po_create(order_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    """"Create POs": one draft per supplier of the items' selected offers; items without one are listed."""
+    from app.modules.execution import purchase_orders
+
+    result = purchase_orders.create_from_sales_order(db, order_id, user.calendar, request_source(request), user.username)
+    db.commit()
+    return {"created": [_po(db, po.id) for po in result["created"]], "unresolved": result["unresolved"]}
+
+
+@router.get("/purchase-orders/{po_id}")
+def po_get(po_id: uuid.UUID, _: CurrentUser, db: Db):
+    return _po(db, po_id)
+
+
+@router.patch("/purchase-orders/{po_id}")
+def po_patch(po_id: uuid.UUID, body: PurchaseOrderPatch, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import purchase_orders
+
+    purchase_orders.update_order(db, po_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
+    db.commit()
+    return _po(db, po_id)
+
+
+@router.delete("/purchase-orders/{po_id}", status_code=204)
+def po_delete(po_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import purchase_orders
+
+    purchase_orders.delete_order(db, po_id, request_source(request), user.username)
+    db.commit()
+    return Response(status_code=204)
+
+
+@router.patch("/purchase-order-items/{item_id}")
+def po_item_patch(item_id: uuid.UUID, body: PurchaseOrderItemPatch, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import purchase_orders
+
+    row = purchase_orders.update_item(db, item_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
+    db.commit()
+    return _po(db, row.purchase_order_id)
+
+
+@router.delete("/purchase-order-items/{item_id}")
+def po_item_delete(item_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import purchase_orders
+
+    po = purchase_orders.remove_item(db, item_id, request_source(request), user.username)
+    db.commit()
+    return _po(db, po.id)
+
+
+@router.post("/purchase-orders/{po_id}/approve")
+def po_approve(po_id: uuid.UUID, request: Request, user: CurrentUser, db: Db, body: PoApproveIn | None = None):
+    from app.modules.execution import purchase_orders
+
+    purchase_orders.approve(db, po_id, body.model_dump() if body else {}, request_source(request), user.username)
+    db.commit()
+    return _po(db, po_id)
+
+
+@router.post("/purchase-orders/{po_id}/mark-sent")
+def po_sent(po_id: uuid.UUID, body: PoSentIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import purchase_orders
+
+    purchase_orders.mark_sent(db, po_id, body.model_dump(), request_source(request), user.username)
+    db.commit()
+    return _po(db, po_id)
+
+
+@router.post("/purchase-orders/{po_id}/confirm")
+def po_confirm(po_id: uuid.UUID, body: PoConfirmIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import purchase_orders
+
+    purchase_orders.confirm(db, po_id, body.model_dump(), request_source(request), user.username)
+    db.commit()
+    return _po(db, po_id)
+
+
+@router.post("/purchase-orders/{po_id}/ready-date")
+def po_ready_date(po_id: uuid.UUID, body: PoReadyDateIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import purchase_orders
+
+    purchase_orders.change_ready_date(db, po_id, body.model_dump(), request_source(request), user.username)
+    db.commit()
+    return _po(db, po_id)
+
+
+@router.post("/purchase-orders/{po_id}/status")
+def po_status(po_id: uuid.UUID, body: PoStatusIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import purchase_orders
+
+    purchase_orders.set_status(db, po_id, body.model_dump(), request_source(request), user.username)
+    db.commit()
+    return _po(db, po_id)
+
+
+@router.post("/purchase-orders/{po_id}/revise", status_code=201)
+def po_revise(po_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import purchase_orders
+
+    new = purchase_orders.revise(db, po_id, request_source(request), user.username)
+    db.commit()
+    return _po(db, new.id)
+
+
+@router.post("/purchase-orders/{po_id}/cancel")
+def po_cancel(po_id: uuid.UUID, body: ReasonIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import purchase_orders
+
+    purchase_orders.cancel(db, po_id, body.reason, request_source(request), user.username)
+    db.commit()
+    return _po(db, po_id)
+
+
+@router.get("/purchase-orders/{po_id}/print", response_class=HTMLResponse)
+def po_print(po_id: uuid.UUID, _: CurrentUser, db: Db):
+    from app.modules.execution.common import get_purchase_order
+
+    return HTMLResponse(output.render_html(output.purchase_order_context(db, get_purchase_order(db, po_id))))
+
+
+@router.post("/purchase-orders/{po_id}/outputs", status_code=201)
+def po_output(po_id: uuid.UUID, body: OutputIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution.common import get_purchase_order
+
+    po = get_purchase_order(db, po_id)
+    result = output.generate(db, "purchase_order", po, output.purchase_order_context(db, po), body.format,
+                             request_source(request), user.username)
+    db.commit()
+    return result
+
+
+# ---- process checklists (M2) ----------------------------------------------------------------------------------------------
+
+@router.get("/process-templates")
+def pt_list(_: CurrentUser, db: Db, include_archived: bool = False):
+    from app.modules.execution import process
+
+    return [process.template_out(db, t) for t in process.list_templates(db, include_archived)]
+
+
+@router.post("/process-templates", status_code=201)
+def pt_create(body: ProcessTemplateIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import process
+
+    row = process.create_template(db, body.model_dump(), request_source(request), user.username)
+    db.commit()
+    return process.template_out(db, row)
+
+
+@router.patch("/process-templates/{template_id}")
+def pt_patch(template_id: uuid.UUID, body: ProcessTemplatePatch, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import process
+
+    data = body.model_dump(exclude_unset=True)
+    if body.steps is not None:
+        data["steps"] = [s.model_dump() for s in body.steps]
+    row = process.update_template(db, template_id, data, request_source(request), user.username)
+    db.commit()
+    return process.template_out(db, row)
+
+
+@router.delete("/process-templates/{template_id}", status_code=204)
+def pt_delete(template_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import process
+
+    process.delete_template(db, template_id, request_source(request), user.username)
+    db.commit()
+    return Response(status_code=204)
+
+
+@router.post("/cases/{case_id}/processes", status_code=201)
+def process_create(case_id: uuid.UUID, body: ProcessIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import process
+
+    row = process.create_process(db, case_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
+    db.commit()
+    return process.process_out(db, row)
+
+
+@router.get("/processes/{process_id}")
+def process_get(process_id: uuid.UUID, _: CurrentUser, db: Db):
+    from app.modules.execution import process
+    from app.modules.execution.common import get
+    from app.modules.execution.models import Process
+
+    return process.process_out(db, get(db, Process, process_id, "Process"))
+
+
+@router.post("/processes/{process_id}/steps", status_code=201)
+def step_add(process_id: uuid.UUID, body: StepIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import process
+    from app.modules.execution.common import get
+    from app.modules.execution.models import Process
+
+    process.add_step(db, process_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
+    db.commit()
+    return process.process_out(db, get(db, Process, process_id, "Process"))
+
+
+@router.post("/processes/{process_id}/reorder")
+def step_reorder(process_id: uuid.UUID, body: StepOrderIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import process
+    from app.modules.execution.common import get
+    from app.modules.execution.models import Process
+
+    process.reorder(db, process_id, body.step_ids, request_source(request), user.username)
+    db.commit()
+    return process.process_out(db, get(db, Process, process_id, "Process"))
+
+
+@router.patch("/process-steps/{step_id}")
+def step_patch(step_id: uuid.UUID, body: StepPatch, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import process
+    from app.modules.execution.common import get
+    from app.modules.execution.models import Process
+
+    step = process.update_step(db, step_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
+    db.commit()
+    return process.process_out(db, get(db, Process, step.process_id, "Process"))
+
+
+@router.delete("/process-steps/{step_id}")
+def step_delete(step_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution import process
+    from app.modules.execution.common import get
+    from app.modules.execution.models import Process, ProcessStep
+
+    process_id = get(db, ProcessStep, step_id, "Process step").process_id
+    process.remove_step(db, step_id, request_source(request), user.username)
+    db.commit()
+    return process.process_out(db, get(db, Process, process_id, "Process"))
 
 
 ROUTERS = [router]

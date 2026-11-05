@@ -21,7 +21,9 @@ from app.modules.sourcing.models import MessageTemplate, RfqRecipient
 PLACEHOLDERS = ("supplier_name", "contact_name", "case_title", "items_table", "respond_by", "signature")
 QUOTE_PLACEHOLDERS = ("buyer_name", "valid_until", "payment_terms", "incoterm", "lead_time", "bank_details",
                       "addressee", "setad_number")  # v0.5.0: Setad proforma
-PLACEHOLDERS_BY_KIND = {"rfq": PLACEHOLDERS, "quote_terms": QUOTE_PLACEHOLDERS}
+PO_PLACEHOLDERS = ("supplier_name", "contact_name", "payment_terms", "incoterm", "ready_due_on", "delivery_place",
+                   "delivery_terms", "case_title", "signature")  # v0.7.0: purchase order terms (module execution)
+PLACEHOLDERS_BY_KIND = {"rfq": PLACEHOLDERS, "quote_terms": QUOTE_PLACEHOLDERS, "po_terms": PO_PLACEHOLDERS}
 _TOKEN = re.compile(r"\{\{|\}\}|\{([^{}]*)\}|[{}]")
 
 LABELS = {
