@@ -389,3 +389,30 @@ Nothing here pays, ships or contacts anyone: BOMS records what you did.
 
 **Command center «اجرا»**
 - [ ] The *Execution* section lists POs sent and not confirmed, ready dates passed, delayed shipments, checklist steps due, payments past due, open claims and deliveries due; each row opens the right case tab. The *Execution & Shipping* menu shows the same.
+
+## Manual checks for v0.8.0 (internal tasks and deal finance)
+
+Run once on the Windows PC after `update.bat` from 0.7.0 (not yet run there). There is no Moadian or bank access:
+you register invoices in سامانه مودیان yourself and type the tax ID into BOMS.
+
+**Update and reminders moved to «کارهای من»**
+- [ ] Run the 0.8.0 `scripts\update.bat`: it prints `0.7.0 -> 0.8.0`, a `pre_update` backup appears, migrations `0014` and `0015` run, and *Run restore test* passes afterwards (now 104 tables).
+- [ ] Open a customer that had many checklist and date reminders: its follow-up list now shows only real follow-ups (RFQ chases, PO confirmation, claims, guarantee release, your own).
+- [ ] The sidebar *Command Center → My tasks* («کارهای من») lists the moved reminders under overdue / today / this week / later; filter by case and kind; add one manual task; mark one done, move one, cancel one with a note.
+- [ ] A case's *Tasks* tab shows that case's open tasks; the command center has a «کارها» section.
+
+**One deal closed with real documents**
+- [ ] Party page of the buyer: fill *National ID* and *Economic code*; Settings → Letterhead: the company's national ID and economic code.
+- [ ] Case → *Finance* («مالی») → «فاکتور جدید» for the delivered quantities, then «فاکتور باقی‌مانده» after the next delivery; issue both.
+- [ ] **A real fa invoice PDF via Edge**: Iranian layout, seller and buyer blocks with their IDs, VAT, the total in Persian words, Jalali dates and Persian digits, one page for a short invoice. **Word opens the `.docx` without a repair prompt.**
+- [ ] Register the invoice in سامانه مودیان yourself; type the «شماره منحصربه‌فرد مالیاتی» and set the status to *Accepted*.
+- [ ] Record the customer's payment (a foreign-currency payment asks for its real rate) and allocate it from the suggestion; the invoice shows *Paid*.
+- [ ] Record the supplier's invoice against the PO; a price difference is flagged and approving asks for a reason. Record your payment to the supplier and allocate it.
+- [ ] Add the real freight and customs costs (a USD freight asks for its rate).
+- [ ] The profit table shows planned, actual and variance by line kind, in the deal currency and in rials, the FX gain or loss, VAT and the cost of money.
+- [ ] «بستن»: the checklist lists what is still open; give a reason where needed and close. The deal becomes read-only; rate the supplier and the customer; the ratings appear on their party pages and next to the supplier in RFQ suggestions.
+- [ ] Reopen once with a reason and close again.
+
+**Accountant exports**
+- [ ] Menu *Deal Finance* («مالی معاملات»): receivables aging, payables, invoices, payments, deals, VAT.
+- [ ] **Download a CSV and open it in Excel: Persian text is intact** (UTF-8 with BOM), dates are in your calendar with an ISO column; «خروجی همه برای دوره» downloads a zip of all six files.

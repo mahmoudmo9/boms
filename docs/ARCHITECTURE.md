@@ -834,3 +834,143 @@ Hooks and registries (new ones marked *new*):
 A confirmed sales order, an approved or sent PO, a delivery of a closed order and a paid milestone are never deleted
 one by one (cancel or reverse). Validation convention as elsewhere: CHECK violations 422 with the constraint name,
 unique / still referenced 409.
+
+## Internal tasks and deal finance (Phase 9, v0.8.0, migrations `0014_tasks`, `0015_finance`)
+
+### Tasks instead of party follow-ups (section 0.1)
+
+Module `app/modules/tasks/` owns `core.task` (title, due date and optional time, status open / done / cancelled with a
+done note — a cancel needs one, priority, the case and party as context only, `source` / `source_kind` / `source_id`,
+`remind_of_due`, `remind_days_before`, notes; audited). Kinds: `tender_date`, `process_step`, `guarantee_expiry`,
+`warranty_end`, `warranty_remind`, `opening`, `contract`, `invoice_issue`, `manual`. Public service `tasks.service`:
+create, update, move, done, cancel, reopen, `tasks_of`, `cancel_by_source`, and `sync` (one task per remind day before
+a date, moved with it, cancelled when the date goes away or the source is done / closed / deleted; none for a date that
+has passed). A task never appears on a party's follow-up list.
+
+`tenders.reminders` and `execution.followups` keep their call signatures and route by purpose: internal purposes
+(`date_reminder`, `guarantee_expiry`, `opening`, `contract`; `step_reminder`, `invoice`, `warranty_end`,
+`warranty_remind`) are tasks; counterparty purposes (RFQ chases, `po_confirm`, `po_ready`, `claim`,
+`guarantee_release`, manual follow-ups) stay parties follow-ups. Both return `(link, item)` pairs with the same
+attributes, so callers do not care which kind they hold.
+
+Migration `0014` moves every follow-up linked through `ops.tender_followup` / `ops.execution_followup` with an internal
+purpose into a task (same due date, status, done note, case, party, source record, days before; `due_at` from the
+tender date), records an event `task` / `reminders_moved` with the counts per kind, and deletes the link rows and the
+original follow-ups (the audit trigger keeps them). Downgrade drops `core.task` (moved reminders are not turned back).
+
+API: `GET /api/tasks` («کارهای من»: overdue, today, this week, later, done; filters `case_id`, `kind`, `q`),
+`GET /api/cases/{id}/tasks`, `POST /api/tasks` (manual), `PATCH /api/tasks/{id}`, `POST .../done|move|cancel|reopen`.
+Command center section `tasks` (overdue, today, tomorrow). The case's tasks are deleted by the case cascade (order 0);
+the party counter `tasks` is non-blocking.
+
+Other section-0 changes: the ordering gate passes only when every customer prepayment milestone is `done` (409
+`customer_prepayment_missing` lists received / expected); sending an already sent or confirmed PO gives 409
+`purchase_order_already_sent`; a claim's counterparty defaults from its link (PO / receipt / inspection → the PO's
+supplier, shipment → carrier, delivery → customer); the PO price check converts across currencies with the cost
+sheet's FX entries (direct, reverse or through the pricing currency) and flags an item `fx_missing`
+(«نرخ ارز در برگهٔ هزینه نیست») instead of skipping it; a warranty reminder task `execution.warranty_remind_days`
+(default 30) before the warranty end.
+
+### Finance (module `app/modules/finance/`, schema `ops`)
+
+| Table | Content |
+|---|---|
+| `invoice_sequence` | gap-free numbers per prefix and year of the user's calendar, handed out when an invoice is issued: `INV-`, credit notes `CN-`, debit notes `DN-` |
+| `sales_invoice` (+ `sales_invoice_line`) | from a sales order: kind invoice / credit_note / debit_note (`corrects_invoice_id` for notes), language fa (domestic) / en (commercial invoice), customer, issue and due date, currency, price basis, subtotal, discount, VAT percent and amount (+ note), total, status draft → issued / cancelled, Moadian tax ID / status / date / note, export fields (Incoterm, origin, marks, weights, packages, transport document, shipment); lines with the sales order item, unit, price, discount, HS code |
+| `purchase_invoice` (+ `purchase_invoice_line`) | supplier invoices on a PO or without one: supplier invoice number (unique per supplier unless cancelled), dates, currency, subtotal, VAT, total, status received / approved / disputed / cancelled, difference reason, dispute reason and claim, document |
+| `actual_cost` | freight, insurance, bank fees, customs, levy, clearance, storage, inspection, domestic freight, export clearance, other: party, amount + currency, own FX rate and base amount, input VAT, incurred / due date, document, status expected / incurred / paid (paid derived), shipment / PO |
+| `payment_allocation` | a payment record to exactly one sales invoice, supplier invoice or actual cost: amount in the payment currency, `fx_rate` when the target's currency differs, target amount |
+| `deal_result` | the frozen profit computation of a closed case, the reasons given at close, who closed it |
+| `party_rating` | per closed case, party and role: quality, timeliness, communication, price (supplier) or payment behavior (customer), 1–5, a one-line note |
+
+Owned by their modules (same migration): `core.party.national_id`, `economic_code` (parties; the buyer IDs of a
+domestic invoice) and `ops.payment_record.fx_rate_to_base`, `base_amount`, `rate_source`, `bank_fee` +
+`bank_fee_currency` (execution).
+
+**Sales invoices.** Lines default to delivered-but-not-invoiced quantities (`delivered − invoiced`, invoiced counting
+drafts and issued invoices); more than delivered needs a reason (kept and in the event), more than ordered is 422
+`over_ordered`; several invoices per order; `POST /api/sales-orders/{id}/invoice-rest` creates the rest in one call.
+Issue requires the seller's name, national ID and economic code and, on a domestic invoice (fa to an Iranian
+customer), the buyer's national ID and economic code (economic code not for a person): 422
+`issue_requirements_missing` lists them. Issue assigns the number and the due date (`finance.payment_days`, default
+30), locks the invoice (409 `invoice_locked`) and sets Moadian `not_sent` on a domestic invoice, `not_required`
+otherwise; the owner registers it in سامانه مودیان himself and types the tax ID and status. VAT: the `vat` tax
+parameter in force on the issue date for the case's deal type on a domestic invoice, 0 on an export one; another
+percent needs a note. Corrections are credit / debit notes (a credit note never exceeds the invoice with its notes);
+cancel needs a reason, no allocations and no issued notes, and keeps the number. Outputs: print, PDF and Word on the
+quote output engine (fa: the Iranian layout, seller / buyer blocks with IDs, amount, discount, after discount, VAT and
+total per line, the total in Persian words, Jalali and Persian digits; en: commercial invoice with HS codes and
+shipping data, Gregorian and Latin digits; a DRAFT mark before issue).
+
+**Supplier invoices.** From a PO the supplier, currency and lines (received not invoiced, at the PO price) default.
+Matching per PO item: ordered, received, invoiced on all supplier invoices of the PO, on this one, PO price, invoice
+price, flags `invoiced_above_received`, `invoiced_above_ordered`, `price_difference` (and lines without a PO item).
+Approving with differences needs a reason (409 `invoice_differences`); a disputed invoice can link to a claim of the
+case. Approved invoices are never deleted (cancel them).
+
+**Payments and allocation.** A payment record not in the base currency (`finance.base_currency`, IRR) needs its real
+rate (422 `fx_rate_required`); `base_amount = amount × rate` rounded by the base currency. Older records without a rate
+show «نرخ ثبت نشده» and are completed with `PATCH /api/payment-records/{id}`. A bank fee is an actual cost (kind
+`bank_fees`, read-only, at the payment's rate). Allocation (`POST /api/payment-records/{id}/allocations`, all or
+nothing): money in pays sales invoices and debit notes of the same customer, money out pays supplier invoices of the
+same supplier and actual costs; a target in another currency needs `fx_rate` (1 payment unit in the target currency);
+over the payment's unallocated amount or the target's open balance is 422. The suggestion is oldest-first (due date)
+over the party's open targets in the payment's currency (others listed as `needs_rate`). An allocation made by
+mistake is reversed with a reason (event; refused on a closed deal). Unallocated money in is an advance.
+Invoice balance = total − allocations (+ issued debit notes − issued credit notes); status unpaid / partly_paid / paid
+/ overpaid.
+
+**Actual costs.** Owned rows carry their own rate (required when foreign); expected / incurred is the owner's and
+`paid` follows the allocations. Read-only rows come from their modules, never copied: tender costs (a refundable
+deposit once refunded is excluded), guarantee fees, payment bank fees. Goods are supplier invoices, never a cost row.
+
+**Profit (`finance.profit`, read-only).** Revenue = issued sales invoices net of VAT (subtotal − discount), credit
+notes negative. Cost by cost-sheet line kind: goods = approved supplier invoices (subtotal; one without a PO counts as
+`other`) plus received goods not on an approved invoice at the PO price (`estimated`); actual costs by kind (expected
+ones `estimated`) and the read-only rows; claim resolutions from a supplier / carrier / insurer (credit note, refund,
+discount) lower goods / freight / insurance (a credit given to the customer is a sales credit note). Plan: the final
+cost sheet of the accepted quote or approved proposal (else the current sheet) limited to the sales order's items:
+per line kind, revenue = total price, cost = sum of the kinds; cost of money and guarantee are information lines.
+Values: an amount in the base currency is itself; a paid foreign amount is valued at its payments' real rates
+(Σ allocation base / Σ allocation target), an actual cost at its own rate, the rest at the latest rate entered on the
+case (payments and costs by date, else the sheet's) and reported as `unrealized`; the deal-currency figure is the
+amount itself when in the deal currency, else base ÷ the latest deal-currency rate. FX effect
+«سود/زیان تفاوت نرخ ارز» = Σ over foreign amounts of (value at the sheet's rate − real value) for costs and
+(real − sheet) for revenue. Variance = actual − planned, variance % = variance ÷ planned. Margin = profit ÷ revenue,
+markup = profit ÷ cost. VAT is outside profit: output VAT (issued invoices, credit notes negative), input VAT
+(approved supplier invoices and actual costs), net. Actual cost of money = Σ over the periods between payment dates
+of the rial cash tied up (out − in, when positive) × days × the sheet's annual percent ÷ 365. Open deals also show an
+expected profit (actual where a kind has actuals, else planned; revenue at least the sales order's).
+
+**Closing.** `GET /api/cases/{id}/close-checklist` lists every problem together: items still sold, delivered not
+invoiced, invoice drafts, invoices unpaid, Moadian not accepted / not required, supplier invoices not approved or not
+paid, received goods without a supplier invoice, costs unpaid, open claims, open milestones, guarantees not released
+(a running performance guarantee or warranty is a note, allowed, keeping its tasks), and the open tasks and follow-ups
+closing cancels. `POST /api/cases/{id}/close` passes with no problems or a reason per problem code (409
+`close_checklist`), and with `confirm_cancel_open` when there is something to cancel (409 `open_tasks`); it stores the
+`deal_result` snapshot, sets the case `closed` and the items `closed` through `recompute_item_status` (event
+`deal_closed`). A closed deal is read-only: a session `before_flush` guard refuses any write of an execution or finance
+row of a case with a deal result (409 `case_closed`), except during close / reopen / the test-data cascade; notes,
+ratings, documents and tasks stay writable. `POST /api/cases/{id}/reopen` (a reason) removes the snapshot (event
+`deal_result` / `removed`), sets the case `open` and derives the items again. Ratings: `POST /api/cases/{id}/ratings`
+for the customer and each supplier with a PO, only on a closed case; one per party, role and case.
+
+**Workspace and exports.** `/api/finance/receivables` (aging 0–30 including not yet due, 31–60, 61–90, 90+ by days
+past due; by customer and currency; unallocated advances), `/payables` (supplier invoices and costs: overdue, within 7,
+within 30, later), `/invoices` (sales or purchase; status, Moadian, period, party, case), `/payments`, `/deals` (one row
+per case with a sales order; planned and actual revenue, cost, profit, margin), `/vat` (per month of the user's
+calendar, in rials, information only). CSV (`/api/finance/exports/{sales_invoices|purchase_invoices|payments|
+actual_costs|deals|receivables}.csv`): UTF-8 with BOM, headers in the user's language, every date in the user's
+calendar followed by an ISO column; `/api/finance/exports/all.zip` zips them for a period (stdlib `zipfile`).
+
+**Hooks and integrations.** New registries: `sourcing.items.register_closed_check` (closed set and cleared only by the
+deal), `sourcing.inquiries.register_case_status_guard` (a deal with a sales order is closed / reopened only through
+finance: 409 `use_close_deal` / `use_reopen`), `sourcing.capabilities.register_suggestion_extra` (the supplier rating
+average next to each Phase 5 suggestion; the ranking is unchanged). Finance registers: command center section
+`finance` (receivables overdue, payables due within 7 days or overdue, delivered not invoiced, received without a
+supplier invoice, Moadian not sent / rejected, payments without a rate, cases ready to close), search providers
+(invoice numbers and Moadian tax IDs, supplier invoice numbers, payment references), party counters (`sales_invoices`,
+`purchase_invoices`, `actual_costs`, `ratings`; 409 with counts), the case cascade (order 0, before execution: every
+finance row of the case, a closed one included). Party page: a finance tab (receivable / payable and overdue per
+currency, invoices, ratings) and the national ID / economic code fields. Settings: `finance.base_currency`,
+`finance.payment_days`, `finance.supplier_payment_days`, `execution.warranty_remind_days`.
