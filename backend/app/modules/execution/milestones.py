@@ -23,6 +23,7 @@ from app.modules.execution.models import PaymentMilestone, PaymentRecord
 from app.modules.parties import service as parties
 from app.modules.sourcing import inquiries as sourcing
 from app.modules.sourcing.common import diff, flush, jsonable, row_snapshot
+from app.modules.system import settings
 
 FIELDS = ("kind", "label", "position", "percent", "amount", "amount_currency", "due_on", "due_event", "method",
           "reference", "receipt_document_id", "note", "party_id")
@@ -188,6 +189,7 @@ def add_record(db: Session, milestone_id: uuid.UUID, data: dict, source: str, ac
         documents.get(db, data["document_id"])
     row = PaymentRecord(milestone_id=ms.id, amount=data["amount"], amount_currency=record_currency,
                         paid_on=data["paid_on"], **{k: data.get(k) for k in ("method", "reference", "document_id", "note")})
+    _rate_and_fee(db, row, data)
     db.add(row)
     flush(db, "invalid_payment")
     old = ms.status
@@ -199,14 +201,61 @@ def add_record(db: Session, milestone_id: uuid.UUID, data: dict, source: str, ac
     return row
 
 
+RATE_FIELDS = ("fx_rate_to_base", "rate_source", "bank_fee", "bank_fee_currency")
+
+
+def _rate_and_fee(db: Session, row: PaymentRecord, data: dict) -> None:
+    """v0.8.0: a payment not in the base currency (``finance.base_currency``) needs its real rate; the base (rial)
+    amount follows. A bank fee needs a currency (the payment's by default); it becomes an actual cost (kind
+    ``bank_fees``) of the case, read from here."""
+    from app.modules.costing import service as costing
+
+    base = settings.get(db, "finance.base_currency") or "IRR"
+    for key in RATE_FIELDS:
+        if key in data:
+            setattr(row, key, data[key])
+    if row.bank_fee is not None and not row.bank_fee_currency:
+        row.bank_fee_currency = row.amount_currency
+    if row.amount_currency == base:
+        row.fx_rate_to_base, row.base_amount = None, row.amount
+        return
+    if row.fx_rate_to_base is None:
+        if data.get("allow_missing_rate"):
+            row.base_amount = None
+            return
+        raise AppError("fx_rate_required", f"A payment in {row.amount_currency} needs its real rate to {base}",
+                       {"currency": row.amount_currency, "base_currency": base}, status=422)
+    exp = Decimal(1).scaleb(-costing.currency_decimals(db, base))
+    row.base_amount = money((row.amount * row.fx_rate_to_base).quantize(exp))
+
+
+def update_record(db: Session, record_id: uuid.UUID, data: dict, source: str, actor: str | None = None) -> PaymentRecord:
+    """Complete a record (v0.8.0): the real rate of an older foreign payment («نرخ ثبت نشده»), its rate source or
+    bank fee, method, reference, note."""
+    row = get(db, PaymentRecord, record_id, "Payment record")
+    before = row_snapshot(row)
+    for key in ("method", "reference", "note", "document_id"):
+        if key in data:
+            setattr(row, key, data[key])
+    _rate_and_fee(db, row, data)
+    flush(db, "invalid_payment")
+    after = row_snapshot(row)
+    changed = {k: {"old": before[k], "new": after[k]} for k in after if before.get(k) != after[k] and k != "updated_at"}
+    if changed:
+        events.record(db, "payment_milestone", row.milestone_id, "payment_update",
+                      jsonable({"record_id": row.id, "changes": changed}), source, actor=actor)
+    return row
+
+
 def reverse_record(db: Session, record_id: uuid.UUID, reason: str, source: str, actor: str | None = None) -> PaymentMilestone:
-    """Remove a payment recorded by mistake (reason required, kept in the event); the status recomputes."""
+    """Remove a payment recorded by mistake (reason required, kept in the event); the status recomputes. A payment
+    allocated to invoices or costs (v0.8.0) is refused (409 ``in_use``) until its allocations are reversed."""
     row = get(db, PaymentRecord, record_id, "Payment record")
     reason = reason_required(reason)
     ms = get_milestone(db, row.milestone_id)
     snapshot = row_snapshot(row)
     db.delete(row)
-    db.flush()
+    flush(db, "in_use")
     old = ms.status
     _derive(db, ms)
     flush(db, "invalid_milestone")

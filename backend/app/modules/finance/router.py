@@ -9,9 +9,10 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.web import request_source
-from app.modules.finance import output, purchase_invoices, sales_invoices
-from app.modules.finance.schemas import (ApproveIn, DisputeIn, IssueIn, MoadianIn, NoteIn, OutputIn, PurchaseInvoiceIn,
-                                         PurchaseInvoicePatch, ReasonIn, SalesInvoiceIn, SalesInvoicePatch)
+from app.modules.finance import costs, output, payments, profit, purchase_invoices, sales_invoices
+from app.modules.finance.schemas import (ActualCostIn, ActualCostPatch, AllocationsIn, ApproveIn, DisputeIn, IssueIn,
+                                         MoadianIn, NoteIn, OutputIn, PurchaseInvoiceIn, PurchaseInvoicePatch, ReasonIn,
+                                         SalesInvoiceIn, SalesInvoicePatch)
 from app.modules.system.auth import CurrentUser
 
 Db = Annotated[Session, Depends(get_db)]
@@ -179,6 +180,77 @@ def cancel_purchase_invoice(invoice_id: uuid.UUID, body: ReasonIn, request: Requ
     purchase_invoices.cancel(db, invoice_id, body.reason, request_source(request), user.username)
     db.commit()
     return _pi(db, invoice_id)
+
+
+# ---- the case ------------------------------------------------------------------------------------------------------
+
+@router.get("/cases/{case_id}/finance")
+def case_finance(case_id: uuid.UUID, _: CurrentUser, db: Db):
+    """The case's «مالی» tab: invoices, supplier invoices, actual costs, payments with allocations, the profit table."""
+    from app.modules.sourcing import inquiries as sourcing
+
+    sourcing.get_case(db, case_id)
+    return {"sales_invoices": [sales_invoices.invoice_out(db, i) for i in sales_invoices.invoices_of(db, case_id=case_id)],
+            "purchase_invoices": [purchase_invoices.invoice_out(db, i) for i in purchase_invoices.invoices_of(db, case_id=case_id)],
+            "actual_costs": costs.all_rows(db, case_id), "payments": payments.records_of_case(db, case_id),
+            "advances": payments.unallocated_advances(db, case_id), "profit": profit.result(db, case_id)}
+
+
+@router.get("/cases/{case_id}/profit")
+def case_profit(case_id: uuid.UUID, _: CurrentUser, db: Db):
+    return profit.result(db, case_id)
+
+
+# ---- actual costs ------------------------------------------------------------------------------------------------------
+
+@router.post("/cases/{case_id}/actual-costs", status_code=201)
+def create_cost(case_id: uuid.UUID, body: ActualCostIn, request: Request, user: CurrentUser, db: Db):
+    row = costs.create(db, case_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
+    db.commit()
+    return costs.cost_out(db, row)
+
+
+@router.patch("/actual-costs/{cost_id}")
+def patch_cost(cost_id: uuid.UUID, body: ActualCostPatch, request: Request, user: CurrentUser, db: Db):
+    row = costs.update(db, cost_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
+    db.commit()
+    return costs.cost_out(db, row)
+
+
+@router.delete("/actual-costs/{cost_id}", status_code=204)
+def delete_cost(cost_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    costs.delete(db, cost_id, request_source(request), user.username)
+    db.commit()
+
+
+# ---- allocation ----------------------------------------------------------------------------------------------------------
+
+@router.get("/payment-records/{record_id}/allocation")
+def allocation_view(record_id: uuid.UUID, _: CurrentUser, db: Db):
+    from app.modules.execution.models import PaymentRecord
+
+    record = db.get(PaymentRecord, record_id)
+    if record is None:
+        from app.core.errors import NotFound
+
+        raise NotFound("not_found", "Payment record not found")
+    return {"record": payments.record_out(db, record), "suggestion": payments.suggest(db, record_id)}
+
+
+@router.post("/payment-records/{record_id}/allocations", status_code=201)
+def allocate(record_id: uuid.UUID, body: AllocationsIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.execution.models import PaymentRecord
+
+    payments.allocate_many(db, record_id, [a.model_dump(exclude_unset=True) for a in body.allocations],
+                           request_source(request), user.username)
+    db.commit()
+    return payments.record_out(db, db.get(PaymentRecord, record_id))
+
+
+@router.post("/payment-allocations/{allocation_id}/reverse", status_code=204)
+def reverse_allocation(allocation_id: uuid.UUID, body: ReasonIn, request: Request, user: CurrentUser, db: Db):
+    payments.reverse(db, allocation_id, body.reason, request_source(request), user.username)
+    db.commit()
 
 
 ROUTERS = [router]

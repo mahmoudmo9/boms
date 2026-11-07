@@ -127,3 +127,56 @@ class ApproveIn(InputModel):
 class DisputeIn(InputModel):
     reason: Text2000
     claim_id: uuid.UUID | None = None
+
+
+# ---- payments and actual costs ----------------------------------------------------------------------------------------
+
+class AllocationIn(InputModel):
+    sales_invoice_id: uuid.UUID | None = None
+    purchase_invoice_id: uuid.UUID | None = None
+    actual_cost_id: uuid.UUID | None = None
+    amount: Positive
+    fx_rate: Rate | None = None
+    note: Text2000 | None = None
+
+
+class AllocationsIn(InputModel):
+    allocations: list[AllocationIn] = Field(min_length=1, max_length=100)
+
+
+CostKind = Literal["freight_international", "insurance", "bank_fees", "customs_duty", "levy", "customs_clearance",
+                   "storage", "inspection", "freight_domestic", "export_clearance", "other"]
+
+
+class ActualCostIn(InputModel):
+    kind: CostKind
+    description: Annotated[str, Field(min_length=1, max_length=500)]
+    party_id: uuid.UUID | None = None
+    amount: Positive
+    currency: Currency
+    fx_rate_to_base: Rate | None = None
+    vat_amount: Amount | None = None
+    incurred_on: date | None = None
+    due_date: date | None = None
+    document_id: uuid.UUID | None = None
+    status: Literal["expected", "incurred"] = "incurred"
+    shipment_id: uuid.UUID | None = None
+    purchase_order_id: uuid.UUID | None = None
+    notes: LongText | None = None
+
+
+class ActualCostPatch(InputModel):
+    kind: CostKind | None = None
+    description: Annotated[str, Field(min_length=1, max_length=500)] | None = None
+    party_id: uuid.UUID | None = None
+    amount: Positive | None = None
+    currency: Currency | None = None
+    fx_rate_to_base: Rate | None = None
+    vat_amount: Amount | None = None
+    incurred_on: date | None = None
+    due_date: date | None = None
+    document_id: uuid.UUID | None = None
+    status: Literal["expected", "incurred"] | None = None
+    shipment_id: uuid.UUID | None = None
+    purchase_order_id: uuid.UUID | None = None
+    notes: LongText | None = None

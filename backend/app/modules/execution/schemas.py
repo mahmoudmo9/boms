@@ -151,6 +151,21 @@ class PaymentIn(InputModel):
     reference: Text300 | None = None
     document_id: uuid.UUID | None = None
     note: Text2000 | None = None
+    # v0.8.0: the real rate to the base currency (required for a foreign currency), its source, the bank fee
+    fx_rate_to_base: Annotated[Decimal, Field(gt=0, max_digits=20, decimal_places=6)] | None = None
+    rate_source: Text300 | None = None
+    bank_fee: Amount | None = None
+    bank_fee_currency: Currency | None = None
+
+
+class PaymentRecordPatch(InputModel):
+    fx_rate_to_base: Annotated[Decimal, Field(gt=0, max_digits=20, decimal_places=6)] | None = None
+    rate_source: Text300 | None = None
+    bank_fee: Amount | None = None
+    bank_fee_currency: Currency | None = None
+    method: Text300 | None = None
+    reference: Text300 | None = None
+    note: Text2000 | None = None
 
 
 __all__ = ["AmendIn", "ConfirmIn", "MilestoneIn", "MilestonePatch", "OutputIn", "PaymentIn", "ReasonIn",

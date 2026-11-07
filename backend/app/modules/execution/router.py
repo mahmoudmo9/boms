@@ -18,7 +18,7 @@ from app.modules.execution.schemas import (AmendIn, ConfirmIn, MilestoneIn, Mile
                                            SalesOrderItemPatch, SalesOrderManual, SalesOrderPatch, StepIn, StepOrderIn,
                                            StepPatch, ShipmentIn, ShipmentPatch, ShipmentEventIn, ShipmentDocumentIn,
                                            InspectionIn, InspectionPatch, ReceiptIn, ClaimIn, ClaimPatch, ClaimStatusIn,
-                                           DeliveryIn)
+                                           DeliveryIn, PaymentRecordPatch)
 from app.modules.sourcing.common import jsonable, row_snapshot
 from app.modules.system.auth import CurrentUser
 
@@ -186,6 +186,14 @@ def ms_payment(milestone_id: uuid.UUID, body: PaymentIn, request: Request, user:
     milestones.add_record(db, milestone_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
     db.commit()
     return milestones.milestone_out(db, milestones.get_milestone(db, milestone_id))
+
+
+@router.patch("/payment-records/{record_id}")
+def ms_record_patch(record_id: uuid.UUID, body: PaymentRecordPatch, request: Request, user: CurrentUser, db: Db):
+    """v0.8.0: complete an older record (its real rate «نرخ ثبت نشده», rate source, bank fee)."""
+    row = milestones.update_record(db, record_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
+    db.commit()
+    return milestones.milestone_out(db, milestones.get_milestone(db, row.milestone_id))
 
 
 @router.post("/payment-records/{record_id}/reverse")
