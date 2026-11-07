@@ -62,7 +62,8 @@ NO_SOURCING = {"inquiries": 0, "cases": 0, "rfq_recipients": 0, "offers": 0, "ca
                # v0.7.0: execution registers its counts too
                "sales_orders": 0, "purchase_orders": 0, "claims": 0, "shipments": 0, "inspections": 0,
                "payment_milestones": 0,
-               "tasks": 0}  # v0.8.0: tasks (non-blocking; the party is only context)
+               "tasks": 0,  # v0.8.0: tasks (non-blocking; the party is only context)
+               "sales_invoices": 0, "purchase_invoices": 0, "actual_costs": 0, "ratings": 0}  # v0.8.0: finance
 
 
 def test_delete_contact_allowed_and_blocked(client, db):

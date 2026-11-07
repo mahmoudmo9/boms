@@ -518,8 +518,24 @@ def create_case(db: Session, data: dict, source: str, actor: str | None = None) 
     return case
 
 
+# later modules may refuse a status change made by hand (v0.8.0: a deal is closed and reopened through finance)
+_case_status_guards: list = []
+
+
+def register_case_status_guard(fn) -> None:
+    """``fn(db, case, new_status)`` raises to refuse the change."""
+    if fn not in _case_status_guards:
+        _case_status_guards.append(fn)
+
+
 def update_case(db: Session, case_id: uuid.UUID, changes: dict, source: str, actor: str | None = None) -> Case:
     case = get_case(db, case_id)
+    if changes.get("status") and changes["status"] != case.status:
+        from app.core.modules import load_hooks
+
+        load_hooks()
+        for guard in _case_status_guards:
+            guard(db, case, changes["status"])
     if changes.get("party_id"):
         parties.get_party(db, changes["party_id"])
     for key in ("title", "status"):

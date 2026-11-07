@@ -9,14 +9,25 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.web import request_source
-from app.modules.finance import costs, output, payments, profit, purchase_invoices, sales_invoices
-from app.modules.finance.schemas import (ActualCostIn, ActualCostPatch, AllocationsIn, ApproveIn, DisputeIn, IssueIn,
-                                         MoadianIn, NoteIn, OutputIn, PurchaseInvoiceIn, PurchaseInvoicePatch, ReasonIn,
-                                         SalesInvoiceIn, SalesInvoicePatch)
+from datetime import date
+from decimal import Decimal
+from typing import Literal
+
+from fastapi.responses import Response
+
+from app.modules.finance import (closing, costs, output, payments, profit, purchase_invoices, ratings, sales_invoices,
+                                 workspace)
+from app.modules.finance.schemas import (ActualCostIn, ActualCostPatch, AllocationsIn, ApproveIn, CloseIn, DisputeIn,
+                                         IssueIn, MoadianIn, NoteIn, OutputIn, PurchaseInvoiceIn, PurchaseInvoicePatch,
+                                         RatingIn, ReasonIn, SalesInvoiceIn, SalesInvoicePatch)
 from app.modules.system.auth import CurrentUser
 
 Db = Annotated[Session, Depends(get_db)]
 router = APIRouter(prefix="/api", tags=["finance"])
+
+from app.modules.finance import guard as _guard  # noqa: E402
+
+_guard.install()   # a closed deal is read-only for every request (also installed with the hooks)
 
 
 def _lines(body) -> list[dict] | None:
@@ -251,6 +262,124 @@ def allocate(record_id: uuid.UUID, body: AllocationsIn, request: Request, user: 
 def reverse_allocation(allocation_id: uuid.UUID, body: ReasonIn, request: Request, user: CurrentUser, db: Db):
     payments.reverse(db, allocation_id, body.reason, request_source(request), user.username)
     db.commit()
+
+
+# ---- closing and ratings -----------------------------------------------------------------------------------------------
+
+@router.get("/cases/{case_id}/close-checklist")
+def close_checklist(case_id: uuid.UUID, _: CurrentUser, db: Db):
+    return closing.checklist(db, case_id)
+
+
+@router.post("/cases/{case_id}/close")
+def close_deal(case_id: uuid.UUID, body: CloseIn, request: Request, user: CurrentUser, db: Db):
+    result = closing.close(db, case_id, body.model_dump(), request_source(request), user.username)
+    db.commit()
+    return result
+
+
+@router.post("/cases/{case_id}/reopen")
+def reopen_deal(case_id: uuid.UUID, body: ReasonIn, request: Request, user: CurrentUser, db: Db):
+    closing.reopen(db, case_id, body.reason, request_source(request), user.username)
+    db.commit()
+    return profit.result(db, case_id)
+
+
+@router.get("/cases/{case_id}/ratings")
+def case_ratings(case_id: uuid.UUID, _: CurrentUser, db: Db):
+    return {"rateable": jsonable_list(ratings.rateable(db, case_id)), "ratings": ratings.ratings_of_case(db, case_id)}
+
+
+@router.post("/cases/{case_id}/ratings")
+def rate(case_id: uuid.UUID, body: RatingIn, request: Request, user: CurrentUser, db: Db):
+    row = ratings.save(db, case_id, body.model_dump(exclude_unset=True), request_source(request), user.username)
+    db.commit()
+    from app.modules.sourcing.common import row_snapshot
+
+    return row_snapshot(row)
+
+
+@router.get("/parties/{party_id}/finance")
+def party_finance(party_id: uuid.UUID, _: CurrentUser, db: Db):
+    """The party page's finance block: receivable / payable balances, overdue, invoices, ratings."""
+    from app.modules.parties import service as parties
+
+    parties.get_party(db, party_id)
+    sales = workspace.invoices(db, kind="sales", party_id=party_id)
+    purchases = workspace.invoices(db, kind="purchase", party_id=party_id)
+    rec = [r for r in workspace.receivables(db)["invoices"] if r["party_id"] == str(party_id)]
+    pay = [r for r in workspace.payables(db)["items"] if r["party_id"] == str(party_id)]
+
+    def per_currency(rows, pred=lambda r: True):
+        out: dict = {}
+        for r in rows:
+            if pred(r):
+                out[r["currency"]] = out.get(r["currency"], Decimal(0)) + Decimal(r["balance"])
+        return {k: str(v) for k, v in out.items()}
+
+    return {"receivable": per_currency(rec), "receivable_overdue": per_currency(rec, lambda r: r["overdue"]),
+            "payable": per_currency(pay), "payable_overdue": per_currency(pay, lambda r: r["window"] == "overdue"),
+            "sales_invoices": sales[:20], "purchase_invoices": purchases[:20], "ratings": ratings.summary(db, party_id)}
+
+
+# ---- the finance workspace and exports -------------------------------------------------------------------------------------
+
+@router.get("/finance/receivables")
+def fin_receivables(_: CurrentUser, db: Db):
+    return workspace.receivables(db)
+
+
+@router.get("/finance/payables")
+def fin_payables(_: CurrentUser, db: Db):
+    return workspace.payables(db)
+
+
+@router.get("/finance/invoices")
+def fin_invoices(_: CurrentUser, db: Db, kind: Literal["sales", "purchase"] = "sales", status: str | None = None,
+                 moadian_status: str | None = None, date_from: date | None = None, date_to: date | None = None,
+                 party_id: uuid.UUID | None = None, case_id: uuid.UUID | None = None):
+    return workspace.invoices(db, kind=kind, status=status, moadian_status=moadian_status, date_from=date_from,
+                              date_to=date_to, party_id=party_id, case_id=case_id)
+
+
+@router.get("/finance/payments")
+def fin_payments(_: CurrentUser, db: Db, date_from: date | None = None, date_to: date | None = None,
+                 direction: Literal["in", "out"] | None = None):
+    return workspace.payment_list(db, date_from=date_from, date_to=date_to, direction=direction)
+
+
+@router.get("/finance/deals")
+def fin_deals(_: CurrentUser, db: Db, state: Literal["open", "closed"] | None = None, date_from: date | None = None,
+              date_to: date | None = None):
+    return workspace.deals(db, state=state, date_from=date_from, date_to=date_to)
+
+
+@router.get("/finance/vat")
+def fin_vat(user: CurrentUser, db: Db, date_from: date | None = None, date_to: date | None = None):
+    return workspace.vat(db, calendar=user.calendar, date_from=date_from, date_to=date_to)
+
+
+EXPORTS = Literal["sales_invoices", "purchase_invoices", "payments", "actual_costs", "deals", "receivables"]
+
+
+@router.get("/finance/exports/all.zip")
+def fin_export_all(user: CurrentUser, db: Db, date_from: date | None = None, date_to: date | None = None):
+    data = workspace.export_all(db, user.language, user.calendar, date_from, date_to)
+    return Response(data, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="boms-finance-{date_from or "all"}-{date_to or "all"}.zip"'})
+
+
+@router.get("/finance/exports/{name}.csv")
+def fin_export(name: EXPORTS, user: CurrentUser, db: Db, date_from: date | None = None, date_to: date | None = None):
+    data = workspace.export(db, name, user.language, user.calendar, date_from, date_to)
+    return Response(data, media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{name}.csv"'})
+
+
+def jsonable_list(rows):
+    from app.modules.sourcing.common import jsonable
+
+    return jsonable(rows)
 
 
 ROUTERS = [router]

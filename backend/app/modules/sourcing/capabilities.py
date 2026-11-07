@@ -184,6 +184,15 @@ def matching_party_ids(db: Session, spec: str) -> set[uuid.UUID]:
     return set(db.scalars(select(PartyCapability.party_id).where(PartyCapability.kind == kind, condition)))
 
 
+# later modules add read-only facts next to each suggestion (v0.8.0: the supplier rating), never the ranking:
+# ``fn(db, party_ids) -> {str(party_id): value}`` stored under the registered key
+_suggestion_extras: dict = {}
+
+
+def register_suggestion_extra(key: str, fn) -> None:
+    _suggestion_extras[key] = fn
+
+
 def suggest_suppliers(db: Session, hs_codes: list[str], exclude: set[uuid.UUID] | None = None) -> list[dict]:
     """Parties whose HS tags match the items' HS codes: 4-digit heading first, then chapter. Suggestions only."""
     exclude = exclude or set()
@@ -213,7 +222,16 @@ def suggest_suppliers(db: Session, hs_codes: list[str], exclude: set[uuid.UUID] 
         stage = next((r.stage for r in roles[pid] if r.role == "supplier"), None)
         out.append({**entry, "name_fa": party.name_fa, "name_en": party.name_en, "country_iso2": party.country_iso2,
                     "supplier_stage": stage, "codes": sorted(set(entry["codes"]))})
-    return jsonable(sorted(out, key=lambda e: (e["match"] != "heading", (e["name_en"] or e["name_fa"] or ""))))
+    out.sort(key=lambda e: (e["match"] != "heading", (e["name_en"] or e["name_fa"] or "")))
+    from app.core.modules import load_hooks
+
+    load_hooks()
+    if _suggestion_extras and out:
+        for key, fn in _suggestion_extras.items():
+            values = fn(db, [e["party_id"] for e in out])
+            for e in out:
+                e[key] = values.get(str(e["party_id"]))
+    return jsonable(out)
 
 
 def search_party_ids(db: Session, needle: str, limit: int = 50) -> list[uuid.UUID]:

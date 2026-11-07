@@ -180,3 +180,24 @@ class ActualCostPatch(InputModel):
     shipment_id: uuid.UUID | None = None
     purchase_order_id: uuid.UUID | None = None
     notes: LongText | None = None
+
+
+# ---- closing and ratings ----------------------------------------------------------------------------------------------
+
+class CloseIn(InputModel):
+    reasons: dict[Annotated[str, Field(max_length=60)], Text2000] = Field(default_factory=dict)
+    confirm_cancel_open: bool = False
+
+
+Score = Annotated[int, Field(ge=1, le=5)]
+
+
+class RatingIn(InputModel):
+    party_id: uuid.UUID
+    role: Literal["supplier", "customer"]
+    quality: Score | None = None
+    timeliness: Score | None = None
+    communication: Score | None = None
+    price: Score | None = None
+    payment_behavior: Score | None = None
+    note: Annotated[str, Field(max_length=300)] | None = None

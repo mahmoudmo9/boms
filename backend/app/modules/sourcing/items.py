@@ -231,6 +231,27 @@ def _delivered(db: Session, item_id: uuid.UUID) -> bool | None:
     return False if any(v is False for v in verdicts) else None
 
 
+# "closed" is decided by the finance module (v0.8.0) when a deal is closed through these checks:
+# ``fn(db, item) -> True`` (the deal is closed), ``False`` (reopened: derive again) or ``None`` (not decided here:
+# an item closed before v0.8.0 stays closed)
+_closed_checks: list = []
+
+
+def register_closed_check(fn) -> None:
+    if fn not in _closed_checks:
+        _closed_checks.append(fn)
+
+
+def _closed(db: Session, item: LineItem) -> bool | None:
+    from app.core.modules import load_hooks
+
+    load_hooks()
+    verdicts = [check(db, item) for check in _closed_checks]
+    if any(v is True for v in verdicts):
+        return True
+    return False if any(v is False for v in verdicts) else None
+
+
 def _is_sold(db: Session, item_id: uuid.UUID) -> bool:
     from app.core.modules import load_hooks
 
@@ -257,7 +278,8 @@ def recompute_item_status(db: Session, item: LineItem, source: str, actor: str |
                           exclude_offer_items: set[uuid.UUID] | None = None) -> str:
     """The ONLY place that derives an item's coverage status (v0.3.1), in this order:
 
-    cancelled / closed are never touched; delivered follows the delivery quantities (v0.7.0; an item marked
+    cancelled is never touched; closed follows the deal (v0.8.0: closing sets it, reopening derives again; an item
+    closed before that stays closed); delivered follows the delivery quantities (v0.7.0; an item marked
     delivered without delivery data stays as it is); sold is never touched otherwise; a still-valid selected offer row -> selected;
     any valid available offer row -> has_offer; any RFQ (not cancelled) that includes the item and has a
     recipient that is not ``draft`` (sent, replied, declined, no_response, expired; v0.3.2) -> rfq_sent;
@@ -265,7 +287,17 @@ def recompute_item_status(db: Session, item: LineItem, source: str, actor: str |
     (event ``selection_lost``). ``exclude_offer_items`` treats rows about to be deleted as gone.
     ``no_coverage_confirmed`` is a separate flag and is not changed here.
     """
-    if item.status in ("cancelled", "closed"):
+    if item.status == "cancelled":
+        return item.status
+    closed = _closed(db, item)   # v0.8.0: set and cleared only by closing / reopening the deal
+    if closed is True:
+        if item.status != "closed":
+            old_status, item.status = item.status, "closed"
+            db.flush()
+            events.record(db, "line_item", item.id, "status", {"old_status": old_status, "new_status": "closed",
+                                                               "reason": cause or "deal_closed"}, source, actor=actor)
+        return "closed"
+    if item.status == "closed" and closed is None:
         return item.status
     delivered = _delivered(db, item.id)
     if delivered is True:  # v0.7.0: set and cleared only from delivery quantities
