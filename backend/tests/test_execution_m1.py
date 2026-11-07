@@ -258,7 +258,7 @@ def test_cash_position_on_a_fixed_dataset(client):
     assert client.get(f"/api/cases/{case['id']}/execution").json()["cash"] == cash
 
 
-def test_the_ordering_gate_needs_a_reason_while_the_prepayment_is_expected(client, db):
+def test_the_ordering_gate_needs_a_reason_while_the_prepayment_is_not_done(client, db):
     case, items, party, quote, so = confirmed_order(client)
     import uuid
 
@@ -271,7 +271,9 @@ def test_the_ordering_gate_needs_a_reason_while_the_prepayment_is_expected(clien
     assert ms_service.check_ordering_gate(db, uuid.UUID(so["id"]), True, "مشتری معتبر است") == "مشتری معتبر است"
     client.post(f"/api/payment-milestones/{m_in['id']}/payments", json={"amount": "1", "paid_on": day(0)})
     db.expire_all()
-    assert ms_service.check_ordering_gate(db, uuid.UUID(so["id"]), False, None) is None     # partly: no longer blocks
+    with pytest.raises(Conflict) as exc:                                   # v0.8.0: partly still blocks
+        ms_service.check_ordering_gate(db, uuid.UUID(so["id"]), False, None)
+    assert exc.value.details["prepayments"][0]["status"] == "partly"
 
 
 def test_unknown_fields_are_refused(client):

@@ -3,8 +3,8 @@
 A delivery (date, place, receiver, the receipt «رسید انبار» / «صورتجلسه تحویل») lists quantities per sales order item;
 the delivered quantity of an item never exceeds the ordered one (422). An item fully delivered becomes ``delivered``
 through ``recompute_item_status`` (the registered delivered check); when every item of the order is delivered the order
-becomes ``delivered`` and BOMS creates the follow-up «صدور فاکتور و پیگیری تسویه» (Phase 9 replaces it), the warranty
-end (``warranty_months``) as a follow-up on its date, and the release reminder of a linked performance guarantee
+becomes ``delivered`` and BOMS creates the task «صدور فاکتور و پیگیری تسویه», the warranty end (``warranty_months``)
+as a task on its date plus one ``execution.warranty_remind_days`` before it (v0.8.0), and the release reminder of a linked performance guarantee
 (Phase 7b reminders). A delivery is reversed (deleted with a reason) while the order is not closed; statuses recompute.
 """
 import uuid
@@ -72,7 +72,7 @@ def _after_change(db: Session, order: SalesOrder, source: str, actor: str | None
         flush(db, "invalid_sales_order")
         events.record(db, "sales_order", order.id, "status", {"old_status": "delivered", "new_status": "in_progress",
                                                                "cause": "delivery reversed"}, source, actor=actor)
-        followups.cancel(db, "delivery reversed", source, actor, ref_id=order.id, purposes=("invoice", "warranty_end"))
+        followups.cancel(db, "delivery reversed", source, actor, ref_id=order.id, purposes=("invoice", "warranty_end", "warranty_remind"))
         if order.performance_guarantee_id:
             from app.modules.tenders import reminders as tender_reminders
 
@@ -92,6 +92,12 @@ def _on_delivered(db: Session, order: SalesOrder, source: str, actor: str | None
         ends = add_months(last, order.warranty_months)
         followups.create(db, case_id=order.case_id, purpose="warranty_end", ref_id=order.id, party_id=order.customer_party_id,
                          action=f"پایان گارانتی {order.number}", due_on=ends, source=source, actor=actor)
+        before = settings.get(db, "execution.warranty_remind_days")
+        if before and ends - timedelta(days=before) >= today():
+            followups.create(db, case_id=order.case_id, purpose="warranty_remind", ref_id=order.id,
+                             party_id=order.customer_party_id, action=f"یادآوری پایان گارانتی {order.number}",
+                             due_on=ends - timedelta(days=before), days_before=before, remind_of_due=ends,
+                             source=source, actor=actor)
     if order.performance_guarantee_id:
         from app.modules.tenders import guarantees
 

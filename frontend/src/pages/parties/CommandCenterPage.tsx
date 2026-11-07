@@ -11,6 +11,7 @@ import { useFormat } from "../../lib/prefs";
 import type { CommandCenter, ExecutionSummary, FollowupRow, SetadSummary, SourcingSummary, TendersSummary } from "../../lib/types";
 import { useQuickLog } from "./QuickLog";
 import { FollowupActions, PartyName, stageLabel } from "./shared";
+import { TaskList } from "../tasks/TaskList";
 
 const FUNNELS = ["buyer", "supplier"] as const;
 
@@ -242,6 +243,27 @@ export function ExecutionSection({ s }: { s: ExecutionSummary }) {
   );
 }
 
+/** v0.8.0: «کارها», the owner's internal tasks overdue and due today or tomorrow (not follow-ups with a party). */
+function TasksSection({ s }: { s: NonNullable<CommandCenter["tasks"]> }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const card = (key: "overdue" | "today" | "tomorrow") => (
+    <Card key={key} padded={false} className={key === "overdue" && s.overdue.length ? "border-danger" : ""}
+      title={<span className="flex items-center gap-2">{t(`cc.tasks.${key}`)} <Badge tone={key === "overdue" && s[key].length ? "danger" : key === "today" ? "accent" : "neutral"}>{f.num(s[key].length)}</Badge></span>}>
+      <div className="max-h-72 overflow-y-auto"><TaskList rows={s[key]} tone={key === "overdue" ? "danger" : undefined} /></div>
+    </Card>
+  );
+  return (
+    <section className="flex flex-col gap-3" data-testid="cc-tasks">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-base font-semibold">{t("cc.tasks.title")}</h2>
+        <Link to="/tasks" className="text-sm text-accent hover:underline">{t("cc.tasks.all")}</Link>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-3">{card("overdue")}{card("today")}{card("tomorrow")}</div>
+    </section>
+  );
+}
+
 export function CommandCenterPage() {
   const { t } = useTranslation();
   const f = useFormat();
@@ -292,6 +314,7 @@ export function CommandCenterPage() {
           )}
         </Card>
       </div>
+      {d.tasks && <TasksSection s={d.tasks} />}
       <SourcingSection s={d.sourcing} />
       {d.setad && <SetadSection s={d.setad} />}
       {d.tenders && <TendersSection s={d.tenders} />}

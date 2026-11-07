@@ -22,6 +22,7 @@ from app.modules.quotes.router import ROUTERS as quotes_routers
 from app.modules.listings.router import ROUTERS as listings_routers
 from app.modules.tenders.router import ROUTERS as tenders_routers
 from app.modules.execution.router import ROUTERS as execution_routers
+from app.modules.tasks.router import ROUTERS as tasks_routers
 from app.modules.search.router import router as search_router
 from app.modules.system.router import router as system_router
 
@@ -35,7 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(events_router)
     app.include_router(documents_router)
     app.include_router(search_router)
-    for router in parties_routers + sourcing_routers + catalog_routers + costing_routers + quotes_routers + listings_routers + tenders_routers + execution_routers:
+    for router in parties_routers + sourcing_routers + catalog_routers + costing_routers + quotes_routers + listings_routers + tenders_routers + execution_routers + tasks_routers:
         app.include_router(router)
 
     @app.get("/api/health")

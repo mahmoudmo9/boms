@@ -13,7 +13,7 @@ from tests.conftest import unique_bytes, upload
 from tests.test_listings_store import tag
 from tests.test_quotes import ready_case
 from tests.test_sourcing_inquiries import events
-from tests.test_tenders import at, followups
+from tests.test_tenders import at, followups, tasks
 
 
 def day(n: int) -> str:
@@ -206,13 +206,14 @@ def test_won_sells_items_and_wins_the_case_revising_clears_sold(client, db):
 def test_lost_or_cancelled_creates_the_bid_bond_release_followup(client, db):
     case, items, party, sheet, t = tender_case(client)
     bid = make_ready(client, t, case)
-    assert len(followups(db, party["id"])) >= 2                                       # date + guarantee reminders
+    assert len(tasks(db, party["id"])) >= 2                                           # date + guarantee reminders (tasks)
     r = client.post(f"/api/tenders/{t['id']}/result", json={"result": "cancelled", "case_status": "cancelled"})
     assert r.status_code == 200 and r.json()["stage"] == "result"
     assert client.get(f"/api/cases/{case['id']}").json()["status"] == "cancelled"
     actions = [f.action for f in followups(db, party["id"])]
     assert any("پیگیری آزادسازی تضمین" in a for a in actions)
-    assert not any(a.startswith("یادآوری:") for a in actions)                        # date reminders cancelled
+    assert not any(a.startswith("یادآوری:") for a in actions)                        # never follow-ups
+    assert not any(r.action.startswith("یادآوری:") for r in tasks(db, party["id"]))  # date reminder tasks cancelled
     g = client.get(f"/api/guarantees/{bid['id']}").json()
     assert {x["purpose"] for x in g["reminders"]} == {"guarantee_expiry", "guarantee_release"}
     # an addendum cancellation does the same through the result
@@ -275,15 +276,15 @@ def test_cascade_delete_counts_and_cancels_followups(client, db):
     client.post(f"/api/tenders/{t['id']}/addenda", json={"received_on": day(0), "kind": "clarification", "summary": "توضیح"})
     client.post(f"/api/tenders/{t['id']}/costs", json={"kind": "travel", "amount": "1000"})
     new_proposal(client, t)
-    open_before = len(followups(db, party["id"]))
+    open_before = len(followups(db, party["id"])) + len(tasks(db, party["id"]))
     assert open_before >= 4
     r = client.request("DELETE", f"/api/cases/{case['id']}", params={"cascade": "true"}, json={"confirm_title": case["title"]})
     assert r.status_code == 200, r.text
     counts = r.json()["counts"]
     assert counts["tenders"] == 1 and counts["guarantees"] == 1 and counts["tender_envelope_items"] == 14
     assert counts["tender_dates"] == 1 and counts["tender_addenda"] == 1 and counts["tender_costs"] == 1
-    assert counts["tender_proposals"] == 1 and counts["followups_cancelled"] >= open_before
-    assert followups(db, party["id"]) == []
+    assert counts["tender_proposals"] == 1 and counts.get("followups_cancelled", 0) + counts["tasks"] >= open_before
+    assert followups(db, party["id"]) == [] and tasks(db, party["id"]) == []
     assert db.execute(text("SELECT count(*) FROM ops.tender WHERE id = :i"), {"i": t["id"]}).scalar() == 0
     assert db.execute(text("SELECT count(*) FROM ops.guarantee_event WHERE guarantee_id = :i"), {"i": g["id"]}).scalar() == 0
 

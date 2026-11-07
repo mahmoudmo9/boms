@@ -51,12 +51,12 @@ def reminder_action(tender: Tender, row: TenderDate) -> str:
 
 def sync_reminders(db: Session, tender: Tender, row: TenderDate, source: str, actor: str | None,
                    note: str = DATE_MOVED_NOTE) -> dict:
-    """The date's reminders on the organizer (none when the tender has no organizer, is closed or has a result)."""
+    """The date's reminder tasks (v0.8.0; none when the tender is closed or has a result)."""
     active = tender.result is None and tender.stage not in ("result", "closed")
     return reminders.sync(db, tender_id=tender.id, purpose=REMINDER_PURPOSE, ref_id=row.id,
-                          party_id=tender.organizer_party_id if active else None, action=reminder_action(tender, row),
-                          target=tehran_day(row.at), offsets=list(row.remind_days_before or []), note=note,
-                          source=source, actor=actor)
+                          party_id=tender.organizer_party_id, action=reminder_action(tender, row),
+                          target=tehran_day(row.at) if active else None, offsets=list(row.remind_days_before or []),
+                          note=note, source=source, actor=actor)
 
 
 def add_date(db: Session, tender_id: uuid.UUID, data: dict, source: str, actor: str | None = None) -> TenderDate:

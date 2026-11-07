@@ -1,9 +1,13 @@
-"""Follow-ups BOMS creates for tenders (reminders before a date, guarantee expiry and release, opening, contract).
+"""Reminders BOMS creates for tenders.
 
-The follow-ups themselves are written by the parties module (public service); ``ops.tender_followup`` records which
-one belongs to which date or guarantee, so a moved date moves its reminders and a closed tender cancels them.
+Since v0.8.0 the internal ones (reminders before a tender date, guarantee expiry, the opening day, the contract) are
+TASKS (module ``tasks``, never on a party's follow-up list); only the guarantee release chase, which is an action with
+the beneficiary, stays a parties follow-up linked in ``ops.tender_followup``. ``links`` returns both kinds as
+(link, item) pairs with the same attributes (link.purpose / days_before / ref_id, item.id / due_on / action /
+party_id / status), so callers do not care which kind a reminder is.
 """
 import uuid
+from dataclasses import dataclass
 from datetime import date
 
 from sqlalchemy import select
@@ -11,26 +15,82 @@ from sqlalchemy.orm import Session
 
 from app.modules.parties import interactions as party_interactions
 from app.modules.parties.models import Followup
+from app.modules.tasks import service as tasks
 from app.modules.tenders.common import today
-from app.modules.tenders.models import TenderFollowup
+from app.modules.tenders.models import Guarantee, Tender, TenderFollowup
+
+# tender reminder purpose -> task kind (internal); every other purpose is a follow-up with a counterparty
+INTERNAL = {"date_reminder": "tender_date", "guarantee_expiry": "guarantee_expiry", "opening": "opening", "contract": "contract"}
+PURPOSE_OF = {v: k for k, v in INTERNAL.items()}
+
+
+@dataclass
+class TaskLink:
+    purpose: str
+    days_before: int | None
+    ref_id: uuid.UUID | None
+    tender_id: uuid.UUID | None = None
+
+
+@dataclass
+class TaskItem:
+    id: uuid.UUID
+    due_on: date
+    action: str
+    party_id: uuid.UUID | None
+    status: str
+    kind: str = "task"
+
+
+def _item(t) -> TaskItem:
+    return TaskItem(id=t.id, due_on=t.due_on, action=t.title, party_id=t.party_id, status=t.status)
+
+
+def _case_of(db: Session, tender_id, purpose: str, ref_id):
+    if tender_id:
+        tender = db.get(Tender, tender_id)
+        if tender is not None:
+            return tender.case_id
+    if purpose == "guarantee_expiry" and ref_id:
+        g = db.get(Guarantee, ref_id)
+        return g.case_id if g else None
+    return None
 
 
 def links(db: Session, *, tender_id: uuid.UUID | None = None, purpose: str | None = None,
-          ref_id: uuid.UUID | None = None, open_only: bool = True) -> list[tuple[TenderFollowup, Followup]]:
-    query = select(TenderFollowup, Followup).join(Followup, Followup.id == TenderFollowup.followup_id)
-    if tender_id is not None:
-        query = query.where(TenderFollowup.tender_id == tender_id)
-    if purpose is not None:
-        query = query.where(TenderFollowup.purpose == purpose)
-    if ref_id is not None:
-        query = query.where(TenderFollowup.ref_id == ref_id)
-    if open_only:
-        query = query.where(Followup.status == "open")
-    return list(db.execute(query.order_by(Followup.due_on)).all())
+          ref_id: uuid.UUID | None = None, open_only: bool = True) -> list[tuple]:
+    out: list[tuple] = []
+    if purpose is None or purpose not in INTERNAL:
+        query = select(TenderFollowup, Followup).join(Followup, Followup.id == TenderFollowup.followup_id)
+        if tender_id is not None:
+            query = query.where(TenderFollowup.tender_id == tender_id)
+        if purpose is not None:
+            query = query.where(TenderFollowup.purpose == purpose)
+        if ref_id is not None:
+            query = query.where(TenderFollowup.ref_id == ref_id)
+        if open_only:
+            query = query.where(Followup.status == "open")
+        out += list(db.execute(query).all())
+    if purpose is None or purpose in INTERNAL:
+        kinds = (INTERNAL[purpose],) if purpose else tuple(INTERNAL.values())
+        case_id = None
+        if tender_id is not None:
+            tender = db.get(Tender, tender_id)
+            if tender is None:
+                return out
+            case_id = tender.case_id
+        rows = tasks.tasks_of(db, case_id=case_id, source="tenders", kinds=kinds, source_id=ref_id, open_only=open_only)
+        out += [(TaskLink(PURPOSE_OF[t.source_kind], t.remind_days_before, t.source_id, tender_id), _item(t)) for t in rows]
+    return sorted(out, key=lambda pair: pair[1].due_on)
 
 
 def create(db: Session, *, tender_id: uuid.UUID | None, purpose: str, ref_id: uuid.UUID | None, party_id: uuid.UUID,
-           action: str, due_on: date, days_before: int | None, source: str, actor: str | None) -> Followup:
+           action: str, due_on: date, days_before: int | None, source: str, actor: str | None):
+    if purpose in INTERNAL:
+        task = tasks.create(db, {"title": action, "due_on": due_on, "case_id": _case_of(db, tender_id, purpose, ref_id),
+                                 "party_id": party_id, "source": "tenders", "source_kind": INTERNAL[purpose],
+                                 "source_id": ref_id, "remind_of_due": due_on, "remind_days_before": days_before}, source, actor)
+        return _item(task)
     followup = party_interactions.create_followup(db, {"party_id": party_id, "action": action[:500], "due_on": due_on},
                                                   source, actor)
     db.add(TenderFollowup(tender_id=tender_id, followup_id=followup.id, purpose=purpose, ref_id=ref_id,
@@ -41,48 +101,24 @@ def create(db: Session, *, tender_id: uuid.UUID | None, purpose: str, ref_id: uu
 
 def sync(db: Session, *, tender_id: uuid.UUID | None, purpose: str, ref_id: uuid.UUID, party_id: uuid.UUID | None,
          action: str, target: date | None, offsets: list[int], note: str, source: str, actor: str | None) -> dict:
-    """Make the open reminders of one date / guarantee match ``target`` minus each offset: move the ones that stay,
-    cancel the ones no longer wanted (or already in the past), create the missing ones. Reminders for a date that
-    has passed are not created."""
-    wanted: dict[int, date] = {}
-    if target is not None and party_id is not None and target >= today():
-        for offset in offsets:
-            due = target - _days(offset)
-            if due >= today():
-                wanted[offset] = due
-    out = {"created": 0, "moved": 0, "cancelled": 0}
-    for link, followup in links(db, purpose=purpose, ref_id=ref_id):
-        offset = link.days_before
-        if offset in wanted and followup.party_id == party_id:
-            due = wanted.pop(offset)
-            if followup.due_on != due:
-                party_interactions.reschedule_followup(db, followup.id, due, note, source, actor)
-                out["moved"] += 1
-            if followup.action != action[:500]:
-                followup.action = action[:500]
-        else:
-            party_interactions.cancel_followup(db, followup.id, note, source, actor)
-            out["cancelled"] += 1
-    for offset, due in wanted.items():
-        create(db, tender_id=tender_id, purpose=purpose, ref_id=ref_id, party_id=party_id, action=action,
-               due_on=due, days_before=offset, source=source, actor=actor)
-        out["created"] += 1
-    db.flush()
-    return out
+    """One task per remind day before ``target`` (moved with it, cancelled when it goes away or passes); a reminder
+    for a date that has passed is not created. ``target=None`` cancels them all."""
+    if purpose not in INTERNAL:
+        raise ValueError(f"sync is for internal reminders, not {purpose}")
+    return tasks.sync(db, source="tenders", source_kind=INTERNAL[purpose], source_id=ref_id,
+                      case_id=_case_of(db, tender_id, purpose, ref_id), party_id=party_id, title=action, target=target,
+                      offsets=offsets, note=note, source_ev=source, actor=actor, today=today())
 
 
 def cancel(db: Session, note: str, source: str, actor: str | None, *, tender_id: uuid.UUID | None = None,
            purposes: tuple[str, ...] | None = None, ref_id: uuid.UUID | None = None) -> list[uuid.UUID]:
     cancelled = []
-    for link, followup in links(db, tender_id=tender_id, ref_id=ref_id):
+    for link, item in links(db, tender_id=tender_id, ref_id=ref_id):
         if purposes and link.purpose not in purposes:
             continue
-        party_interactions.cancel_followup(db, followup.id, note, source, actor)
-        cancelled.append(followup.id)
+        if isinstance(item, TaskItem):
+            tasks.cancel(db, item.id, note, source, actor)
+        else:
+            party_interactions.cancel_followup(db, item.id, note, source, actor)
+        cancelled.append(item.id)
     return cancelled
-
-
-def _days(n: int):
-    from datetime import timedelta
-
-    return timedelta(days=n)

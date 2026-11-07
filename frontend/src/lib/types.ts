@@ -335,6 +335,8 @@ export interface CommandCenter {
   setad?: SetadSummary;
   tenders?: TendersSummary;
   execution?: ExecutionSummary;
+  /** v0.8.0: «کارها», overdue and due today / tomorrow */
+  tasks?: import("./tasks").TasksSummary;
 }
 
 /** Command center section "Setad" (v0.5.0). */
@@ -1257,7 +1259,9 @@ export interface PurchaseOrderRow {
   confirmed_at: string | null; supplier_ref: string | null; confirmed_ready_on: string | null; confirmation_document_id: string | null;
   ready_on: string | null; status_note: string | null; terms_text: string | null; cancel_reason: string | null; notes: string | null;
   supplier: PartyRef; items: PurchaseOrderItemRow[]; changes: OrderChangeRow[]; offer_payment_terms: string | null;
-  above_cost_sheet: { purchase_order_item_id: string; description: string; unit_price: string; cost_sheet_price: string; tolerance_percent: string; currency: string }[];
+  /** v0.8.0: ``check`` "above" (converted with the sheet's FX entries when the currencies differ) or "fx_missing" */
+  above_cost_sheet: { purchase_order_item_id: string; description: string; unit_price: string; cost_sheet_price: string; tolerance_percent: string;
+    currency: string; check?: "above" | "fx_missing"; cost_sheet_currency?: string; unit_price_converted?: string; rate?: string }[];
   milestones: MilestoneRow[]; followups: { id: string; purpose: string; due_on: string; action: string }[]; outputs: OutputLink[];
 }
 export interface ProcessStepRow {

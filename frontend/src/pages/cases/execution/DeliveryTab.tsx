@@ -113,7 +113,10 @@ function ClaimDialog({ data, onClose, run }: { data: CaseExecution; onClose: () 
           {["defect", "shortage", "delay", "damage", "wrong_item", "documents", "other"].map((k) => <option key={k} value={k}>{t(`execution.claims.kinds.${k}`)}</option>)}</Select></Field>
         <Field label={t("execution.claims.counterparty")} htmlFor="cl-party"><Select id="cl-party" value={form.counterparty_id} onChange={(e) => setForm({ ...form, counterparty_id: e.target.value })}>
           {[...parties].map(([id, name]) => <option key={id} value={id}>{name}</option>)}</Select></Field>
-        <Field label={t("execution.claims.po")} htmlFor="cl-po"><Select id="cl-po" value={form.purchase_order_id} onChange={(e) => setForm({ ...form, purchase_order_id: e.target.value })}>
+        <Field label={t("execution.claims.po")} htmlFor="cl-po"><Select id="cl-po" value={form.purchase_order_id} onChange={(e) => {
+          const po = data.purchase_orders.find((p) => p.id === e.target.value);   // v0.8.0: a PO defaults the counterparty to its supplier
+          setForm({ ...form, purchase_order_id: e.target.value, counterparty_id: po?.supplier_party_id ?? form.counterparty_id });
+        }}>
           <option value="">—</option>{data.purchase_orders.filter((p) => p.status !== "superseded").map((p) => <option key={p.id} value={p.id}>{p.number}</option>)}</Select></Field>
         <Field label={t("execution.claims.amount")} htmlFor="cl-amount"><span className="flex gap-1.5"><Input id="cl-amount" dir="ltr" inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           <CurrencySelect value={form.currency} onChange={(v) => setForm({ ...form, currency: v })} /></span></Field>

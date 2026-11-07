@@ -20,9 +20,10 @@ import { RfqsTab } from "./Rfqs";
 import { TenderHeaderFacts, TenderTab } from "./Tender";
 import { DeliveryTab, ExecutionHeaderFacts, LogisticsTab, OrderTab, PurchaseTab } from "./execution";
 import { SetadOrigin } from "../tenders/SetadOrigin";
+import { CaseTasksTab } from "../tasks/CaseTasksTab";
 
-const TABS = ["items", "tender", "rfqs", "offers", "comparison", "costing", "quotes", "order", "purchase", "logistics", "delivery", "documents",
-  "history"] as const;
+const TABS = ["items", "tender", "rfqs", "offers", "comparison", "costing", "quotes", "order", "purchase", "logistics", "delivery", "tasks",
+  "documents", "history"] as const;
 type Tab = (typeof TABS)[number];
 
 function EditCaseDialog({ c, onClose, onSaved }: { c: CaseDetail; onClose: () => void; onSaved: () => void }) {
@@ -127,6 +128,7 @@ export function CaseDetailPage() {
       {tab === "purchase" && <PurchaseTab caseData={c} />}
       {tab === "logistics" && <LogisticsTab caseData={c} />}
       {tab === "delivery" && <DeliveryTab caseData={c} />}
+      {tab === "tasks" && <CaseTasksTab caseId={c.id} />}
       {tab === "documents" && <AttachedDocuments documents={c.documents} linkPath={`/api/cases/${c.id}/documents`} onChanged={refresh} />}
       {tab === "history" && <>
         <HistoryCard entityType="case" entityId={c.id} />

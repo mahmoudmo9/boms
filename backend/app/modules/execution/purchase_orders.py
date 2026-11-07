@@ -222,24 +222,54 @@ def remove_item(db: Session, item_id: uuid.UUID, source: str, actor: str | None 
     return po
 
 
+FX_MISSING_FA = "نرخ ارز در برگهٔ هزینه نیست"
+
+
+def _sheet_rate(fx: dict, src: str, dst: str, pricing: str) -> Decimal | None:
+    """1 ``src`` in ``dst`` from the sheet's FX entries: direct, reverse, or through the pricing currency."""
+    if src == dst:
+        return Decimal(1)
+    if (src, dst) in fx:
+        return fx[(src, dst)]
+    if (dst, src) in fx and fx[(dst, src)]:
+        return Decimal(1) / fx[(dst, src)]
+    if pricing not in (src, dst):
+        a, b = _sheet_rate(fx, src, pricing, pricing), _sheet_rate(fx, dst, pricing, pricing)
+        if a is not None and b:
+            return a / b
+    return None
+
+
 def above_cost_sheet(db: Session, po: PurchaseOrder) -> list[dict]:
-    """PO prices above the current cost sheet's purchase price (same currency) by more than the tolerance."""
+    """PO prices above the current cost sheet's purchase price by more than the tolerance. A PO in another currency
+    than the purchase line is converted with the sheet's FX entries (v0.8.0); without a rate the item is flagged
+    «نرخ ارز در برگهٔ هزینه نیست» (``check: fx_missing``) instead of being skipped."""
     sheet = costing.current_sheet(db, po.case_id)
     if sheet is None:
         return []
     tolerance = Decimal(str(settings.get(db, "execution.po_price_tolerance_percent") or 0))
     purchase = {line.line_item_id: line for line in costing.lines_of(db, sheet.id)
                 if line.kind == "purchase" and line.scope == "item" and line.line_item_id and line.amount is not None}
+    fx = {(e.from_currency, e.to_currency): e.rate for e in costing.fx_of(db, sheet.id)}
     out = []
     for row in items_of(db, po.id):
         line = purchase.get(row.line_item_id)
-        if line is None or line.currency != po.currency:
+        if line is None:
+            continue
+        line_currency = line.currency or sheet.pricing_currency
+        base = {"purchase_order_item_id": str(row.id), "description": row.description, "unit_price": str(row.unit_price),
+                "cost_sheet_price": str(line.amount), "cost_sheet_currency": line_currency,
+                "tolerance_percent": str(tolerance), "currency": po.currency}
+        rate = _sheet_rate(fx, po.currency, line_currency, sheet.pricing_currency)
+        if rate is None:
+            out.append({**base, "check": "fx_missing", "message_fa": FX_MISSING_FA,
+                        "message_en": f"No {po.currency} -> {line_currency} rate on the cost sheet"})
             continue
         limit = money(line.amount * (Decimal(100) + tolerance) / Decimal(100))
-        if row.unit_price > limit:
-            out.append({"purchase_order_item_id": str(row.id), "description": row.description,
-                        "unit_price": str(row.unit_price), "cost_sheet_price": str(line.amount),
-                        "tolerance_percent": str(tolerance), "currency": po.currency})
+        price = money(row.unit_price * rate)
+        if price > limit:
+            extra = {} if line_currency == po.currency else {"unit_price_converted": str(price), "rate": str(rate)}
+            out.append({**base, "check": "above", **extra})
     return out
 
 
@@ -266,6 +296,9 @@ def mark_sent(db: Session, po_id: uuid.UUID, data: dict, source: str, actor: str
     """Records the sending (BOMS sends nothing): an outgoing interaction with the supplier and the follow-up
     «پیگیری تأیید سفارش» after ``execution.po_confirm_days``; the customer-prepayment ordering gate applies."""
     po = get_purchase_order(db, po_id)
+    if po.status in ("sent", "confirmed"):
+        raise Conflict("purchase_order_already_sent", f"The purchase order is already {po.status}",
+                       {"status": po.status})
     if po.status != "approved":
         raise Conflict("purchase_order_not_approved", f"The purchase order is {po.status}; approve it first",
                        {"status": po.status})

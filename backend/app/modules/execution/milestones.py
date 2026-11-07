@@ -264,24 +264,30 @@ def cash_position(db: Session, case_id: uuid.UUID) -> dict:
 
 
 def prepayment_missing(db: Session, sales_order_id: uuid.UUID | None) -> list[PaymentMilestone]:
-    """The customer's prepayment milestones of the order that are still ``expected`` (nothing received yet)."""
+    """The customer's prepayment milestones of the order not fully received (``expected`` or only ``partly``)."""
     if sales_order_id is None:
         return []
     return [ms for ms in milestones_of(db, sales_order_id=sales_order_id, direction="in")
-            if ms.kind == "prepayment" and ms.status == "expected"]
+            if ms.kind == "prepayment" and ms.status in ("expected", "partly")]
 
 
 def check_ordering_gate(db: Session, sales_order_id: uuid.UUID | None, confirm: bool, reason: str | None) -> str | None:
     """Ordering before payment needs your explicit approval line (the Phase 5 rule): 409 unless confirmed with a reason.
-    Returns the reason used (to store and record), None when nothing was missing."""
+    The gate passes only when every prepayment milestone of the order is ``done`` (v0.8.0: a partly received one does
+    not open it). Returns the reason used (to store and record), None when nothing was missing."""
     missing = prepayment_missing(db, sales_order_id)
     if not missing:
         return None
     text = (reason or "").strip()
     if not confirm or not text:
+        details = []
+        for ms in missing:
+            expected, currency = expected_amount(db, ms)
+            details.append({"id": str(ms.id), "status": ms.status, "received": str(ms.actual_amount or ZERO),
+                            "expected": str(expected), "currency": currency})
         raise Conflict("customer_prepayment_missing",
-                       "The customer's prepayment has not been received. Ordering before payment needs your explicit "
-                       "approval line.", {"milestones": [str(ms.id) for ms in missing]})
+                       "The customer's prepayment has not been fully received. Ordering before payment needs your "
+                       "explicit approval line.", {"milestones": [d["id"] for d in details], "prepayments": details})
     return text
 
 

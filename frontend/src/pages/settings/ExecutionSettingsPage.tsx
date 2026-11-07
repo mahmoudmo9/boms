@@ -16,7 +16,8 @@ type StepDraft = Omit<Step, "id" | "position"> & { key: string };
 
 const NUMBERS = [["execution.po_price_tolerance_percent", "tolerance"], ["execution.po_confirm_days", "confirmDays"],
   ["execution.ready_followup_days_before", "readyDays"], ["execution.delay_warning_days", "delayDays"],
-  ["execution.claim_followup_days", "claimDays"], ["execution.invoice_followup_days", "invoiceDays"]] as const;
+  ["execution.claim_followup_days", "claimDays"], ["execution.invoice_followup_days", "invoiceDays"],
+  ["execution.warranty_remind_days", "warrantyRemindDays"]] as const;
 
 function TemplateEditor({ template, onSaved }: { template: ProcessTemplateRow; onSaved: () => void }) {
   const { t } = useTranslation();

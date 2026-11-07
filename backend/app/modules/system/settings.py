@@ -173,6 +173,7 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "execution.delay_warning_days": (3, _int_range(0, 365)),     # ETA later than the first ETA by more than this
     "execution.claim_followup_days": (7, _int_range(1, 90)),     # «پیگیری ادعا» while a claim is open
     "execution.invoice_followup_days": (3, _int_range(0, 90)),   # «صدور فاکتور و پیگیری تسویه» after delivery
+    "execution.warranty_remind_days": (30, _int_range(0, 365)),  # a task this many days before the warranty end
 }
 
 

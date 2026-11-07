@@ -73,6 +73,12 @@ def followups(db, party_id, status="open"):
                       {"p": party_id, "s": status}).all()
 
 
+def tasks(db, party_id, status="open"):
+    """v0.8.0: internal reminders are tasks (the party is context only), not follow-ups on the party."""
+    return db.execute(text("SELECT id, title AS action, due_on FROM core.task WHERE party_id = :p AND status = :s "
+                           "ORDER BY due_on"), {"p": party_id, "s": status}).all()
+
+
 def tender_day(value) -> date:
     return (datetime.fromisoformat(value) if isinstance(value, str) else value).astimezone(TEHRAN).date()
 
@@ -161,8 +167,9 @@ def test_reminders_per_remind_day_and_none_for_passed_dates(client, db):
     d = next(x for x in r.json()["dates"] if x["kind"] == "proposal_deadline")
     assert d["remind_days_before"] == [3, 1]                                   # setting tenders.reminder_days
     assert sorted(x["due_on"] for x in d["reminders"]) == [(date.today() + timedelta(days=n)).isoformat() for n in (7, 9)]
-    rows = followups(db, party["id"])
+    rows = tasks(db, party["id"])
     assert any(r.action.startswith("یادآوری: مهلت ارسال پیشنهاد") and t["tender_no"] in r.action for r in rows)
+    assert followups(db, party["id"]) == []                                    # not on the organizer's follow-up list
     # 2 days ahead: the 3-day reminder would be in the past; only the 1-day one is created
     r = client.post(f"/api/tenders/{t['id']}/dates", json={"kind": "site_visit", "at": at(2)})
     site = next(x for x in r.json()["dates"] if x["kind"] == "site_visit")
@@ -193,7 +200,7 @@ def test_moving_a_date_moves_its_reminders_and_keeps_history(client, db):
     r = client.patch(f"/api/tender-dates/{d['id']}", json={"remind_days_before": [1]})
     assert [x["days_before"] for x in next(x for x in r.json()["dates"] if x["id"] == d["id"])["reminders"]] == [1]
     assert any("tender reminders changed" == row[0] for row in db.execute(text(
-        "SELECT done_note FROM core.followup WHERE party_id = :p AND status = 'cancelled'"), {"p": party["id"]}).all())
+        "SELECT done_note FROM core.task WHERE party_id = :p AND status = 'cancelled'"), {"p": party["id"]}).all())
 
 
 def test_addendum_extension_applies_linked_date_changes(client, db):
@@ -285,16 +292,16 @@ def test_new_addenda_on_setad_until_recorded(client, db):
 def test_result_and_close_and_case_cancel_cancel_the_reminders(client, db):
     case, t, party = manual_tender(client)
     client.post(f"/api/tenders/{t['id']}/dates", json={"kind": "proposal_deadline", "at": at(10)})
-    assert len(followups(db, party["id"])) == 2
+    assert len(tasks(db, party["id"])) == 2
     r = client.patch(f"/api/tenders/{t['id']}", json={"stage": "closed"})
     assert r.status_code == 200
-    assert followups(db, party["id"]) == []
+    assert tasks(db, party["id"]) == []
     # back to an active stage: the reminders come back
     client.patch(f"/api/tenders/{t['id']}", json={"stage": "pricing"})
-    assert len(followups(db, party["id"])) == 2
+    assert len(tasks(db, party["id"])) == 2
     assert client.patch(f"/api/cases/{case['id']}", json={"status": "cancelled"}).status_code == 200
-    assert followups(db, party["id"]) == []
-    notes = {r[0] for r in db.execute(text("SELECT done_note FROM core.followup WHERE party_id = :p AND status = 'cancelled'"),
+    assert tasks(db, party["id"]) == []
+    notes = {r[0] for r in db.execute(text("SELECT done_note FROM core.task WHERE party_id = :p AND status = 'cancelled'"),
                                       {"p": party["id"]}).all()}
     assert "case cancelled" in notes
 

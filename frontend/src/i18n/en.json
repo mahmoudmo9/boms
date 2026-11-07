@@ -61,7 +61,9 @@
       "guarantees": "Guarantees",
       "tenderSettings": "Tenders",
       "companyDocuments": "Company documents",
-      "executionSettings": "Execution"
+      "executionSettings": "Execution",
+      "commandCenterHome": "Overview",
+      "myTasks": "My tasks"
     }
   },
   "placeholder": {
@@ -657,6 +659,13 @@
         "in": "In",
         "out": "Out"
       }
+    },
+    "tasks": {
+      "title": "Tasks",
+      "overdue": "Overdue tasks",
+      "today": "Due today",
+      "tomorrow": "Due tomorrow",
+      "all": "All my tasks"
     }
   },
   "funnel": {
@@ -892,7 +901,8 @@
       "cases": "cases",
       "rfq_recipients": "RFQ recipients",
       "offers": "offers",
-      "capabilities": "capability tags"
+      "capabilities": "capability tags",
+      "tasks": "tasks"
     },
     "dangerZone": "Danger zone",
     "cascadeHint": "For test data only: deletes this party with all its interactions, follow-ups and document links. The files themselves stay in Documents. The deletion is recorded in the event log.",
@@ -1101,7 +1111,8 @@
         "order": "Order",
         "purchase": "Purchase",
         "logistics": "Logistics",
-        "delivery": "Delivery and claims"
+        "delivery": "Delivery and claims",
+        "tasks": "Tasks"
       },
       "cascadeHint": "For test data only: deletes this case with its items, RFQs, recipients, offers and document links. Files stay in Documents and interactions stay in the parties' history. The deletion is recorded in the event log.",
       "typeTitle": "Type the case title to confirm",
@@ -2714,7 +2725,8 @@
         "closed": "Closed",
         "cancelled": "Cancelled",
         "superseded": "Superseded"
-      }
+      },
+      "fxMissing": "No {{from}} → {{to}} rate on the cost sheet; the price was not checked"
     },
     "receipts": {
       "title": "Goods receipt",
@@ -2938,6 +2950,7 @@
       "delayDays": "ETA delay warning after (days)",
       "claimDays": "Follow up a claim every (days)",
       "invoiceDays": "Invoice follow-up after delivery (days)",
+      "warrantyRemindDays": "Warranty end reminder task (days before)",
       "stepReminders": "Step reminders (days before due)",
       "poTerms": "PO terms",
       "poTermsHint": "The PO terms texts (Persian and English) are edited with the templates.",
@@ -2955,6 +2968,48 @@
       "offset": "Days",
       "requiresDocument": "Needs a document",
       "addStep": "Add step"
+    }
+  },
+  "tasks": {
+    "subtitle": "Your own reminders: checklist steps, tender dates, guarantees, warranty and invoicing. They are not follow-ups with a party.",
+    "quickAdd": "Add a task",
+    "title": "Task",
+    "case": "Case",
+    "kind": "Kind",
+    "allCases": "All cases",
+    "allKinds": "All kinds",
+    "add": "Add",
+    "high": "High priority",
+    "none": "No tasks",
+    "openCase": "Case",
+    "note": "Note (optional)",
+    "cancelNote": "Why is it cancelled?",
+    "newDue": "New due date",
+    "done": "Done",
+    "move": "Move",
+    "cancel": "Cancel task",
+    "reopen": "Reopen",
+    "doneTitle": "Mark the task done",
+    "moveTitle": "Move the task",
+    "cancelTitle": "Cancel the task",
+    "caseOpen": "Open tasks of this case",
+    "groups": {
+      "overdue": "Overdue",
+      "today": "Today",
+      "week": "This week",
+      "later": "Later",
+      "done": "Done and cancelled"
+    },
+    "kinds": {
+      "tender_date": "Tender date",
+      "process_step": "Checklist step",
+      "guarantee_expiry": "Guarantee expiry",
+      "warranty_end": "Warranty end",
+      "warranty_remind": "Before warranty end",
+      "opening": "Opening",
+      "contract": "Contract",
+      "invoice_issue": "Issue invoice",
+      "manual": "Manual"
     }
   }
 }

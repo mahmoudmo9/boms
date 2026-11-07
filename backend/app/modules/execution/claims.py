@@ -65,7 +65,28 @@ def _ensure_followup(db: Session, claim: Claim, source: str, actor: str | None) 
                      action=f"پیگیری ادعا ({claim.kind})", due_on=today() + timedelta(days=days), source=source, actor=actor)
 
 
+def default_counterparty(db: Session, data: dict):
+    """v0.8.0: a claim from a PO, receipt or inspection is against the PO's supplier; from a shipment, its carrier;
+    from a delivery, the customer. The owner can change it."""
+    if data.get("delivery_id"):
+        from app.modules.execution.common import get_sales_order
+
+        return get_sales_order(db, get(db, Delivery, data["delivery_id"], "Delivery").sales_order_id).customer_party_id
+    po_id = data.get("purchase_order_id")
+    if not po_id and data.get("receipt_id"):
+        po_id = get(db, Receipt, data["receipt_id"], "Receipt").purchase_order_id
+    if not po_id and data.get("inspection_id"):
+        po_id = get(db, Inspection, data["inspection_id"], "Inspection").purchase_order_id
+    if po_id:
+        return get_purchase_order(db, po_id).supplier_party_id
+    if data.get("shipment_id"):
+        return get(db, Shipment, data["shipment_id"], "Shipment").carrier_party_id
+    return None
+
+
 def create(db: Session, data: dict, source: str, actor: str | None = None) -> Claim:
+    if not data.get("counterparty_id"):
+        data = {**data, "counterparty_id": default_counterparty(db, data)}
     case_id = _case_of_links(db, data)
     if data.get("case_id") and case_id != data["case_id"]:
         raise AppError("link_not_of_case", "A linked record belongs to another case", status=422)

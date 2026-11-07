@@ -30,6 +30,10 @@ def line_status(client, line_item_id):
 
 
 def open_followups(db, ref_id, purpose):
+    kind = {"invoice": "invoice_issue", "warranty_end": "warranty_end", "warranty_remind": "warranty_remind"}.get(purpose)
+    if kind:                                        # v0.8.0: internal reminders are tasks
+        return db.execute(text("SELECT id, due_on, title AS action FROM core.task WHERE source = 'execution' "
+                               "AND source_id = :r AND source_kind = :k AND status = 'open'"), {"r": ref_id, "k": kind}).all()
     return db.execute(text("SELECT f.id, f.due_on, f.action FROM ops.execution_followup l JOIN core.followup f ON f.id = l.followup_id "
                            "WHERE l.ref_id = :r AND l.purpose = :p AND f.status = 'open'"), {"r": ref_id, "p": purpose}).all()
 
@@ -239,6 +243,7 @@ def test_deliveries_partial_progress_delivered_status_followups_and_reversal(cli
     assert line_status(client, pump["line_item_id"]) == "sold" and line_status(client, valve["line_item_id"]) == "delivered"
     db.expire_all()
     assert open_followups(db, so["id"], "invoice") == [] and open_followups(db, so["id"], "warranty_end") == []
+    assert open_followups(db, so["id"], "warranty_remind") == []
     release = client.get(f"/api/guarantees/{perf['id']}").json()["reminders"]
     assert not [x for x in release if x["purpose"] == "guarantee_release"]
 

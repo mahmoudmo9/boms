@@ -165,8 +165,8 @@ def test_mark_sent_interaction_followup_and_the_prepayment_gate(client, db):
     inter = db.execute(text("SELECT direction, party_id FROM core.interaction WHERE id = :i"), {"i": po["interaction_id"]}).one()
     assert inter.direction == "out" and str(inter.party_id) == po["supplier_party_id"]
     assert client.get(f"/api/sales-orders/{so['id']}").json()["status"] == "in_progress"
-    # prepayment received: the second PO goes without a reason
-    client.post(f"/api/payment-milestones/{ms['id']}/payments", json={"amount": "1", "paid_on": day(0)})
+    # prepayment fully received (v0.8.0: partly is not enough): the second PO goes without a reason
+    client.post(f"/api/payment-milestones/{ms['id']}/payments", json={"amount": ms["expected_amount"], "paid_on": day(0)})
     eur = by_currency(client.get(f"/api/cases/{case['id']}/execution").json()["purchase_orders"])["EUR"]
     sent = sent_po(client, eur)
     assert sent["prepayment_override_reason"] is None
@@ -246,13 +246,11 @@ def test_document_rule_reminders_and_progress(client, db):
     assert r.json()["progress"]["done"] == 3 and r.json()["progress"]["total"] == 13
     assert r.json()["progress"]["next"]["code"] == "currency_allocation"
     # the case closed: the remaining reminders are cancelled
-    open_before = db.execute(text("SELECT count(*) FROM ops.execution_followup l JOIN core.followup f ON f.id = l.followup_id "
-                                  "WHERE l.case_id = :c AND l.purpose = 'step_reminder' AND f.status = 'open'"), {"c": case["id"]}).scalar()
+    open_before = db.execute(text("SELECT count(*) FROM core.task WHERE case_id = :c AND source_kind = 'process_step' AND status = 'open'"), {"c": case["id"]}).scalar()
     assert open_before > 0
     client.patch(f"/api/cases/{case['id']}", json={"status": "cancelled"})
     db.expire_all()
-    open_after = db.execute(text("SELECT count(*) FROM ops.execution_followup l JOIN core.followup f ON f.id = l.followup_id "
-                                 "WHERE l.case_id = :c AND l.purpose = 'step_reminder' AND f.status = 'open'"), {"c": case["id"]}).scalar()
+    open_after = db.execute(text("SELECT count(*) FROM core.task WHERE case_id = :c AND source_kind = 'process_step' AND status = 'open'"), {"c": case["id"]}).scalar()
     assert open_after == 0
 
 
