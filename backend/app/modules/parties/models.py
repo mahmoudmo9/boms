@@ -48,6 +48,8 @@ class Party(Timestamps, Base):
     do_not_contact_reason: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, default="active")
     ref_company_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
+    national_id: Mapped[str | None] = mapped_column(Text)      # v0.8.0: the buyer IDs of a domestic invoice
+    economic_code: Mapped[str | None] = mapped_column(Text)
 
 
 class PartyRole(Timestamps, Base):

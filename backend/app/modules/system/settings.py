@@ -174,6 +174,10 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "execution.claim_followup_days": (7, _int_range(1, 90)),     # «پیگیری ادعا» while a claim is open
     "execution.invoice_followup_days": (3, _int_range(0, 90)),   # «صدور فاکتور و پیگیری تسویه» after delivery
     "execution.warranty_remind_days": (30, _int_range(0, 365)),  # a task this many days before the warranty end
+    # Deal finance (v0.8.0)
+    "finance.base_currency": ("IRR", _short_text),                # rial amounts of payments and costs
+    "finance.payment_days": (30, _int_range(0, 365)),             # invoice due date after the issue date
+    "finance.supplier_payment_days": (30, _int_range(0, 365)),    # supplier invoice due date when not typed
 }
 
 

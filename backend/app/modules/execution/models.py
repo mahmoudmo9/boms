@@ -196,6 +196,12 @@ class PaymentRecord(Timestamps, Base):
     reference: Mapped[str | None] = mapped_column(Text)
     document_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     note: Mapped[str | None] = mapped_column(Text)
+    # v0.8.0: the real rate of a foreign-currency payment and its rial amount; a bank fee becomes an actual cost
+    fx_rate_to_base: Mapped[Decimal | None] = mapped_column(Numeric(20, 6))
+    base_amount: Mapped[Decimal | None] = mapped_column(AMOUNT)
+    rate_source: Mapped[str | None] = mapped_column(Text)
+    bank_fee: Mapped[Decimal | None] = mapped_column(AMOUNT)
+    bank_fee_currency: Mapped[str | None] = mapped_column(Text)
 
 
 class ProcessTemplate(Timestamps, Base):

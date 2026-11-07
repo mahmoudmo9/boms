@@ -44,6 +44,8 @@ class PartyCreate(_Names):
     country_iso2: Iso2 | None = None
     website: ShortText | None = None
     notes: LongText | None = None
+    national_id: ShortText | None = None       # v0.8.0: required on a domestic invoice to this buyer
+    economic_code: ShortText | None = None
     roles: list[Role] = Field(default_factory=list, max_length=6)
     confirm_duplicate: bool = False
 
@@ -61,6 +63,8 @@ class PartyPatch(_Names):
     country_iso2: Iso2 | None = None
     website: ShortText | None = None
     notes: LongText | None = None
+    national_id: ShortText | None = None       # v0.8.0: required on a domestic invoice to this buyer
+    economic_code: ShortText | None = None
     do_not_contact: bool | None = None
     do_not_contact_reason: ShortText | None = None
 
@@ -98,6 +102,8 @@ class PartyOut(ApiModel):
     do_not_contact: bool
     do_not_contact_reason: str | None
     status: str
+    national_id: str | None = None
+    economic_code: str | None = None
     created_at: datetime
     updated_at: datetime
 
