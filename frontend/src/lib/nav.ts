@@ -49,7 +49,7 @@ export const WORKSPACES: Workspace[] = [
   },
   { key: "tenders", path: "/tenders", icon: "gavel" },
   { key: "execution", path: "/execution", icon: "truck" },
-  { key: "finance", path: "/finance", icon: "coins", phase: "9" },
+  { key: "finance", path: "/finance", icon: "coins" },
   { key: "documents", path: "/documents", icon: "file" },
   { key: "reports", path: "/reports", icon: "chart", phase: "10" },
   {

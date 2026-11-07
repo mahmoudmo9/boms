@@ -105,18 +105,24 @@ const KINDS = ["prepayment", "on_order_confirmation", "on_shipment", "on_deliver
 function PaymentForm({ m, onClose, run }: { m: MilestoneRow; onClose: () => void; run: (path: string, body?: Body) => Promise<unknown> }) {
   const { t } = useTranslation();
   const left = Math.max(0, Number(m.expected_amount) - Number(m.actual_amount ?? 0));
-  const [form, setForm] = useState({ amount: left ? String(left) : "", paid_on: new Date() as Date | null, method: "", reference: "", document_id: null as string | null });
+  const [form, setForm] = useState({ amount: left ? String(left) : "", paid_on: new Date() as Date | null, method: "", reference: "", document_id: null as string | null,
+    fx_rate_to_base: "", rate_source: "", bank_fee: "" });
+  const foreign = m.expected_currency !== "IRR";   // v0.8.0: a foreign payment carries its real rate to rials
   const [error, setError] = useState<unknown>(null);
   return (
     <Modal open title={t("execution.milestones.record")} onClose={onClose}
-      footer={<><Button onClick={onClose}>{t("common.cancel")}</Button><Button variant="primary" data-testid="payment-save" disabled={!Number(form.amount) || !form.paid_on}
+      footer={<><Button onClick={onClose}>{t("common.cancel")}</Button><Button variant="primary" data-testid="payment-save" disabled={!Number(form.amount) || !form.paid_on || (foreign && !Number(form.fx_rate_to_base))}
         onClick={() => run(`/api/payment-milestones/${m.id}/payments`, { amount: form.amount, paid_on: toDateString(form.paid_on!), method: form.method || null,
-          reference: form.reference || null, document_id: form.document_id }).then(onClose, setError)}>{t("common.save")}</Button></>}>
+          reference: form.reference || null, document_id: form.document_id, ...(foreign ? { fx_rate_to_base: form.fx_rate_to_base, rate_source: form.rate_source || null } : {}),
+          ...(Number(form.bank_fee) ? { bank_fee: form.bank_fee } : {}) }).then(onClose, setError)}>{t("common.save")}</Button></>}>
       <div className="grid gap-3 sm:grid-cols-2" data-testid="payment-form">
         <Field label={`${t("execution.milestones.amount")} (${m.expected_currency})`} htmlFor="pay-amount"><Input id="pay-amount" dir="ltr" inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></Field>
         <Field label={t("execution.milestones.paidOn")} htmlFor="pay-on"><DateInput id="pay-on" value={form.paid_on} onChange={(d) => setForm({ ...form, paid_on: d })} /></Field>
         <Field label={t("execution.milestones.method")} htmlFor="pay-method"><Input id="pay-method" dir="auto" value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} /></Field>
         <Field label={t("execution.milestones.reference")} htmlFor="pay-ref"><Input id="pay-ref" dir="ltr" value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></Field>
+        {foreign && <Field label={t("finance.fxRate", { cur: m.expected_currency })} htmlFor="pay-rate"><Input id="pay-rate" dir="ltr" inputMode="decimal" value={form.fx_rate_to_base} onChange={(e) => setForm({ ...form, fx_rate_to_base: e.target.value })} /></Field>}
+        {foreign && <Field label={t("finance.rateSource")} htmlFor="pay-rate-src"><Input id="pay-rate-src" dir="auto" value={form.rate_source} onChange={(e) => setForm({ ...form, rate_source: e.target.value })} /></Field>}
+        <Field label={`${t("finance.bankFee")} (${m.expected_currency})`} htmlFor="pay-fee"><Input id="pay-fee" dir="ltr" inputMode="decimal" value={form.bank_fee} onChange={(e) => setForm({ ...form, bank_fee: e.target.value })} /></Field>
         <Field label={t("execution.milestones.receipt")} htmlFor="pay-doc"><FilePick id="pay-doc" value={form.document_id} onChange={(d) => setForm({ ...form, document_id: d })} /></Field>
       </div>
       <ErrorNote error={error} />

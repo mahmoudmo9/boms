@@ -264,6 +264,43 @@ function TasksSection({ s }: { s: NonNullable<CommandCenter["tasks"]> }) {
   );
 }
 
+/** v0.8.0: «مالی» — receivables overdue, payables due, delivered not invoiced, received without a supplier invoice,
+ * Moadian pending, payments without an FX rate, cases ready to close. */
+function FinanceSection({ s }: { s: NonNullable<CommandCenter["finance"]> }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const card = (key: keyof typeof s, rows: { key: string; to: string; label: ReactNode; extra?: ReactNode }[], tone: "danger" | "warning" | "accent" = "warning") => (
+    <Card key={key} padded={false} title={<span className="flex items-center gap-2">{t(`cc.finance.${key}`)} <Badge tone={rows.length ? tone : "neutral"}>{f.num(rows.length)}</Badge></span>}>
+      {rows.length === 0 ? <EmptyState>{t("cc.nothing")}</EmptyState> : (
+        <ul className="max-h-64 divide-y divide-line overflow-y-auto">{rows.map((r) => (
+          <li key={r.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
+            <Link to={r.to} className="min-w-0 truncate text-accent hover:underline">{r.label}</Link>{r.extra}</li>))}</ul>)}
+    </Card>
+  );
+  const to = (caseId: string) => `/cases/${caseId}?tab=finance`;
+  return (
+    <section className="flex flex-col gap-3" data-testid="cc-finance">
+      <div className="flex flex-wrap items-center gap-3"><h2 className="text-base font-semibold">{t("cc.finance.title")}</h2>
+        <Link to="/finance" className="text-sm text-accent hover:underline">{t("cc.finance.open")}</Link></div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        {card("receivables_overdue", s.receivables_overdue.map((r) => ({ key: r.invoice_id, to: to(r.case_id), label: <bdi dir="ltr">{r.number}</bdi>,
+          extra: <span className="text-xs text-danger">{f.num(r.balance)} {r.currency} · {t("cc.finance.daysPast", { n: f.num(r.days_past_due) })}</span> })), "danger")}
+        {card("payables_due", s.payables_due.map((r) => ({ key: r.id, to: to(r.case_id), label: <Bdi>{r.label}</Bdi>,
+          extra: <span className="text-xs text-warning">{f.num(r.balance)} {r.currency}{r.due_date ? ` · ${f.day(r.due_date)}` : ""}</span> })))}
+        {card("delivered_not_invoiced", s.delivered_not_invoiced.map((r) => ({ key: r.sales_order_id, to: to(r.case_id), label: <bdi dir="ltr">{r.number}</bdi>,
+          extra: <span className="text-xs text-muted"><Bdi>{r.case_title ?? ""}</Bdi> · {f.num(r.quantity)}</span> })))}
+        {card("received_not_invoiced", s.received_not_invoiced.map((r) => ({ key: r.purchase_order_id, to: to(r.case_id), label: <bdi dir="ltr">{r.number}</bdi>,
+          extra: <span className="text-xs text-muted"><Bdi>{r.case_title ?? ""}</Bdi></span> })))}
+        {card("moadian_pending", s.moadian_pending.map((r) => ({ key: r.invoice_id, to: to(r.case_id), label: <bdi dir="ltr">{r.number}</bdi>,
+          extra: <span className="text-xs text-warning">{t(`finance.moadian.statuses.${r.moadian_status}`)}</span> })))}
+        {card("payments_without_rate", s.payments_without_rate.map((r) => ({ key: r.record_id, to: to(r.case_id), label: <span>{f.num(r.amount)} {r.currency}</span>,
+          extra: <span className="text-xs text-muted">{f.day(r.paid_on)} · <Bdi>{r.case_title ?? ""}</Bdi></span> })), "danger")}
+        {card("ready_to_close", s.ready_to_close.map((r) => ({ key: r.case_id, to: to(r.case_id), label: <Bdi>{r.case_title ?? ""}</Bdi> })), "accent")}
+      </div>
+    </section>
+  );
+}
+
 export function CommandCenterPage() {
   const { t } = useTranslation();
   const f = useFormat();
@@ -319,6 +356,7 @@ export function CommandCenterPage() {
       {d.setad && <SetadSection s={d.setad} />}
       {d.tenders && <TendersSection s={d.tenders} />}
       {d.execution && <ExecutionSection s={d.execution} />}
+      {d.finance && <FinanceSection s={d.finance} />}
       <div className="grid gap-4 xl:grid-cols-2">
         {FUNNELS.map((role) => (
           <Card key={role} title={t(`funnel.title.${role}`)} actions={<Link className="text-sm text-accent hover:underline" to={`/parties/funnels?role=${role}`}>{t("funnel.openBoard")}</Link>}>

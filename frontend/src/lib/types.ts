@@ -198,6 +198,8 @@ export interface Party {
   kind: "company" | "person";
   country_iso2: string | null;
   website: string | null;
+  national_id?: string | null;
+  economic_code?: string | null;
   notes: string | null;
   do_not_contact: boolean;
   do_not_contact_reason: string | null;
@@ -337,6 +339,8 @@ export interface CommandCenter {
   execution?: ExecutionSummary;
   /** v0.8.0: «کارها», overdue and due today / tomorrow */
   tasks?: import("./tasks").TasksSummary;
+  /** v0.8.0: «مالی» */
+  finance?: import("./finance").FinanceSummary;
 }
 
 /** Command center section "Setad" (v0.5.0). */

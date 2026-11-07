@@ -3,6 +3,7 @@ import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "rea
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
+import { PartyFinance } from "./PartyFinance";
 import { Bdi } from "../../components/Bdi";
 import { DateInput } from "../../components/DateInput";
 import { Icon } from "../../components/Icon";
@@ -20,7 +21,7 @@ import { CountrySelect } from "./PartiesPage";
 import { PartyPicker, useQuickLog } from "./QuickLog";
 import { CancelFollowupButton, CHANNELS, DeleteButton, FollowupActions, InUseNote, METHOD_TYPES, PartyName, ROLES, SharedNumberPrompt, StageSelect, stageLabel } from "./shared";
 
-const TABS = ["overview", "contacts", "interactions", "documents", "quotes", "orders", "history"] as const;
+const TABS = ["overview", "contacts", "interactions", "documents", "quotes", "orders", "finance", "history"] as const;
 type Tab = (typeof TABS)[number];
 
 function useParty(id: string) {
@@ -45,7 +46,7 @@ function Overview({ party }: { party: PartyDetail }) {
   const refresh = useRefresh(party.id);
   const [form, setForm] = useState({
     name_fa: party.name_fa ?? "", name_en: party.name_en ?? "", kind: party.kind, country_iso2: party.country_iso2 ?? "",
-    website: party.website ?? "", notes: party.notes ?? "",
+    website: party.website ?? "", notes: party.notes ?? "", national_id: party.national_id ?? "", economic_code: party.economic_code ?? "",
   });
   const [dnc, setDnc] = useState(party.do_not_contact);
   const [dncReason, setDncReason] = useState(party.do_not_contact_reason ?? "");
@@ -55,7 +56,7 @@ function Overview({ party }: { party: PartyDetail }) {
     mutationFn: () => api(`/api/parties/${party.id}`, {
       method: "PATCH",
       body: { ...form, name_fa: form.name_fa || null, name_en: form.name_en || null, country_iso2: form.country_iso2 || null,
-        website: form.website || null, notes: form.notes || null, do_not_contact: dnc, do_not_contact_reason: dnc ? dncReason : null },
+        website: form.website || null, notes: form.notes || null, national_id: form.national_id || null, economic_code: form.economic_code || null, do_not_contact: dnc, do_not_contact_reason: dnc ? dncReason : null },
     }),
     onSuccess: () => { toast(t("common.saved"), "success"); refresh(); },
   });
@@ -128,6 +129,8 @@ function Overview({ party }: { party: PartyDetail }) {
             </Select>
           </Field>
           <Field label={t("parties.country")} htmlFor="pd-country"><CountrySelect id="pd-country" value={form.country_iso2} onChange={(v) => setForm({ ...form, country_iso2: v })} /></Field>
+          <Field label={t("finance.party.nationalId")} htmlFor="pd-nid"><Input id="pd-nid" dir="ltr" value={form.national_id} onChange={(e) => setForm({ ...form, national_id: e.target.value })} /></Field>
+          <Field label={t("finance.party.economicCode")} htmlFor="pd-eco"><Input id="pd-eco" dir="ltr" value={form.economic_code} onChange={(e) => setForm({ ...form, economic_code: e.target.value })} /></Field>
           <div className="sm:col-span-2"><Field label={t("parties.website")} htmlFor="pd-web"><Input id="pd-web" dir="ltr" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></Field></div>
           <div className="sm:col-span-2"><Field label={t("parties.notes")} htmlFor="pd-notes"><Textarea id="pd-notes" dir="auto" rows={4} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field></div>
           <div className="rounded-md border border-line p-3 sm:col-span-2">
@@ -719,6 +722,7 @@ export function PartyDetailPage() {
       {tab === "documents" && <Documents party={p} />}
       {tab === "quotes" && <Quotes partyId={p.id} />}
       {tab === "orders" && <Orders partyId={p.id} />}
+      {tab === "finance" && <PartyFinance partyId={p.id} />}
       {tab === "history" && <History partyId={p.id} />}
     </div>
   );

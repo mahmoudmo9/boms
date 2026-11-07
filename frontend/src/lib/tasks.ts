@@ -54,3 +54,18 @@ export function remindsOf(task: Pick<TaskRow, "remind_of_due" | "due_on" | "due_
   if (task.due_at) return task.due_at;
   return task.remind_of_due && task.remind_of_due !== task.due_on ? `${task.remind_of_due}T23:59:00` : null;
 }
+
+/** The «کارهای من» groups (the server's rule, used for a task added or moved before the list reloads): overdue,
+ * today, this week (next 7 days), later; done and cancelled together. */
+export function groupTasks<T extends Pick<TaskRow, "status" | "due_on">>(rows: T[], today: string): Record<TaskGroup, T[]> {
+  const out: Record<TaskGroup, T[]> = { overdue: [], today: [], week: [], later: [], done: [] };
+  const week = new Date(Date.parse(`${today}T00:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
+  for (const r of rows) {
+    if (r.status !== "open") out.done.push(r);
+    else if (r.due_on < today) out.overdue.push(r);
+    else if (r.due_on === today) out.today.push(r);
+    else if (r.due_on <= week) out.week.push(r);
+    else out.later.push(r);
+  }
+  return out;
+}

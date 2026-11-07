@@ -153,6 +153,7 @@ const psql = (sql) => execFileSync('psql', ['-h', '127.0.0.1', '-U', process.env
       await page.locator('[data-testid=milestone-save]').click();
       await page.locator('[data-testid=milestones-in] [data-testid=record-payment]').click();
       await page.locator('#pay-ref').fill('TRX-' + tag);
+      if (await page.locator('#pay-rate').count()) await page.locator('#pay-rate').fill('600000');   // v0.8.0: a foreign payment needs its rate
       await page.locator('[data-testid=payment-save]').click();
       check('prepayment received', await poll(async () => (await ok('GET', `/api/sales-orders/${soId}`)).milestones[0]?.status === 'done'));
       check('cash position shows it', await poll(async () => (await page.locator('[data-testid=cash-position]').innerText()).includes(t('execution.cash.received'))));
@@ -197,6 +198,7 @@ const psql = (sql) => execFileSync('psql', ['-h', '127.0.0.1', '-U', process.env
       await page.locator('#ms-value').fill('37.5');
       await page.locator('[data-testid=milestone-save]').click();
       await page.locator('[data-testid="milestones-out-USD"] [data-testid=record-payment]').click();
+      if (await page.locator('#pay-rate').count()) await page.locator('#pay-rate').fill('600000');   // v0.8.0: a foreign payment needs its rate
       await page.locator('[data-testid=payment-save]').click();
       check('supplier prepayment paid', await poll(async () => (await ok('GET', `/api/purchase-orders/${usd.id}`)).milestones[0]?.status === 'done'));
       await shot(`${lang}-purchase`, true);

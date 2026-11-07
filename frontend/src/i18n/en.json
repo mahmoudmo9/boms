@@ -112,7 +112,10 @@
       "purchase_order": "Purchase order",
       "shipment": "Shipment",
       "process_step": "Process step",
-      "claim": "Claim"
+      "claim": "Claim",
+      "sales_invoice": "Sales invoice",
+      "purchase_invoice": "Supplier invoice",
+      "payment": "Payment"
     }
   },
   "date": {
@@ -666,6 +669,18 @@
       "today": "Due today",
       "tomorrow": "Due tomorrow",
       "all": "All my tasks"
+    },
+    "finance": {
+      "title": "Finance",
+      "open": "Finance workspace",
+      "daysPast": "{{n}} days past due",
+      "receivables_overdue": "Receivables overdue",
+      "payables_due": "Payables due within 7 days",
+      "delivered_not_invoiced": "Delivered, not invoiced",
+      "received_not_invoiced": "Received, no supplier invoice",
+      "moadian_pending": "Moadian not sent / rejected",
+      "payments_without_rate": "Payments without FX rate",
+      "ready_to_close": "Ready to close"
     }
   },
   "funnel": {
@@ -786,7 +801,8 @@
       "documents": "Documents",
       "history": "History",
       "quotes": "Quotes",
-      "orders": "Orders and claims"
+      "orders": "Orders and claims",
+      "finance": "Finance"
     },
     "archiveTitle": "Archive party",
     "archiveOpenFollowups": "This party has {{count}} open follow-up(s).",
@@ -902,7 +918,11 @@
       "rfq_recipients": "RFQ recipients",
       "offers": "offers",
       "capabilities": "capability tags",
-      "tasks": "tasks"
+      "tasks": "tasks",
+      "sales_invoices": "sales invoices",
+      "purchase_invoices": "supplier invoices",
+      "actual_costs": "actual costs",
+      "ratings": "ratings"
     },
     "dangerZone": "Danger zone",
     "cascadeHint": "For test data only: deletes this party with all its interactions, follow-ups and document links. The files themselves stay in Documents. The deletion is recorded in the event log.",
@@ -1112,7 +1132,8 @@
         "purchase": "Purchase",
         "logistics": "Logistics",
         "delivery": "Delivery and claims",
-        "tasks": "Tasks"
+        "tasks": "Tasks",
+        "finance": "Finance"
       },
       "cascadeHint": "For test data only: deletes this case with its items, RFQs, recipients, offers and document links. Files stay in Documents and interactions stay in the parties' history. The deletion is recorded in the event log.",
       "typeTitle": "Type the case title to confirm",
@@ -3010,6 +3031,313 @@
       "contract": "Contract",
       "invoice_issue": "Issue invoice",
       "manual": "Manual"
+    }
+  },
+  "finance": {
+    "none": "Nothing here",
+    "reason": "Reason",
+    "amount": "Amount",
+    "balance": "Balance",
+    "bankFee": "Bank fee",
+    "rateSource": "Rate source",
+    "fxRate": "Real rate: 1 {{cur}} in rials",
+    "header": "Invoices {{n}} · open {{due}} · profit so far {{profit}} {{cur}}",
+    "paymentStatus": {
+      "unpaid": "Unpaid",
+      "partly_paid": "Partly paid",
+      "paid": "Paid",
+      "overpaid": "Overpaid",
+      "none": "—"
+    },
+    "invoices": {
+      "title": "Sales invoices",
+      "new": "New invoice",
+      "rest": "Invoice the rest",
+      "none": "No invoices yet",
+      "createDraft": "Create draft",
+      "item": "Item",
+      "ordered": "Ordered",
+      "delivered": "Delivered",
+      "invoiced": "Invoiced",
+      "quantity": "Quantity",
+      "language": "Invoice language",
+      "languageAuto": "By customer country",
+      "fa": "Persian (domestic invoice)",
+      "en": "English (commercial invoice)",
+      "overReason": "Reason for invoicing more than delivered",
+      "description": "Description",
+      "unitPrice": "Unit price",
+      "creditNote": "Credit note",
+      "debitNote": "Debit note",
+      "cancel": "Cancel invoice",
+      "draftNo": "DRAFT",
+      "kinds": {
+        "invoice": "Invoice",
+        "credit_note": "Credit note",
+        "debit_note": "Debit note"
+      },
+      "statuses": {
+        "draft": "Draft",
+        "issued": "Issued",
+        "cancelled": "Cancelled"
+      },
+      "totals": "Subtotal {{subtotal}} · VAT {{rate}}% {{vat}} · total {{total}} {{cur}}",
+      "issued": "issued",
+      "due": "due",
+      "corrects": "corrects",
+      "missing": "Missing before issue",
+      "fillIn": "Fill in",
+      "vatRate": "VAT %",
+      "vatNote": "VAT note",
+      "saveVat": "Save VAT",
+      "issue": "Issue",
+      "missingFields": {
+        "company_name": "seller name",
+        "company_national_id": "seller national ID",
+        "company_economic_code": "seller economic code",
+        "customer_national_id": "buyer national ID",
+        "customer_economic_code": "buyer economic code"
+      }
+    },
+    "moadian": {
+      "status": "Moadian status",
+      "taxId": "Tax ID (شماره منحصربه‌فرد مالیاتی)",
+      "note": "Moadian note",
+      "statuses": {
+        "not_required": "Not required",
+        "not_sent": "Not sent",
+        "sent": "Sent",
+        "accepted": "Accepted",
+        "rejected": "Rejected"
+      }
+    },
+    "supplier": {
+      "title": "Supplier invoices",
+      "new": "Record supplier invoice",
+      "none": "No supplier invoices",
+      "po": "Purchase order",
+      "number": "Supplier invoice no.",
+      "date": "Invoice date",
+      "vat": "VAT amount",
+      "linesHint": "Lines default to the received quantities not yet invoiced, at the PO price.",
+      "received": "Received",
+      "poPrice": "PO price",
+      "invoicePrice": "Invoice price",
+      "savePrices": "Save prices",
+      "approve": "Approve",
+      "dispute": "Dispute",
+      "cancel": "Cancel",
+      "claim": "Linked claim",
+      "approveWithDifferences": "Approve with differences",
+      "differenceReason": "Approved with differences",
+      "statuses": {
+        "received": "Received",
+        "approved": "Approved",
+        "disputed": "Disputed",
+        "cancelled": "Cancelled"
+      },
+      "flags": {
+        "invoiced_above_received": "More than received",
+        "invoiced_above_ordered": "More than ordered",
+        "price_difference": "Price differs",
+        "lines_without_po_item": "Lines without a PO item"
+      }
+    },
+    "costs": {
+      "title": "Actual costs",
+      "new": "Add cost",
+      "none": "No actual costs",
+      "kind": "Kind",
+      "vat": "Input VAT",
+      "date": "Date",
+      "status": "Status",
+      "statuses": {
+        "expected": "Expected",
+        "incurred": "Incurred",
+        "paid": "Paid"
+      },
+      "sources": {
+        "tender_cost": "Tender cost",
+        "guarantee_fee": "Guarantee fee",
+        "payment_fee": "Payment bank fee",
+        "actual_cost": "Actual cost"
+      }
+    },
+    "payments": {
+      "title": "Payments and allocation",
+      "none": "No payments recorded",
+      "allocate": "Allocate",
+      "allocated": "Allocated",
+      "unallocated": "Unallocated",
+      "confirm": "Confirm allocation",
+      "unallocatedOf": "Unallocated: {{amount}} {{cur}} (suggested oldest first)",
+      "nothingOpen": "No open invoice or cost of this party",
+      "rate": "Rate: 1 {{from}} in {{to}}",
+      "rateMissing": "Rate not recorded",
+      "saveRate": "Save rate",
+      "direction": {
+        "in": "In",
+        "out": "Out"
+      }
+    },
+    "profit": {
+      "title": "Deal profit: actual against plan",
+      "soFar": "So far",
+      "final": "Final (closed)",
+      "kind": "Line",
+      "planned": "Planned",
+      "actual": "Actual",
+      "variance": "Variance",
+      "estimated": "estimated",
+      "unrealized": "unrealized",
+      "margin": "Margin actual / plan",
+      "markup": "Markup actual / plan",
+      "fxEffect": "FX gain / loss",
+      "expected": "Expected profit",
+      "noPlan": "No complete cost sheet: the plan is not available.",
+      "costOfMoney": "Cost of money: actual {{actual}} {{cur}} ({{days}} days), planned {{planned}} {{cur}}",
+      "unrealizedNote": "Not yet paid, at the latest case rate: revenue {{revenue}}, cost {{cost}} {{cur}}",
+      "missingRates": "No rate for: {{list}}",
+      "lines": {
+        "purchase": "Goods",
+        "freight_international": "International freight",
+        "insurance": "Insurance",
+        "bank_fees": "Bank fees",
+        "customs_duty": "Customs duty",
+        "levy": "Levy",
+        "customs_clearance": "Customs clearance",
+        "storage": "Storage",
+        "inspection": "Inspection",
+        "freight_domestic": "Domestic freight",
+        "export_clearance": "Export clearance",
+        "other": "Other",
+        "revenue": "Revenue",
+        "cost_total": "Total cost",
+        "profit": "Profit"
+      }
+    },
+    "vat": {
+      "output": "Output VAT",
+      "input": "Input VAT",
+      "net": "Net VAT"
+    },
+    "close": {
+      "title": "Close the deal",
+      "ready": "Ready to close",
+      "problemsN": "{{n}} open",
+      "passes": "The checklist passes.",
+      "button": "Close deal",
+      "confirmCancel": "Cancel the case's {{n}} open tasks and follow-ups",
+      "closedTitle": "Closed deal",
+      "readOnly": "The deal is read-only except notes, ratings and documents.",
+      "reopen": "Reopen",
+      "problems": {
+        "items_not_delivered": "Sold items not delivered or cancelled",
+        "delivered_not_invoiced": "Delivered quantities not invoiced",
+        "invoice_drafts": "Invoice drafts not issued",
+        "invoices_unpaid": "Sales invoices not fully paid",
+        "moadian_pending": "Moadian status not accepted",
+        "supplier_invoices_not_approved": "Supplier invoices not approved",
+        "supplier_invoices_unpaid": "Supplier invoices not fully paid",
+        "received_not_invoiced": "Received goods without a supplier invoice",
+        "costs_unpaid": "Actual costs not paid",
+        "claims_open": "Open claims",
+        "milestones_open": "Open payment milestones",
+        "guarantees_not_released": "Guarantees not released"
+      },
+      "notes": {
+        "guarantee_running": "A performance guarantee is still running (allowed; its tasks stay).",
+        "warranty_running": "The warranty is still running (allowed; its tasks stay)."
+      }
+    },
+    "ratings": {
+      "title": "Ratings",
+      "note": "Note (one line)",
+      "saved": "Saved",
+      "roles": {
+        "supplier": "Supplier",
+        "customer": "Customer"
+      },
+      "criteria": {
+        "quality": "Quality",
+        "timeliness": "Timeliness",
+        "communication": "Communication",
+        "price": "Price",
+        "payment_behavior": "Payment behavior"
+      }
+    },
+    "party": {
+      "receivable": "Receivable",
+      "receivableOverdue": "Overdue receivable",
+      "payable": "Payable",
+      "payableOverdue": "Overdue payable",
+      "nationalId": "National ID",
+      "economicCode": "Economic code"
+    },
+    "ws": {
+      "subtitle": "Invoices, payments, costs and deal results. No general ledger: exports for the accountant are CSV.",
+      "tabs": {
+        "receivables": "Receivables",
+        "payables": "Payables",
+        "invoices": "Invoices",
+        "payments": "Payments",
+        "deals": "Deals",
+        "vat": "VAT"
+      },
+      "byCustomer": "By customer (aging)",
+      "byInvoice": "By invoice",
+      "advances": "Unallocated advances",
+      "party": "Party",
+      "currency": "Currency",
+      "total": "Total",
+      "number": "Number",
+      "case": "Case",
+      "due": "Due",
+      "balance": "Balance",
+      "bucket": "Bucket",
+      "date": "Date",
+      "unallocated": "Unallocated",
+      "label": "Item",
+      "window": "Window",
+      "kind": "Kind",
+      "status": "Status",
+      "sales": "Sales invoices",
+      "purchase": "Supplier invoices",
+      "allStatuses": "All statuses",
+      "allMoadian": "All Moadian statuses",
+      "direction": "Direction",
+      "base": "Rials",
+      "state": "State",
+      "allDeals": "All deals",
+      "open": "Open",
+      "closed": "Closed",
+      "marginPlanned": "Margin planned",
+      "marginActual": "Margin actual",
+      "period": "Period",
+      "infoOnly": "information only",
+      "from": "From",
+      "to": "To",
+      "exportAll": "Export all for period (zip)",
+      "buckets": {
+        "0-30": "0–30 days",
+        "31-60": "31–60",
+        "61-90": "61–90",
+        "90+": "90+"
+      },
+      "windows": {
+        "overdue": "Overdue",
+        "due_7": "Within 7 days",
+        "due_30": "Within 30 days",
+        "later": "Later"
+      },
+      "exports": {
+        "sales_invoices": "Sales invoices CSV",
+        "purchase_invoices": "Supplier invoices CSV",
+        "payments": "Payments CSV",
+        "actual_costs": "Costs CSV",
+        "deals": "Deals CSV",
+        "receivables": "Aging CSV"
+      }
     }
   }
 }

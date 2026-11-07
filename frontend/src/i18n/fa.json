@@ -112,7 +112,10 @@
       "purchase_order": "سفارش خرید",
       "shipment": "محموله",
       "process_step": "مرحلهٔ فرایند",
-      "claim": "ادعا"
+      "claim": "ادعا",
+      "sales_invoice": "فاکتور فروش",
+      "purchase_invoice": "فاکتور تأمین‌کننده",
+      "payment": "پرداخت"
     }
   },
   "date": {
@@ -666,6 +669,18 @@
       "today": "سررسید امروز",
       "tomorrow": "سررسید فردا",
       "all": "همهٔ کارهای من"
+    },
+    "finance": {
+      "title": "مالی",
+      "open": "میز مالی",
+      "daysPast": "{{n}} روز گذشته از سررسید",
+      "receivables_overdue": "مطالبات سررسیدگذشته",
+      "payables_due": "بدهی‌های تا ۷ روز",
+      "delivered_not_invoiced": "تحویل‌شده، بدون فاکتور",
+      "received_not_invoiced": "دریافت‌شده، بدون فاکتور تأمین‌کننده",
+      "moadian_pending": "مودیان ارسال‌نشده / ردشده",
+      "payments_without_rate": "پرداخت بدون نرخ ارز",
+      "ready_to_close": "آمادهٔ بستن"
     }
   },
   "funnel": {
@@ -786,7 +801,8 @@
       "documents": "اسناد",
       "history": "تاریخچه",
       "quotes": "پیش‌فاکتورها",
-      "orders": "سفارش‌ها و ادعاها"
+      "orders": "سفارش‌ها و ادعاها",
+      "finance": "مالی"
     },
     "archiveTitle": "بایگانی طرف",
     "archiveOpenFollowups": "این طرف {{count}} پیگیری باز دارد.",
@@ -902,7 +918,11 @@
       "rfq_recipients": "گیرندگان استعلام",
       "offers": "پیشنهادها",
       "capabilities": "برچسب‌های توانمندی",
-      "tasks": "کار"
+      "tasks": "کار",
+      "sales_invoices": "فاکتور فروش",
+      "purchase_invoices": "فاکتور تأمین‌کننده",
+      "actual_costs": "هزینهٔ واقعی",
+      "ratings": "امتیاز"
     },
     "dangerZone": "منطقه خطر",
     "cascadeHint": "فقط برای داده آزمایشی: این طرف را با همه تعامل‌ها، پیگیری‌ها و پیوندهای اسناد حذف می‌کند. خود فایل‌ها در اسناد می‌مانند. حذف در گزارش رویدادها ثبت می‌شود.",
@@ -1112,7 +1132,8 @@
         "purchase": "خرید",
         "logistics": "لجستیک",
         "delivery": "تحویل و ادعا",
-        "tasks": "کارها"
+        "tasks": "کارها",
+        "finance": "مالی"
       },
       "cascadeHint": "فقط برای داده‌های آزمایشی: این پرونده را با اقلام، استعلام‌ها، گیرندگان، پیشنهادها و پیوند اسناد حذف می‌کند. فایل‌ها در اسناد و تعامل‌ها در سابقهٔ طرف‌ها می‌مانند. حذف در گزارش رویدادها ثبت می‌شود.",
       "typeTitle": "برای تأیید، عنوان پرونده را بنویسید",
@@ -3010,6 +3031,313 @@
       "contract": "قرارداد",
       "invoice_issue": "صدور فاکتور",
       "manual": "دستی"
+    }
+  },
+  "finance": {
+    "none": "موردی نیست",
+    "reason": "دلیل",
+    "amount": "مبلغ",
+    "balance": "مانده",
+    "bankFee": "کارمزد بانکی",
+    "rateSource": "منبع نرخ",
+    "fxRate": "نرخ واقعی: ۱ {{cur}} به ریال",
+    "header": "فاکتورها {{n}} · مانده {{due}} · سود تاکنون {{profit}} {{cur}}",
+    "paymentStatus": {
+      "unpaid": "پرداخت‌نشده",
+      "partly_paid": "بخشی پرداخت‌شده",
+      "paid": "تسویه‌شده",
+      "overpaid": "بیش‌پرداخت",
+      "none": "—"
+    },
+    "invoices": {
+      "title": "فاکتورهای فروش",
+      "new": "فاکتور جدید",
+      "rest": "فاکتور باقی‌مانده",
+      "none": "هنوز فاکتوری نیست",
+      "createDraft": "ساخت پیش‌نویس",
+      "item": "قلم",
+      "ordered": "سفارش",
+      "delivered": "تحویل",
+      "invoiced": "فاکتورشده",
+      "quantity": "مقدار",
+      "language": "زبان فاکتور",
+      "languageAuto": "بر اساس کشور خریدار",
+      "fa": "فارسی (فاکتور داخلی)",
+      "en": "انگلیسی (Commercial invoice)",
+      "overReason": "دلیل فاکتور بیش از تحویل",
+      "description": "شرح",
+      "unitPrice": "مبلغ واحد",
+      "creditNote": "صورتحساب کاهشی (برگشت)",
+      "debitNote": "صورتحساب افزایشی",
+      "cancel": "ابطال فاکتور",
+      "draftNo": "پیش‌نویس",
+      "kinds": {
+        "invoice": "فاکتور",
+        "credit_note": "کاهشی",
+        "debit_note": "افزایشی"
+      },
+      "statuses": {
+        "draft": "پیش‌نویس",
+        "issued": "صادرشده",
+        "cancelled": "باطل‌شده"
+      },
+      "totals": "جمع {{subtotal}} · مالیات {{rate}}٪ {{vat}} · جمع کل {{total}} {{cur}}",
+      "issued": "صدور",
+      "due": "سررسید",
+      "corrects": "اصلاح",
+      "missing": "پیش از صدور لازم است",
+      "fillIn": "تکمیل",
+      "vatRate": "درصد مالیات",
+      "vatNote": "توضیح مالیات",
+      "saveVat": "ذخیرهٔ مالیات",
+      "issue": "صدور",
+      "missingFields": {
+        "company_name": "نام فروشنده",
+        "company_national_id": "شناسهٔ ملی فروشنده",
+        "company_economic_code": "کد اقتصادی فروشنده",
+        "customer_national_id": "شناسه/کد ملی خریدار",
+        "customer_economic_code": "کد اقتصادی خریدار"
+      }
+    },
+    "moadian": {
+      "status": "وضعیت مودیان",
+      "taxId": "شماره منحصربه‌فرد مالیاتی",
+      "note": "توضیح مودیان",
+      "statuses": {
+        "not_required": "لازم نیست",
+        "not_sent": "ارسال‌نشده",
+        "sent": "ارسال‌شده",
+        "accepted": "پذیرفته",
+        "rejected": "ردشده"
+      }
+    },
+    "supplier": {
+      "title": "فاکتورهای تأمین‌کننده",
+      "new": "ثبت فاکتور تأمین‌کننده",
+      "none": "فاکتور تأمین‌کننده‌ای نیست",
+      "po": "سفارش خرید",
+      "number": "شماره فاکتور تأمین‌کننده",
+      "date": "تاریخ فاکتور",
+      "vat": "مبلغ مالیات",
+      "linesHint": "ردیف‌ها به‌طور پیش‌فرض مقدار دریافت‌شدهٔ فاکتورنشده با قیمت سفارش است.",
+      "received": "دریافت",
+      "poPrice": "قیمت سفارش",
+      "invoicePrice": "قیمت فاکتور",
+      "savePrices": "ذخیرهٔ قیمت‌ها",
+      "approve": "تأیید",
+      "dispute": "اعتراض",
+      "cancel": "ابطال",
+      "claim": "ادعای مرتبط",
+      "approveWithDifferences": "تأیید با مغایرت",
+      "differenceReason": "تأییدشده با مغایرت",
+      "statuses": {
+        "received": "دریافت‌شده",
+        "approved": "تأییدشده",
+        "disputed": "مورد اعتراض",
+        "cancelled": "باطل‌شده"
+      },
+      "flags": {
+        "invoiced_above_received": "بیش از دریافت",
+        "invoiced_above_ordered": "بیش از سفارش",
+        "price_difference": "اختلاف قیمت",
+        "lines_without_po_item": "ردیف بدون قلم سفارش"
+      }
+    },
+    "costs": {
+      "title": "هزینه‌های واقعی",
+      "new": "افزودن هزینه",
+      "none": "هزینهٔ واقعی ثبت نشده",
+      "kind": "نوع",
+      "vat": "مالیات خرید",
+      "date": "تاریخ",
+      "status": "وضعیت",
+      "statuses": {
+        "expected": "مورد انتظار",
+        "incurred": "ایجادشده",
+        "paid": "پرداخت‌شده"
+      },
+      "sources": {
+        "tender_cost": "هزینهٔ مناقصه",
+        "guarantee_fee": "کارمزد ضمانت‌نامه",
+        "payment_fee": "کارمزد پرداخت",
+        "actual_cost": "هزینهٔ واقعی"
+      }
+    },
+    "payments": {
+      "title": "پرداخت‌ها و تخصیص",
+      "none": "پرداختی ثبت نشده",
+      "allocate": "تخصیص",
+      "allocated": "تخصیص‌یافته",
+      "unallocated": "تخصیص‌نیافته",
+      "confirm": "تأیید تخصیص",
+      "unallocatedOf": "تخصیص‌نیافته: {{amount}} {{cur}} (پیشنهاد از قدیمی‌ترین)",
+      "nothingOpen": "فاکتور یا هزینهٔ بازی از این طرف نیست",
+      "rate": "نرخ: ۱ {{from}} به {{to}}",
+      "rateMissing": "نرخ ثبت نشده",
+      "saveRate": "ذخیرهٔ نرخ",
+      "direction": {
+        "in": "دریافت",
+        "out": "پرداخت"
+      }
+    },
+    "profit": {
+      "title": "سود معامله: واقعی در برابر برنامه",
+      "soFar": "تاکنون",
+      "final": "نهایی (بسته)",
+      "kind": "ردیف",
+      "planned": "برنامه",
+      "actual": "واقعی",
+      "variance": "انحراف",
+      "estimated": "تخمینی",
+      "unrealized": "تحقق‌نیافته",
+      "margin": "حاشیه واقعی / برنامه",
+      "markup": "مارک‌آپ واقعی / برنامه",
+      "fxEffect": "سود/زیان تفاوت نرخ ارز",
+      "expected": "سود مورد انتظار",
+      "noPlan": "برگهٔ هزینهٔ کامل نیست: برنامه در دسترس نیست.",
+      "costOfMoney": "هزینهٔ پول: واقعی {{actual}} {{cur}} ({{days}} روز)، برنامه {{planned}} {{cur}}",
+      "unrealizedNote": "پرداخت‌نشده، به آخرین نرخ پرونده: درآمد {{revenue}}، هزینه {{cost}} {{cur}}",
+      "missingRates": "نرخ نیست برای: {{list}}",
+      "lines": {
+        "purchase": "کالا",
+        "freight_international": "حمل بین‌المللی",
+        "insurance": "بیمه",
+        "bank_fees": "کارمزد بانکی",
+        "customs_duty": "حقوق گمرکی",
+        "levy": "عوارض",
+        "customs_clearance": "ترخیص",
+        "storage": "انبارداری",
+        "inspection": "بازرسی",
+        "freight_domestic": "حمل داخلی",
+        "export_clearance": "تشریفات صادرات",
+        "other": "سایر",
+        "revenue": "درآمد",
+        "cost_total": "جمع هزینه",
+        "profit": "سود"
+      }
+    },
+    "vat": {
+      "output": "مالیات فروش",
+      "input": "مالیات خرید",
+      "net": "خالص مالیات"
+    },
+    "close": {
+      "title": "بستن معامله",
+      "ready": "آمادهٔ بستن",
+      "problemsN": "{{n}} مورد باز",
+      "passes": "چک‌لیست کامل است.",
+      "button": "بستن معامله",
+      "confirmCancel": "لغو {{n}} کار و پیگیری باز این پرونده",
+      "closedTitle": "معاملهٔ بسته",
+      "readOnly": "معامله فقط‌خواندنی است، جز یادداشت، امتیاز و اسناد.",
+      "reopen": "بازگشایی",
+      "problems": {
+        "items_not_delivered": "اقلام فروخته‌شده‌ای که تحویل یا لغو نشده‌اند",
+        "delivered_not_invoiced": "مقادیر تحویل‌شدهٔ بدون فاکتور",
+        "invoice_drafts": "پیش‌نویس فاکتور صادرنشده",
+        "invoices_unpaid": "فاکتورهای فروش تسویه‌نشده",
+        "moadian_pending": "وضعیت مودیان پذیرفته‌نشده",
+        "supplier_invoices_not_approved": "فاکتورهای تأمین‌کننده تأییدنشده",
+        "supplier_invoices_unpaid": "فاکتورهای تأمین‌کننده پرداخت‌نشده",
+        "received_not_invoiced": "کالای دریافت‌شده بدون فاکتور تأمین‌کننده",
+        "costs_unpaid": "هزینه‌های واقعی پرداخت‌نشده",
+        "claims_open": "ادعاهای باز",
+        "milestones_open": "مراحل پرداخت باز",
+        "guarantees_not_released": "ضمانت‌نامه‌های آزادنشده"
+      },
+      "notes": {
+        "guarantee_running": "ضمانت‌نامهٔ حسن انجام کار هنوز جاری است (مجاز؛ کارهایش می‌ماند).",
+        "warranty_running": "گارانتی هنوز جاری است (مجاز؛ کارهایش می‌ماند)."
+      }
+    },
+    "ratings": {
+      "title": "امتیازها",
+      "note": "یادداشت (یک خط)",
+      "saved": "ذخیره شد",
+      "roles": {
+        "supplier": "تأمین‌کننده",
+        "customer": "مشتری"
+      },
+      "criteria": {
+        "quality": "کیفیت",
+        "timeliness": "به‌موقع بودن",
+        "communication": "ارتباط",
+        "price": "قیمت",
+        "payment_behavior": "خوش‌حسابی"
+      }
+    },
+    "party": {
+      "receivable": "طلب",
+      "receivableOverdue": "طلب سررسیدگذشته",
+      "payable": "بدهی",
+      "payableOverdue": "بدهی سررسیدگذشته",
+      "nationalId": "شناسه/کد ملی",
+      "economicCode": "کد اقتصادی"
+    },
+    "ws": {
+      "subtitle": "فاکتورها، پرداخت‌ها، هزینه‌ها و نتیجهٔ معاملات. دفتر کل نیست: خروجی حسابدار CSV است.",
+      "tabs": {
+        "receivables": "مطالبات",
+        "payables": "بدهی‌ها",
+        "invoices": "فاکتورها",
+        "payments": "پرداخت‌ها",
+        "deals": "معاملات",
+        "vat": "مالیات ارزش افزوده"
+      },
+      "byCustomer": "بر اساس مشتری (سنی)",
+      "byInvoice": "بر اساس فاکتور",
+      "advances": "پیش‌دریافت‌های تخصیص‌نیافته",
+      "party": "طرف",
+      "currency": "ارز",
+      "total": "جمع",
+      "number": "شماره",
+      "case": "پرونده",
+      "due": "سررسید",
+      "balance": "مانده",
+      "bucket": "بازه",
+      "date": "تاریخ",
+      "unallocated": "تخصیص‌نیافته",
+      "label": "مورد",
+      "window": "بازه",
+      "kind": "نوع",
+      "status": "وضعیت",
+      "sales": "فاکتورهای فروش",
+      "purchase": "فاکتورهای تأمین‌کننده",
+      "allStatuses": "همهٔ وضعیت‌ها",
+      "allMoadian": "همهٔ وضعیت‌های مودیان",
+      "direction": "جهت",
+      "base": "ریال",
+      "state": "وضعیت",
+      "allDeals": "همهٔ معاملات",
+      "open": "باز",
+      "closed": "بسته",
+      "marginPlanned": "حاشیهٔ برنامه",
+      "marginActual": "حاشیهٔ واقعی",
+      "period": "دوره",
+      "infoOnly": "فقط اطلاع",
+      "from": "از",
+      "to": "تا",
+      "exportAll": "خروجی همه برای دوره (zip)",
+      "buckets": {
+        "0-30": "۰ تا ۳۰ روز",
+        "31-60": "۳۱ تا ۶۰",
+        "61-90": "۶۱ تا ۹۰",
+        "90+": "بیش از ۹۰"
+      },
+      "windows": {
+        "overdue": "سررسیدگذشته",
+        "due_7": "تا ۷ روز",
+        "due_30": "تا ۳۰ روز",
+        "later": "بعداً"
+      },
+      "exports": {
+        "sales_invoices": "CSV فاکتور فروش",
+        "purchase_invoices": "CSV فاکتور تأمین‌کننده",
+        "payments": "CSV پرداخت‌ها",
+        "actual_costs": "CSV هزینه‌ها",
+        "deals": "CSV معاملات",
+        "receivables": "CSV سنی مطالبات"
+      }
     }
   }
 }

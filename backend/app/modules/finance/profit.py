@@ -343,8 +343,11 @@ def compute(db: Session, case_id: uuid.UUID, *, until: date | None = None) -> di
     profit = {k: revenue[k] - cost[k] for k in ("deal", "base")}
     p_rev = plan_pair(p["revenue"]) if plan_ok else None
     p_cost = plan_pair(p["cost"]) if plan_ok else None
-    p_profit = {k: p_rev[k] - p_cost[k] for k in ("deal", "base")} if plan_ok and p_rev["deal"] is not None and \
-        p_cost["deal"] is not None and p_rev["base"] is not None and p_cost["base"] is not None else None
+    p_profit = None
+    if plan_ok:     # each currency on its own: a sheet without a rate to rials still has a deal-currency plan
+        p_profit = {k: (p_rev[k] - p_cost[k]) if p_rev[k] is not None and p_cost[k] is not None else None for k in ("deal", "base")}
+        if p_profit["deal"] is None and p_profit["base"] is None:
+            p_profit = None
 
     def pct(num: Decimal, den: Decimal) -> Decimal | None:
         return (num / den * HUNDRED).quantize(Decimal("0.01")) if den else None
@@ -391,9 +394,9 @@ def compute(db: Session, case_id: uuid.UUID, *, until: date | None = None) -> di
         "revenue": {"planned": p_rev, "actual": revenue, "variance": var(p_rev, revenue)[0]},
         "cost": {"planned": p_cost, "actual": cost, "variance": var(p_cost, cost)[0]},
         "profit": {"planned": p_profit, "actual": profit, "variance": var(p_profit, profit)[0] if p_profit else None},
-        "margin_percent": {"planned": pct(p_profit["deal"], p_rev["deal"]) if p_profit else None,
+        "margin_percent": {"planned": pct(p_profit["deal"], p_rev["deal"]) if p_profit and p_profit["deal"] is not None else None,
                            "actual": pct(profit["deal"], revenue["deal"])},
-        "markup_percent": {"planned": pct(p_profit["deal"], p_cost["deal"]) if p_profit else None,
+        "markup_percent": {"planned": pct(p_profit["deal"], p_cost["deal"]) if p_profit and p_profit["deal"] is not None else None,
                            "actual": pct(profit["deal"], cost["deal"])},
         "fx_effect": base_pair(fx_effect),
         "unrealized": {"revenue": _q(unrealized["revenue"], bdec), "cost": _q(unrealized["cost"], bdec)},

@@ -21,9 +21,10 @@ import { TenderHeaderFacts, TenderTab } from "./Tender";
 import { DeliveryTab, ExecutionHeaderFacts, LogisticsTab, OrderTab, PurchaseTab } from "./execution";
 import { SetadOrigin } from "../tenders/SetadOrigin";
 import { CaseTasksTab } from "../tasks/CaseTasksTab";
+import { FinanceHeaderFacts, FinanceTab } from "./finance";
 
-const TABS = ["items", "tender", "rfqs", "offers", "comparison", "costing", "quotes", "order", "purchase", "logistics", "delivery", "tasks",
-  "documents", "history"] as const;
+const TABS = ["items", "tender", "rfqs", "offers", "comparison", "costing", "quotes", "order", "purchase", "logistics", "delivery", "finance",
+  "tasks", "documents", "history"] as const;
 type Tab = (typeof TABS)[number];
 
 function EditCaseDialog({ c, onClose, onSaved }: { c: CaseDetail; onClose: () => void; onSaved: () => void }) {
@@ -94,6 +95,7 @@ export function CaseDetailPage() {
           <span className="tabular-nums">{f.date(c.created_at)}</span>
           <TenderHeaderFacts caseId={c.id} />
           <ExecutionHeaderFacts caseId={c.id} />
+          <FinanceHeaderFacts caseId={c.id} />
         </span>}
         actions={<>
           <Select className="w-36" aria-label={t("sourcing.status.label")} value={c.status} onChange={(e) => setStatus.mutate(e.target.value)}>
@@ -128,6 +130,7 @@ export function CaseDetailPage() {
       {tab === "purchase" && <PurchaseTab caseData={c} />}
       {tab === "logistics" && <LogisticsTab caseData={c} />}
       {tab === "delivery" && <DeliveryTab caseData={c} />}
+      {tab === "finance" && <FinanceTab caseData={c} />}
       {tab === "tasks" && <CaseTasksTab caseId={c.id} />}
       {tab === "documents" && <AttachedDocuments documents={c.documents} linkPath={`/api/cases/${c.id}/documents`} onChanged={refresh} />}
       {tab === "history" && <>
