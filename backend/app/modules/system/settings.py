@@ -220,6 +220,19 @@ def _naming(value: Any) -> str:
     return check(value)
 
 
+def _money_cap(value: Any) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 100000:
+        raise ValueError("expected an amount in USD between 0 and 100000")
+    return float(value)
+
+
+DEFINITIONS.update({
+    # v0.9.0: AI layer (section 1.2); 0 disables the API fallback (subscription and local tasks continue)
+    "ai.monthly_cap_usd": (20, _money_cap),
+    "ai.log_retention_days": (365, _int_range(7, 3650)),
+    "ai.correspondence_language": ("en", _choice("en", "fa")),
+})
+
 DEFINITIONS["naming.output"] = ("{code}_{type}_{party}_{date}{version}{draft}", _naming)   # v0.9.0 section 6.2
 
 # v0.9.0: code patterns per kind (a change applies to new codes only)

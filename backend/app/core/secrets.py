@@ -47,3 +47,37 @@ def set_secret(name: str, value: str) -> None:
     import keyring
 
     keyring.set_password(SERVICE, name, value)
+
+
+# ---- named secrets (v0.9.0: AI provider keys) -------------------------------------------------------------------------
+
+def env_name_for(name: str) -> str:
+    """``ai.anthropic`` -> ``BOMS_SECRET_AI_ANTHROPIC`` (dev machines and tests use the environment)."""
+    import re
+
+    return "BOMS_SECRET_" + re.sub(r"[^A-Za-z0-9]+", "_", name).upper().strip("_")
+
+
+def get_named_secret(name: str) -> str | None:
+    """A secret named by configuration (an AI provider key). Never logged, never stored in the database or files."""
+    value = os.environ.get(env_name_for(name))
+    if not value and sys.platform == "win32":
+        import keyring
+
+        value = keyring.get_password(SERVICE, name)
+    return value or None
+
+
+def set_named_secret(name: str, value: str | None) -> None:
+    """Store (or with ``None`` remove) a named secret in Credential Manager. Only valid on Windows."""
+    if sys.platform != "win32":
+        raise RuntimeError(f"Set the environment variable {env_name_for(name)} instead")
+    import keyring
+
+    if value:
+        keyring.set_password(SERVICE, name, value)
+    else:
+        try:
+            keyring.delete_password(SERVICE, name)
+        except keyring.errors.PasswordDeleteError:
+            pass

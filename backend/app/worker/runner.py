@@ -13,10 +13,10 @@ log = logging.getLogger("boms.worker")
 BACKOFF_BASE = 30.0
 
 
-def run_one(backoff_base: float | None = None) -> bool:
-    """Run one due job. Returns False when the queue has nothing due."""
+def run_one(backoff_base: float | None = None, lane: str = "default") -> bool:
+    """Run one due job of a lane. Returns False when the queue has nothing due."""
     with new_session() as db:
-        job = jobs.claim_next(db)
+        job = jobs.claim_next(db, lane)
         if job is None:
             return False
         job_id, job_type, payload = job.id, job.type, dict(job.payload)
@@ -39,8 +39,8 @@ def run_one(backoff_base: float | None = None) -> bool:
     return True
 
 
-def run_until_idle(max_jobs: int | None = None, backoff_base: float | None = None) -> int:
+def run_until_idle(max_jobs: int | None = None, backoff_base: float | None = None, lane: str = "default") -> int:
     count = 0
-    while (max_jobs is None or count < max_jobs) and run_one(backoff_base):
+    while (max_jobs is None or count < max_jobs) and run_one(backoff_base, lane):
         count += 1
     return count

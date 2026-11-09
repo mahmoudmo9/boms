@@ -64,6 +64,8 @@ SCHEDULES = [
     Schedule("quotes_expiry_hourly", "quotes.expire", {}, hourly_due),
     # execution: one open «پیگیری ادعا» per open claim, the next after the previous is done (v0.7.0)
     Schedule("execution_claims_hourly", "execution.claim_followups", {}, hourly_due),
+    # ai: the privacy log keeps ai.log_retention_days (v0.9.0)
+    Schedule("ai_log_retention_nightly", "ai.purge_log", {}, nightly_due),
 ]
 
 

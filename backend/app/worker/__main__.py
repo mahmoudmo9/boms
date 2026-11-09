@@ -51,6 +51,19 @@ def main() -> int:
             log.info("requeued %d job(s) left running by a previous worker", n)
         db.commit()
 
+    # v0.9.0: AI work runs on its own lane in a second thread, so a long model call never delays backups or other jobs
+    def ai_lane() -> None:
+        while not _stop:
+            try:
+                if not runner.run_until_idle(max_jobs=5, lane="ai"):
+                    time.sleep(POLL_SECONDS)
+            except Exception:
+                log.exception("ai lane error")
+                time.sleep(POLL_SECONDS)
+
+    import threading
+
+    threading.Thread(target=ai_lane, name="ai-lane", daemon=True).start()
     signal.signal(signal.SIGINT, _request_stop)
     signal.signal(signal.SIGTERM, _request_stop)
     while not _stop:

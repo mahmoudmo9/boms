@@ -292,7 +292,8 @@ def test_case_cascade_delete(client, db):
     assert r.status_code == 200, r.text
     assert r.json()["counts"] == {"items": 2, "rfqs": 1, "recipients": 1, "offers": 1, "offer_items": 1,
                                   "documents": 2, "followups_cancelled": 1,
-                                  "quotes": 0, "quote_outputs": 0, "cost_sheets": 0}
+                                  "quotes": 0, "quote_outputs": 0, "cost_sheets": 0,
+                                  "ai_drafts": 0, "ai_case_settings": 0}            # v0.9.0
     assert client.get(f"/api/cases/{case['id']}").status_code == 404
     assert client.get(f"/api/rfqs/{body['id']}").status_code == 404
     assert client.get(f"/api/offers/{off['id']}").status_code == 404
