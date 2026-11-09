@@ -416,3 +416,38 @@ you register invoices in سامانه مودیان yourself and type the tax ID 
 **Accountant exports**
 - [ ] Menu *Deal Finance* («مالی معاملات»): receivables aging, payables, invoices, payments, deals, VAT.
 - [ ] **Download a CSV and open it in Excel: Persian text is intact** (UTF-8 with BOM), dates are in your calendar with an ISO column; «خروجی همه برای دوره» downloads a zip of all six files.
+
+## Manual checks for v0.9.0 (AI and data foundation) — Windows checklist
+
+AI connection (nothing is installed outside BOMS by the installer):
+
+- [ ] The Claude Agent SDK pinned with BOMS bundles the Claude Code CLI in its Windows wheel; Node.js is not needed.
+      Settings → «هوش مصنوعی» shows «Claude Code در دسترس است». If it says the CLI is missing, install Claude Code from
+      Anthropic's instructions and reopen the page.
+- [ ] Sign in with the Pro plan: in a terminal run the bundled `claude` once (path shown by `python -c "import
+      claude_agent_sdk, pathlib; print(pathlib.Path(claude_agent_sdk.__file__).parent / '_bundled')"` in the BOMS
+      venv) and log in; then «Test connection» on «Claude (اشتراک Pro)» shows its latency.
+- [ ] Optional: an Anthropic, OpenAI or Gemini API key — enter it on the provider (stored in Credential Manager as
+      `BOMS/ai.…`), add the model, enter its prices, enable, test; set the monthly cap.
+- [ ] Optional: Ollama with one vision model (for example `qwen2.5-vl`); set the address `http://127.0.0.1:11434` and
+      the model on «Ollama (محلی)», test, and route «دسته‌بندی سبک» to it.
+- [ ] Mark one case «فقط محلی» and check that its extraction runs only on Ollama (or says none is set up).
+
+AI tasks:
+
+- [ ] Extract items from a real supplier PDF and a real Excel sheet on an inquiry: review, «پذیرش همهٔ موارد مطمئن»,
+      edit one field, «ثبت»; the items show their canonical descriptions; «چه چیزی کجا رفت» lists the calls with file
+      names and pages only.
+- [ ] Paste a supplier e-mail into a case's offers; check a flagged total difference; «ثبت».
+- [ ] «خواندن از امضا یا کارت ویزیت» on Trading parties; «پیش‌نویس با هوش مصنوعی» on an RFQ recipient and a PO.
+
+Folders, outputs, codes:
+
+- [ ] Open a case folder in Explorer («باز کردن پوشه»): files open; editing and saving one is refused (read-only);
+      Settings → «کدگذاری و نام‌گذاری» shows «پیوند سخت».
+- [ ] A real PDF quote through Edge: stamp, footer with «صفحهٔ ۱ از ۱» and the QR; scan the QR with a phone and paste
+      the text into «تأیید سند»; revise the quote and check the old QR shows «جایگزین‌شده».
+- [ ] Update from 0.8.0 (`update.bat`): the update log shows the code backfill counts; existing cases, parties and
+      products show their codes; PI / SO / PO / INV numbers are unchanged.
+- [ ] Settings → «داده‌های مرجع»: download the official UN/LOCODE CSV (UNECE) and the ELF list (GLEIF) and import them
+      from the file; the locations show «تأییدشده با فایل رسمی».

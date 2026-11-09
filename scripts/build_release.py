@@ -25,7 +25,10 @@ SCRIPT_FILES = ["common.ps1", "install.ps1", "update.ps1", "backup.ps1", "restor
                 "install.bat", "update.bat", "backup.bat", "restore.bat", "start.bat", "stop.bat"]
 BACKEND_EXCLUDE = {"tests", "__pycache__", ".pytest_cache", "boms.egg-info"}
 # v0.5.0: never shipped - SetadSuite reference source, browser profiles, the attachments cache, diagnostics
-FORBIDDEN = ("reference", "browser-profile", "profile", "setad-files", "diagnostics", ".download_info.json",
+# "reference" is the repository's top-level folder of background material (never shipped); the app module
+# backend/app/modules/reference (v0.9.0 reference data) is part of the release.
+TOP_LEVEL_FORBIDDEN = ("reference",)
+FORBIDDEN = ("browser-profile", "profile", "setad-files", "diagnostics", ".download_info.json",
              "learned.json", "connectors/setad/data")
 
 
@@ -124,6 +127,7 @@ def check_forbidden(folder: Path) -> None:
     """The release must not contain reference material, browser profiles, cache files or diagnostics."""
     bad = [p.relative_to(folder).as_posix() for p in folder.rglob("*")
            if any(part in FORBIDDEN for part in p.relative_to(folder).parts)
+           or p.relative_to(folder).parts[0] in TOP_LEVEL_FORBIDDEN
            or any(f in p.relative_to(folder).as_posix() for f in FORBIDDEN if "/" in f)]
     if bad:
         sys.exit("release contains forbidden paths:\n  " + "\n  ".join(bad[:20]))

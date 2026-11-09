@@ -974,3 +974,128 @@ supplier invoice, Moadian not sent / rejected, payments without a rate, cases re
 finance row of the case, a closed one included). Party page: a finance tab (receivable / payable and overdue per
 currency, invoices, ratings) and the national ID / economic code fields. Settings: `finance.base_currency`,
 `finance.payment_days`, `finance.supplier_payment_days`, `execution.warranty_remind_days`.
+
+## AI and data foundation (v0.9.0, migrations `0016_carryover` … `0020_noun_modifier`)
+
+### Reference data (module `reference`, schema `ref`, migration `0017_reference`)
+
+- Tables: `location` (UN/LOCODE: country, 3-character location code, full code, name, name without diacritics, curated
+  `name_fa`, subdivision, function flags, coordinates, IATA, `verified` when confirmed by an official UNECE file),
+  `airport` (IATA / ICAO from OurAirports, linked to a location by IATA), `legal_form` (ISO 20275 ELF plus Iranian and
+  common forms curated by BOMS, with abbreviations), `container_type` (ISO 6346), `transport_mode` (UN/ECE Rec. 19),
+  `incoterm` (Incoterms® 2020, 11 rules), `dataset_import` (one row per import with its report). `sys.unit.unece_code`
+  carries UN/ECE Rec. 20.
+- `python -m app.cli reference-import <dataset> [--file path] [--release r]`: idempotent upsert with a report (inserted,
+  updated, deactivated, unchanged, rejected with reason). It accepts a CSV, a `.gz`, a folder or a zip of CSV parts, so
+  the owner can load an official file later (Settings → «داده‌های مرجع» does the same through the API). Nothing is ever
+  fetched at runtime. The shipped files and their sources are listed in `app/modules/reference/data/SOURCE.md`.
+- References on business rows are new nullable columns next to the text fields that stay: shipment origin /
+  destination, shipment event location, Incoterm place on quotes, sales orders, POs and invoices, party legal form;
+  `ops.shipment_container` gives each container number (ISO 6346 check digit validated) its size/type code.
+- Display rule: the code next to the name. Routes «شانگهای SHA ← بوشهر BUZ» (fa) / "Shanghai SHA → Bushehr BUZ" (en),
+  air routes by IATA; Incoterms in the citation format "CFR Bandar Abbas (Incoterms® 2020)"; English outputs show the
+  UN/ECE unit code next to the unit.
+- Downgrade archives the references set on business rows (by natural key) and the container rows in
+  `sys.downgrade_archive`; a later upgrade, once the reference rows exist again, puts them back.
+
+### Codes (module `codes`, schema `core`, migration `0018_codes`)
+
+- `core.code_sequence (kind, scope, last_number)`: `codes.next(kind, context)` takes the next number in the creating
+  transaction with `INSERT … ON CONFLICT DO UPDATE … RETURNING` (the row stays locked until commit, a rolled-back
+  creation gives its number back: no gaps, no duplicates). The scope is the rendered prefix of the pattern, so a pattern
+  change simply starts its own sequence and never touches existing codes.
+- Patterns are settings `codes.pattern.<kind>` (tokens `{yyyy}` user's calendar year, `{0000}` number, `{country}`,
+  `{role}`, `{hs4}`). Kinds: inquiry INQ, case CS, RFQ, tender TDR, shipment SH, receipt RCV, delivery DLV, payment PAY,
+  claim CLM, inspection INS, guarantee GTE, contract CT and letter LT (reserved), party SUP/CUS/BP-{country} by the
+  roles at creation (never changes), product PRD-{HS heading}. PI, SO, PO, INV, CN, DN numbering moved onto the service
+  with their existing sequences carried over (no number changed).
+- Modules register their coded tables (`codes.register`); a `before_flush` listener (installed by the API and the
+  worker) gives every new registered row its code, so creation paths did not change. Codes are unique, searchable (the
+  search ranks exact codes first) and `resolve` opens a record from a typed code.
+- Migration 0018 coded every existing row in creation order per kind and year (event `codes` / `backfill` with counts);
+  a downgrade archives the codes and a later upgrade gives every row its archived code back.
+
+### Folder view, naming, document control (module `documents`)
+
+- `documents/folders.py`: a derived, read-only view per case under `<data folder>/پرونده‌ها/<code> <title> - <party>/`
+  with numbered sub-folders (۰۱ درخواست … ۰۸ مکاتبات, ۰۹ مناقصه only with a tender); the link kind decides the folder
+  (setting `folders.mapping`). Files are NTFS hard links to the store (copies when another volume; Settings says
+  which). A `folders.sync` job is queued (at most one waiting) when links, case code / title / party or document
+  references change; `python -m app.cli folders-rebuild` rebuilds it. Names are sanitised for Windows (reserved names,
+  characters, trailing dots, length) and long paths use `\\?\`. The store stays the only source of truth and the only
+  thing backed up; the view is never backed up or restored. «باز کردن پوشه» opens Explorer only for a request from the
+  PC itself.
+- `documents/naming.py`: outputs are named `{code}_{type}_{party}_{date}[_v{n}][_DRAFT].{ext}` in the document's
+  language (setting `naming.output`); the RFQ Excel is named by its code; subjects start with `[code]`; message
+  templates have a `{code}` placeholder; Persian letters carry «شماره» and «تاریخ» lines.
+- `documents/control.py`: every output (quote / proforma, sales order, PO, invoice and notes, tender proposal) gets a
+  status stamp (پیش‌نویس / DRAFT, صادرشده / ISSUED, جایگزین‌شده / SUPERSEDED, باطل / VOID), a footer (code, version,
+  «صفحهٔ x از y» / "Page x of y" in the page margin box, generation date) and a QR code (segno) with
+  `BOMS|{code}|v{n}|{issue date}|{verification code}`. The verification code is the first 10 base-32 characters of
+  HMAC-SHA256 over those fields with a key derived by HKDF-SHA256 from the session key under the label `doc-verify`.
+  `POST /api/verify-document` («تأیید سند») checks it and shows the record and its current status. Word outputs get the
+  same stamp, PAGE / NUMPAGES fields and the QR picture.
+
+### AI layer (module `ai`, schema `ai`, migration `0019_ai`)
+
+- `ai.provider` (claude_subscription, anthropic_api, openai_api, gemini_api, ollama, openai_compatible; the API key in
+  Windows Credential Manager under `secret_name`, read by `core.secrets.get_named_secret`, never in the database or
+  files), `ai.price` (USD per million tokens per provider and model; an API provider is enabled only with prices),
+  `ai.route` (per task kind: primary and fallback provider + model, privacy `cloud` / `cloud_redacted` / `local_only`),
+  `ai.call` (the privacy log), `ai.draft` + `ai.draft_field`, `ai.correction`, `ai.case_setting` («فقط محلی»).
+- Adapters (`ai/adapters.py`) behind `generate(request) -> result` with usage and timing. HTTP adapters use httpx only
+  (Anthropic Messages API with `anthropic-version` and structured `output_config`, OpenAI chat completions, Gemini
+  `generateContent`, Ollama `/api/chat`, OpenAI-compatible); tests replace the transport with a fake. The subscription
+  adapter drives the Claude Agent SDK (its wheel bundles the Claude Code CLI) in a temporary folder holding only the
+  call's inputs, with Read as the only tool, every other tool denied and a permission callback that refuses any path
+  outside that folder; the folder is removed after the call.
+- Routing (`ai/service.py`): primary, then fallback on error, timeout, rate limit or exhausted quota, when the privacy
+  level and the cap allow it; every attempt is logged. Privacy: `local_only` (or a «فقط محلی» case) skips cloud
+  providers; `cloud_redacted` replaces names of the case's parties and contacts and the owner's company, e-mails,
+  phones, IBANs and national / economic IDs by placeholders and restores them in the answer; local providers (Ollama, an
+  OpenAI-compatible server on the PC or LAN) get the text as written.
+- Cap: setting `ai.monthly_cap_usd` (default 20, 0 = no API route); before an API call the estimated cost must fit the
+  month's remaining budget, else the attempt is logged `cap_reached` and, with nothing else allowed, the task answers
+  409 `ai_cap_reached` while local tasks continue. Warnings at 50 % and 80 % in Settings and the command center.
+- Prompts live in `ai/prompts/<task>/<version>.md`; the version is logged per call. Every task declares a JSON schema;
+  the answer is parsed and validated (`ai/schema.py`), retried once with the errors, then reported as failed. Numbers
+  are recomputed by code (quantity × unit price against a stated total) and differences are flagged.
+- The log (`ai.call`) holds the input description (file names, pages, characters, images, redaction counts), never
+  the content; retention `ai.log_retention_days` (nightly job `ai.purge_log`).
+- Execution: tasks run as jobs on the `ai` lane (a second worker thread), so backups and other jobs never wait on a
+  model. `tasks.start` creates a pending draft and queues the job; the UI polls the draft.
+- Drafts: field by field with confidence and source reference; «پذیرش همهٔ موارد مطمئن», accept / edit / reject;
+  «ثبت» calls the target's committer, which writes through the owning module's services with event source `ai_draft`.
+  Edited fields are stored in `ai.correction` and the last ones are added to the next prompt of the task as examples.
+- Tasks (`ai/builtin.py`): item extraction into a case, an inquiry, a supplier offer (with its supplier, matched to the
+  case items) or a Setad listing conversion (from the downloaded attachments; the accepted items replace the listing's
+  items table in the conversion); PDF text by PyMuPDF and scanned pages as images, Excel/CSV with the proposed column
+  mapping, pasted text; paste to parse a party and its contact; RFQ message and PO cover message drafting with a
+  Persian back-translation (the owner sends; BOMS sends nothing).
+
+### Noun-modifier descriptions (module `catalog`, migration `0020_noun_modifier`)
+
+- `core.product_template`: noun fa/en and ordered attributes (text, number with UN/ECE unit and range, or a choice of
+  values) with the ones that form the short description. Seeded: pump, valve, pipe, flange, gasket, mechanical seal,
+  electric motor, resin/chemical. Products and line items gain `template_id`, `attributes` (validated), `canonical_fa`,
+  `canonical_en` and `canonical_override`; `catalog/nounmod.py` builds `PUMP, CENTRIFUGAL, API 610, 120 m3/h, 85 m` /
+  «پمپ، گریز از مرکز، API 610، ۱۲۰ مترمکعب بر ساعت، ۸۵ متر». Quotes and sales orders use the canonical description in
+  the document's language when there is one.
+
+### Smart fields (module `lookup`)
+
+- `GET /api/lookup?kind=…&q=…`: one contract for party, contact, product, case, location (function filter), airport,
+  currency, unit, HS, ISIC, Incoterm, legal form, container type and record codes; Persian normalisation as in the
+  database; ranking exact code (incl. the UN/LOCODE location part and ICAO), code prefix, name prefix, contains,
+  trigram; each result returns id, code, names fa/en and a subtitle.
+- `GET /api/suggest?context=party|product|case&id=…`: proposed values with their source record (the last sales order or
+  quote of a buyer, the last PO or offer of a supplier, the product's last purchase and sale, the case's parties,
+  currency and Incoterm).
+- `GET /api/validate?kind=…&value=…`: IBAN (ISO 13616), BIC (ISO 9362), Iranian national ID (10 and 11 digits),
+  economic code, Chinese USCC (GB 32100-2015), phone (E.164), e-mail, container (ISO 6346). The same rules run in the
+  browser (`lib/smart.ts`) while typing; the backend checks again.
+- `/api/calc/*`: line totals, margin and markup, conversion at the latest rate on the case, amount in words fa/en,
+  time left.
+- Shared components (`components/smart.tsx`): `LookupField`, `SuggestedValue`, `ValidatedInput`, `CodeChip`,
+  `AmountInWords`; their logic is in `lib/smart.ts` (tested without a browser). `LookupField` acts only on results for
+  exactly what is typed.

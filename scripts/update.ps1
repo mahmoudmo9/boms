@@ -64,6 +64,8 @@ Write-Ok 'Packages installed'
 Write-Step 'Database migrations'
 if ((Invoke-BomsCli -Arguments @('migrate') -AllowFailure) -ne 0) { Undo-Update 'Migration failed' }
 Invoke-BomsCli -Arguments @('seed') | Out-Null
+# v0.9.0: the readable case folders (derived from the store; a failure never blocks the update)
+Invoke-BomsCli -Arguments @('folders-rebuild') -AllowFailure | Out-Null
 Write-Ok 'Database up to date'
 
 Write-Step 'Starting BOMS'

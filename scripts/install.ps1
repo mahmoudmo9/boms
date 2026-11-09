@@ -167,6 +167,7 @@ try {
         Invoke-BomsCli -Arguments @('init-db') | Out-Null
         Invoke-BomsCli -Arguments @('migrate') | Out-Null
         Invoke-BomsCli -Arguments @('seed') | Out-Null
+        Invoke-BomsCli -Arguments @('folders-rebuild') -AllowFailure | Out-Null   # v0.9.0: readable case folders
         Write-Ok 'Database ready (role, extensions, migrations, base data)'
     }
 } finally {
