@@ -1,5 +1,8 @@
 /** Case tab «لجستیک» (v0.7.0): the process checklist(s) with references, dates, documents and reminders; shipments with
  * their events and documents and the delay warnings; inspections. */
+import { CodeChip, LookupField, ValidatedInput } from "../../../components/smart";
+import type { LookupItem } from "../../../lib/smart";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -7,7 +10,7 @@ import { Bdi } from "../../../components/Bdi";
 import { DateInput } from "../../../components/DateInput";
 import { TimeLeftBadge } from "../../../components/TimeLeft";
 import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select } from "../../../components/ui";
-import { ApiError } from "../../../lib/api";
+import { ApiError, api } from "../../../lib/api";
 import { parseContainers, STEP_TONE, stepGroups, stepState } from "../../../lib/execution";
 import { toDateString } from "../../../lib/followups";
 import { useFormat } from "../../../lib/prefs";
@@ -102,11 +105,17 @@ function ProcessCard({ process, caseId }: { process: ProcessRow; caseId: string 
 }
 
 function ShipmentDialog({ data, onClose, run }: { data: CaseExecution; onClose: () => void; run: Run }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const pos = data.purchase_orders.filter((p) => !["draft", "approved", "cancelled", "superseded"].includes(p.status));
   const [form, setForm] = useState({ purchase_order_id: pos[0]?.id ?? "", mode: "sea", transport_doc_kind: "bl", transport_doc_no: "", containers: "", vessel_or_flight: "",
     origin: "", destination: "", etd: null as Date | null, eta: null as Date | null });
   const po = pos.find((p) => p.id === form.purchase_order_id);
+  // v0.9.0: UN/LOCODE origin / destination and ISO 6346 containers with their size/type code
+  const [origin, setOrigin] = useState<LookupItem | null>(null);
+  const [destination, setDestination] = useState<LookupItem | null>(null);
+  const [units, setUnits] = useState<{ number: string; container_type: string }[]>([]);
+  const containerTypes = useQuery({ queryKey: ["reference", "containers"], queryFn: () => api<{ code: string; description_en: string; description_fa: string }[]>("/api/reference/containers"), staleTime: Infinity });
+  const fn = form.mode === "air" ? "airport" : form.mode === "sea" ? "port" : form.mode === "rail" ? "rail" : form.mode === "road" ? "road" : undefined;
   const [qty, setQty] = useState<Record<string, string>>({});
   const [error, setError] = useState<unknown>(null);
   const items = po ? po.items.map((i) => ({ purchase_order_item_id: i.id, quantity: qty[i.id] ?? "" })).filter((x) => Number(x.quantity) > 0) : [];
@@ -116,6 +125,8 @@ function ShipmentDialog({ data, onClose, run }: { data: CaseExecution; onClose: 
         onClick={() => run("/api/shipments", { ...(form.purchase_order_id ? { purchase_order_id: form.purchase_order_id } : { case_id: data.sales_orders[0]?.case_id, sales_order_id: data.sales_orders[0]?.id }),
           mode: form.mode, transport_doc_kind: form.transport_doc_kind || null, transport_doc_no: form.transport_doc_no || null, containers: parseContainers(form.containers),
           vessel_or_flight: form.vessel_or_flight || null, origin: form.origin || null, destination: form.destination || null,
+          origin_location_id: origin?.id ?? null, destination_location_id: destination?.id ?? null,
+          ...(units.some((u) => u.number) ? { container_units: units.filter((u) => u.number).map((u) => ({ number: u.number, container_type: u.container_type || null })) } : {}),
           etd: form.etd ? toDateString(form.etd) : null, eta: form.eta ? toDateString(form.eta) : null, items }).then(onClose, setError)}>{t("common.save")}</Button></>}>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" data-testid="shipment-dialog">
         <Field label={t("execution.shipments.po")} htmlFor="sh-po"><Select id="sh-po" value={form.purchase_order_id} onChange={(e) => setForm({ ...form, purchase_order_id: e.target.value })}>
@@ -127,8 +138,24 @@ function ShipmentDialog({ data, onClose, run }: { data: CaseExecution; onClose: 
         <Field label={t("execution.shipments.docNo")} htmlFor="sh-dn"><Input id="sh-dn" dir="ltr" value={form.transport_doc_no} onChange={(e) => setForm({ ...form, transport_doc_no: e.target.value })} /></Field>
         <Field label={t("execution.shipments.containers")} htmlFor="sh-cont" hint={t("execution.shipments.containersHint")}><Input id="sh-cont" dir="ltr" value={form.containers} onChange={(e) => setForm({ ...form, containers: e.target.value })} /></Field>
         <Field label={t("execution.shipments.vessel")} htmlFor="sh-vessel"><Input id="sh-vessel" dir="auto" value={form.vessel_or_flight} onChange={(e) => setForm({ ...form, vessel_or_flight: e.target.value })} /></Field>
-        <Field label={t("execution.shipments.origin")} htmlFor="sh-origin"><Input id="sh-origin" dir="auto" value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} /></Field>
-        <Field label={t("execution.shipments.destination")} htmlFor="sh-dest"><Input id="sh-dest" dir="auto" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} /></Field>
+        <Field label={t("execution.shipments.origin")}><LookupField kind="location" value={origin} onChange={setOrigin} filters={fn ? { function: fn } : undefined}
+          ariaLabel={t("execution.shipments.origin")} testId="sh-origin-location" /></Field>
+        <Field label={t("execution.shipments.destination")}><LookupField kind="location" value={destination} onChange={setDestination} filters={fn ? { function: fn } : undefined}
+          ariaLabel={t("execution.shipments.destination")} testId="sh-destination-location" /></Field>
+        <div className="flex flex-col gap-1.5 sm:col-span-2 xl:col-span-3" data-testid="sh-container-units">
+          {units.map((u, i) => (
+            <div key={i} className="flex flex-wrap items-start gap-2">
+              <ValidatedInput kind="container" value={u.number} ariaLabel={t("execution.shipments.containerNumber")} testId="sh-container-number"
+                onChange={(v) => setUnits(units.map((x, j) => (j === i ? { ...x, number: v } : x)))} />
+              <Select className="w-56" aria-label={t("execution.shipments.containerType")} value={u.container_type}
+                onChange={(e) => setUnits(units.map((x, j) => (j === i ? { ...x, container_type: e.target.value } : x)))}>
+                <option value="">—</option>
+                {(containerTypes.data ?? []).map((c) => <option key={c.code} value={c.code}>{c.code} · {i18n.language === "fa" ? c.description_fa : c.description_en}</option>)}
+              </Select>
+              <Button variant="ghost" aria-label={t("common.remove")} onClick={() => setUnits(units.filter((_, j) => j !== i))}>✕</Button>
+            </div>))}
+          <Button className="self-start" onClick={() => setUnits([...units, { number: "", container_type: "" }])} data-testid="sh-add-container">{t("execution.shipments.addContainer")}</Button>
+        </div>
         <Field label="ETD" htmlFor="sh-etd"><DateInput id="sh-etd" value={form.etd} onChange={(d) => setForm({ ...form, etd: d })} /></Field>
         <Field label="ETA" htmlFor="sh-eta"><DateInput id="sh-eta" value={form.eta} onChange={(d) => setForm({ ...form, eta: d })} /></Field>
         {po && <ul className="flex flex-col gap-1.5 sm:col-span-2 xl:col-span-3">{po.items.map((i) => (
@@ -143,7 +170,7 @@ function ShipmentDialog({ data, onClose, run }: { data: CaseExecution; onClose: 
 const DOC_KINDS = ["commercial_invoice", "packing_list", "bl", "awb", "cmr", "certificate_of_origin", "inspection_certificate", "insurance_policy", "customs_declaration", "other"] as const;
 
 function ShipmentCard({ s, caseId, warnings }: { s: ShipmentRow; caseId: string; warnings: CaseExecution["warnings"] }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const f = useFormat();
   const m = useRun(caseId);
   const run: Run = (path, body, method = "POST") => m.mutateAsync({ path, body, method });
@@ -155,7 +182,9 @@ function ShipmentCard({ s, caseId, warnings }: { s: ShipmentRow; caseId: string;
     <Card padded={false} title={<span className="flex flex-wrap items-center gap-2">{t("execution.shipments.title")} · {t(`execution.shipments.modes.${s.mode}`)}
       {s.transport_doc_no && <Bdi ltr className="font-mono text-sm">{(s.transport_doc_kind ?? "").toUpperCase()} {s.transport_doc_no}</Bdi>}
       <Badge tone={mine.length ? "danger" : "neutral"}>{t(`execution.shipments.statuses.${s.status}`)}</Badge>
-      {s.containers.length > 0 && <span className="text-xs font-normal text-muted" dir="ltr">{s.containers.join(" · ")}</span>}</span>}>
+      {s.containers.length > 0 && <span className="text-xs font-normal text-muted" dir="ltr">{s.containers.join(" · ")}</span>}
+      <CodeChip code={s.code} />
+      {s.route && <span className="text-xs font-normal" data-testid="shipment-route"><bdi>{i18n.language === "fa" ? s.route.fa : s.route.en}</bdi></span>}</span>}>
       <div className="flex flex-col gap-3 px-4 py-3" data-testid="shipment" data-shipment={s.id}>
         {mine.map((w) => <p key={w.kind} className="rounded-md bg-danger-soft px-3 py-1.5 text-sm text-danger" role="alert" data-testid="delay-warning">
           {t(`execution.warnings.${w.kind}`, { days: f.num(w.days) })}</p>)}

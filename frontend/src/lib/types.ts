@@ -193,6 +193,8 @@ export interface NextFollowup {
 
 export interface Party {
   id: string;
+  code?: string | null;          // v0.9.0
+  legal_form_id?: string | null;
   name_fa: string | null;
   name_en: string | null;
   kind: "company" | "person";
@@ -341,6 +343,7 @@ export interface CommandCenter {
   tasks?: import("./tasks").TasksSummary;
   /** v0.8.0: «مالی» */
   finance?: import("./finance").FinanceSummary;
+  ai?: import("./ai").Usage;          // v0.9.0: the month's AI spending against the cap
 }
 
 /** Command center section "Setad" (v0.5.0). */
@@ -379,6 +382,11 @@ export type ItemStatus = "uncovered" | "rfq_sent" | "has_offer" | "selected" | "
 
 export interface LineItem {
   id: string;
+  template_id?: string | null;   // v0.9.0: noun-modifier description
+  attributes?: Record<string, string>;
+  canonical_fa?: string | null;
+  canonical_en?: string | null;
+  canonical_override?: boolean;
   inquiry_id: string | null;
   case_id: string | null;
   position: number;
@@ -475,6 +483,7 @@ export interface InquiryDetail extends Inquiry {
 
 export interface Case {
   id: string;
+  code?: string | null;          // v0.9.0
   inquiry_id: string | null;
   party_id: string | null;
   title: string;
@@ -1285,6 +1294,8 @@ export interface ProcessTemplateRow {
   steps: { id: string; position: number; group: string | null; code: string; label_fa: string; label_en: string; reference_label: string | null; requires_document: boolean; default_offset_days: number | null }[];
 }
 export interface ShipmentRow {
+  code?: string | null;                          // v0.9.0
+  route?: { fa: string; en: string } | null;
   id: string; case_id: string; direction: "inbound" | "outbound"; purchase_order_id: string | null; sales_order_id: string | null; mode: string;
   carrier_party_id: string | null; forwarder_party_id: string | null; transport_doc_kind: string | null; transport_doc_no: string | null;
   containers: string[]; vessel_or_flight: string | null; origin: string | null; destination: string | null; incoterm: string | null;

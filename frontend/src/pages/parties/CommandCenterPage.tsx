@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { capTone } from "../../lib/ai";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -357,6 +358,13 @@ export function CommandCenterPage() {
       {d.tenders && <TendersSection s={d.tenders} />}
       {d.execution && <ExecutionSection s={d.execution} />}
       {d.finance && <FinanceSection s={d.finance} />}
+      {d.ai?.configured && (
+        <p className="text-sm" data-testid="cc-ai">
+          <Link to="/settings/ai" className="text-accent hover:underline">{t("ai.settings.title")}</Link>{": "}
+          {t("ai.settings.cap.spent", { spent: f.num(d.ai.spent_usd), cap: f.num(d.ai.cap_usd), percent: f.num(d.ai.percent) })}
+          {d.ai.warning && <> <Badge tone={capTone(d.ai)}>{t("ai.settings.cap.warning", { level: d.ai.warning })}</Badge></>}
+        </p>
+      )}
       <div className="grid gap-4 xl:grid-cols-2">
         {FUNNELS.map((role) => (
           <Card key={role} title={t(`funnel.title.${role}`)} actions={<Link className="text-sm text-accent hover:underline" to={`/parties/funnels?role=${role}`}>{t("funnel.openBoard")}</Link>}>

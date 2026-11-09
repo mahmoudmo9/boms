@@ -1,5 +1,6 @@
 /** "Convert to inquiry" (v0.5.0): shows what will be created (buyer match or suggestions, items with product
  * suggestions, attachments) and converts through the server; afterwards opens the new inquiry. */
+import { ExtractButton } from "../../components/AiActions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -33,6 +34,7 @@ export function ConvertDialog({ id, onClose }: { id: string; onClose: () => void
   const [products, setProducts] = useState<Record<number, string>>({});
   const [withoutMissing, setWithoutMissing] = useState(false);
   const [queued, setQueued] = useState(false);
+  const [aiItems, setAiItems] = useState<Record<string, unknown>[] | null>(null);   // v0.9.0: «استخراج اقلام»
   const download = useMutation({
     mutationFn: () => api("/api/setad/commands", { method: "POST", body: { command: "download_files", listing_ids: [id] } }),
     onSuccess: () => setQueued(true),
@@ -45,6 +47,7 @@ export function ConvertDialog({ id, onClose }: { id: string; onClose: () => void
         ...(choice === "new" ? { create_party: true, confirm_duplicate: confirmDuplicate } : choice ? { party_id: choice } : {}),
         products: Object.fromEntries(Object.entries(products).filter(([, v]) => v)),
         without_missing_files: withoutMissing,
+        ...(aiItems ? { items: aiItems } : {}),
       } });
     },
     onSuccess: (out) => {
@@ -68,6 +71,11 @@ export function ConvertDialog({ id, onClose }: { id: string; onClose: () => void
       {p && (
         <div className="flex flex-col gap-3 text-sm" data-testid="convert-dialog">
           <p dir="auto"><b>{p.title}</b> <span className="font-mono text-xs text-muted" dir="ltr">{p.number}</span></p>
+          <div className="flex flex-wrap items-center gap-2">
+            <ExtractButton target="listing" targetId={id} label={t("ai.extract.listingButton")} testId="ai-extract-listing"
+              onCommitted={(r) => setAiItems((r.items as Record<string, unknown>[] | undefined) ?? null)} />
+            {aiItems && <span className="text-xs text-muted" data-testid="ai-listing-items">{t("ai.extract.listingPrefilled", { count: aiItems.length })}</span>}
+          </div>
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
             <dt className="text-muted">{t("listings.convertFields.kind")}</dt><dd>{t(`sourcing.inquiry.kinds.${p.kind}`)}</dd>
             <dt className="text-muted">{t("listings.convertFields.received")}</dt><dd className="tabular-nums">{p.received_at ? f.date(p.received_at, true) : "—"}</dd>

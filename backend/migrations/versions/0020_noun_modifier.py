@@ -44,6 +44,7 @@ def _a(key, fa, en, unit=None, kind="text", values=None, short=True, minimum=Non
     return out
 
 
+FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 MATERIALS = [("cs", "فولاد کربنی", "CARBON STEEL"), ("ss304", "فولاد ضدزنگ ۳۰۴", "SS 304"),
              ("ss316", "فولاد ضدزنگ ۳۱۶", "SS 316"), ("cast_iron", "چدن", "CAST IRON"),
              ("duplex", "داپلکس", "DUPLEX"), ("bronze", "برنز", "BRONZE")]
@@ -63,7 +64,7 @@ TEMPLATES = [
                                                        ("ball", "توپی", "BALL"), ("butterfly", "پروانه‌ای", "BUTTERFLY"),
                                                        ("check", "یک‌طرفه", "CHECK")]),
         _a("size", "سایز", "Size", "INH", "number", minimum=0),
-        _a("rating", "کلاس فشار", "Pressure class", kind="choice", values=[(c, f"کلاس {c}", f"CLASS {c}") for c in
+        _a("rating", "کلاس فشار", "Pressure class", kind="choice", values=[(c, f"کلاس {c.translate(FA)}", f"CLASS {c}") for c in
                                                                            ("150", "300", "600", "900", "1500", "2500")]),
         _a("material", "جنس بدنه", "Body material", kind="choice", values=MATERIALS),
         _a("end", "اتصال", "End connection", kind="choice", values=[("rf", "فلنجی RF", "FLANGED RF"),

@@ -1,4 +1,5 @@
 /** Offers: record form (item grid with keyboard navigation), list, comparison matrix, coverage. */
+import { ExtractButton } from "../../components/AiActions";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { type KeyboardEvent, Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -235,7 +236,12 @@ export function OffersTab({ caseData, highlight, recordFor }: { caseData: CaseDe
   const names = Object.fromEntries(caseData.items.map((i) => [i.id, i.name]));
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end"><Button variant="primary" icon="plus" onClick={() => setRecording(true)}>{t("sourcing.offer.record")}</Button></div>
+      <div className="flex justify-end gap-2">
+        {/* v0.9.0: read a supplier's offer (PDF, sheet, pasted e-mail) into a draft offer */}
+        <ExtractButton target="offer" targetId={caseData.id} needSupplier label={t("ai.extract.offerButton")} documents={caseData.documents ?? []}
+          onCommitted={refresh} testId="ai-extract-offer" />
+        <Button variant="primary" icon="plus" onClick={() => setRecording(true)}>{t("sourcing.offer.record")}</Button>
+      </div>
       <ErrorNote error={offers.error || withdraw.error || remove.error} />
       {(offers.data ?? []).length === 0 && !offers.isLoading && <Card><EmptyState>{t("sourcing.offer.empty")}</EmptyState></Card>}
       {(offers.data ?? []).map((o) => (

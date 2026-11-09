@@ -12,6 +12,8 @@ import { useFormat } from "../../lib/prefs";
 import { type ColumnMapping, type Delimiter, IMPORT_FIELDS, type ImportField, parsePasted, setColumnField, suggestMapping } from "../../lib/sourcing";
 import type { ItemWarning, LineItem, LinkedDocument, Spec } from "../../lib/types";
 import { CountrySelect } from "../parties/PartiesPage";
+import { ExtractButton } from "../../components/AiActions";
+import { LookupField } from "../../components/smart";
 import { AttachedDocuments, CurrencySelect, IncotermSelect, ProductPicker, StatusBadge, UnitInput, useSpecKeys, useUnitLabel } from "./shared";
 
 export interface ItemOwner {
@@ -126,7 +128,11 @@ export function ItemDialog({ owner, item, ownerDocuments, onClose, onSaved }: {
           </Field>
           <Field label={t("sourcing.item.requiredBy")} htmlFor="it-due"><DateInput id="it-due" value={form.required_by ? fromDateString(form.required_by) : null} onChange={(d) => set({ required_by: d ? toDateString(d) : null })} /></Field>
           <Field label={t("sourcing.item.packaging")} htmlFor="it-pack"><Input id="it-pack" dir="auto" value={form.packaging ?? ""} onChange={(e) => set({ packaging: e.target.value || null })} /></Field>
-          <Field label={t("sourcing.item.hsCode")} htmlFor="it-hs"><Input id="it-hs" dir="ltr" inputMode="numeric" value={form.hs_code ?? ""} onChange={(e) => set({ hs_code: e.target.value.replace(/[^\d]/g, "") || null })} /></Field>
+          <Field label={t("sourcing.item.hsCode")} htmlFor="it-hs">
+            <Input id="it-hs" dir="ltr" inputMode="numeric" value={form.hs_code ?? ""} onChange={(e) => set({ hs_code: e.target.value.replace(/[^\d]/g, "") || null })} />
+            {/* v0.9.0: find the heading by name or code (the full tariff code can stay longer) */}
+            <LookupField kind="hs" value={null} onChange={(it) => it && set({ hs_code: it.code })} ariaLabel={t("sourcing.item.hsCode")} testId="it-hs-lookup" />
+          </Field>
           <Field label={t("sourcing.item.route")} htmlFor="it-route">
             <Select id="it-route" value={form.route} onChange={(e) => set({ route: e.target.value as ItemForm["route"] })}>
               {(["unknown", "domestic", "foreign", "both"] as const).map((r) => <option key={r} value={r}>{t(`sourcing.item.routes.${r}`)}</option>)}
@@ -296,7 +302,7 @@ export function ItemsCard({ owner, items, warnings, ownerDocuments, onChanged, i
   inCase?: boolean;
   title?: string;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const f = useFormat();
   const unitLabel = useUnitLabel();
   const [editing, setEditing] = useState<LineItem | "new" | null>(null);
@@ -315,7 +321,10 @@ export function ItemsCard({ owner, items, warnings, ownerDocuments, onChanged, i
 
   return (
     <Card padded={false} title={title ?? t("sourcing.items")} actions={<>
-      <Button disabled={!extractor.data?.configured} title={t("sourcing.import.aiDisabled")}>{t("sourcing.import.ai")}</Button>
+      {/* v0.9.0: AI extraction into a draft the owner reviews field by field */}
+      {extractor.data?.configured ? (
+        <ExtractButton target={owner.case_id ? "case" : "inquiry"} targetId={(owner.case_id ?? owner.inquiry_id)!} documents={ownerDocuments} onCommitted={onChanged} />
+      ) : <Button disabled title={t("ai.extract.notConfigured")}>{t("sourcing.import.ai")}</Button>}
       <Button icon="upload" onClick={() => setImporting(true)}>{t("sourcing.import.button")}</Button>
       <Button variant="primary" icon="plus" onClick={() => setEditing("new")}>{t("sourcing.item.add")}</Button>
     </>}>
@@ -337,6 +346,9 @@ export function ItemsCard({ owner, items, warnings, ownerDocuments, onChanged, i
                   <td className="p-2">
                     <button type="button" className="text-start font-medium text-accent hover:underline" onClick={() => void openItem(item)}><Bdi>{item.name}</Bdi></button>
                     {dup.has(item.id) && <span className="ms-2"><Badge tone="warning">{t("sourcing.item.duplicateName")}</Badge></span>}
+                    {(item.canonical_fa || item.canonical_en) && (   /* v0.9.0: the noun-modifier description in the UI language */
+                      <div className="mt-0.5 text-xs" data-testid="item-canonical"><Bdi>{(i18n.language === "fa" ? item.canonical_fa : item.canonical_en) ?? item.canonical_en ?? item.canonical_fa}</Bdi></div>
+                    )}
                     {item.specs.length > 0 && (
                       <div className="mt-0.5 text-xs text-muted" dir="auto">{item.specs.slice(0, 4).map((s) => `${s.key}: ${s.value}${s.unit ? ` ${s.unit}` : ""}`).join(" · ")}</div>
                     )}

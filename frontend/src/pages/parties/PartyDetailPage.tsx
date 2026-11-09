@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CodeChip, ValidatedInput } from "../../components/smart";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
@@ -118,7 +119,7 @@ function Overview({ party }: { party: PartyDetail }) {
         </Card>
         <CapabilitiesCard partyId={party.id} />
       </div>
-      <Card title={t("parties.details")}>
+      <Card title={<span className="flex items-center gap-2">{t("parties.details")} <CodeChip code={party.code} /></span>}>
         <form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={(e: FormEvent) => { e.preventDefault(); save.mutate(); }}>
           <Field label={t("parties.nameFa")} htmlFor="pd-fa"><Input id="pd-fa" value={form.name_fa} onChange={(e) => setForm({ ...form, name_fa: e.target.value })} /></Field>
           <Field label={t("parties.nameEn")} htmlFor="pd-en"><Input id="pd-en" dir="ltr" value={form.name_en} onChange={(e) => setForm({ ...form, name_en: e.target.value })} /></Field>
@@ -129,7 +130,10 @@ function Overview({ party }: { party: PartyDetail }) {
             </Select>
           </Field>
           <Field label={t("parties.country")} htmlFor="pd-country"><CountrySelect id="pd-country" value={form.country_iso2} onChange={(v) => setForm({ ...form, country_iso2: v })} /></Field>
-          <Field label={t("finance.party.nationalId")} htmlFor="pd-nid"><Input id="pd-nid" dir="ltr" value={form.national_id} onChange={(e) => setForm({ ...form, national_id: e.target.value })} /></Field>
+          {/* v0.9.0: checked while typing (Iranian national ID check digit; Chinese USCC for CN parties) */}
+          <Field label={t("finance.party.nationalId")} htmlFor="pd-nid">
+            <ValidatedInput id="pd-nid" kind={party.country_iso2 === "CN" ? "uscc" : "national_id_ir"} value={form.national_id} testId="pd-national-id"
+              onChange={(v) => setForm({ ...form, national_id: v })} /></Field>
           <Field label={t("finance.party.economicCode")} htmlFor="pd-eco"><Input id="pd-eco" dir="ltr" value={form.economic_code} onChange={(e) => setForm({ ...form, economic_code: e.target.value })} /></Field>
           <div className="sm:col-span-2"><Field label={t("parties.website")} htmlFor="pd-web"><Input id="pd-web" dir="ltr" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></Field></div>
           <div className="sm:col-span-2"><Field label={t("parties.notes")} htmlFor="pd-notes"><Textarea id="pd-notes" dir="auto" rows={4} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field></div>

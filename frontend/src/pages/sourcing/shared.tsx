@@ -115,11 +115,16 @@ export function CurrencySelect({ value, onChange, id, allowEmpty = true, classNa
 }
 
 export function IncotermSelect({ value, onChange, id }: { value: string | null; onChange: (v: string | null) => void; id?: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // v0.9.0: the standard list (Incoterms® 2020) with its names; the code stays the value
+  const rules = useQuery({ queryKey: ["reference", "incoterms"], queryFn: () => api<{ code: string; name_en: string; name_fa: string }[]>("/api/reference/incoterms"),
+    staleTime: Infinity });
+  const rows = rules.data ?? INCOTERMS.map((code) => ({ code, name_en: "", name_fa: "" }));
   return (
-    <Select id={id} dir="ltr" className="w-24" aria-label={t("sourcing.incoterm")} value={value ?? ""} onChange={(e) => onChange(e.target.value || null)}>
+    <Select id={id} dir="ltr" className="w-24" aria-label={t("sourcing.incoterm")} value={value ?? ""} onChange={(e) => onChange(e.target.value || null)}
+      title={rows.find((r) => r.code === value)?.[i18n.language === "fa" ? "name_fa" : "name_en"] ?? undefined}>
       <option value="">—</option>
-      {INCOTERMS.map((i) => <option key={i} value={i}>{i}</option>)}
+      {rows.map((r) => <option key={r.code} value={r.code} title={i18n.language === "fa" ? r.name_fa : r.name_en}>{r.code}</option>)}
     </Select>
   );
 }

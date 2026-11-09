@@ -263,13 +263,13 @@ export function Modal({ open, title, onClose, children, footer, wide }: {
   }, [open]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[10vh]" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-[10vh]" onMouseDown={onClose}>
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         onMouseDown={(e) => e.stopPropagation()}
-        className={`w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-lg border border-line bg-surface shadow-xl`}
+        className={`w-full ${wide ? "max-w-2xl" : "max-w-md"} mb-[5vh] rounded-lg border border-line bg-surface shadow-xl`}
       >
         <header className="flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold">{title}</h2>

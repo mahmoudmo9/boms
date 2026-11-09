@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PartyParseButton } from "../../components/AiActions";
 import type { ColumnDef } from "@tanstack/react-table";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -150,6 +151,7 @@ function NewPartyDialog({ onClose }: { onClose: () => void }) {
 
 export function PartiesPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const f = useFormat();
   const quickLog = useQuickLog();
   const stages = useStages();
@@ -203,6 +205,7 @@ export function PartiesPage() {
     <div>
       <PageHeader title={t("nav.parties")} subtitle={t("parties.subtitle")}
         actions={<>
+          <PartyParseButton onCommitted={(r) => { if (r.party_id) navigate(`/parties/${String(r.party_id)}`); }} />
           <Button icon="plus" onClick={() => quickLog.open()}>{t("quicklog.button")}</Button>
           <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>{t("parties.new")}</Button>
         </>} />

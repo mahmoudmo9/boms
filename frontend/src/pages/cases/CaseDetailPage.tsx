@@ -7,6 +7,8 @@ import { Bdi } from "../../components/Bdi";
 import { Icon } from "../../components/Icon";
 import { ScrollTabs } from "../../components/ScrollTabs";
 import { Button, ErrorNote, Field, Input, Loading, Modal, PageHeader, Select, Textarea } from "../../components/ui";
+import { CaseFolderButton, CaseLocalOnly } from "../../components/CaseTools";
+import { CodeChip } from "../../components/smart";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { CaseCosting, CaseDetail, CaseQuotes } from "../../lib/types";
@@ -85,6 +87,7 @@ export function CaseDetailPage() {
       <Link to="/cases" className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg"><Icon name="chevronStart" size={15} /> {t("nav.cases")}</Link>
       <PageHeader title={<span dir="auto">{c.title}</span>}
         subtitle={<span className="flex flex-wrap items-center gap-2">
+          <CodeChip code={c.code} />
           <StatusBadge group="case" status={c.status} />
           {c.party_id && <PartyName fa={c.party_name_fa ?? null} en={c.party_name_en ?? null} id={c.party_id} />}
           {c.inquiry_id && <Link to={`/sourcing/inquiries/${c.inquiry_id}`} className="text-accent hover:underline">{t("sourcing.case.fromInquiry")}</Link>}
@@ -102,6 +105,8 @@ export function CaseDetailPage() {
           <Select className="w-36" aria-label={t("sourcing.status.label")} value={c.status} onChange={(e) => setStatus.mutate(e.target.value)}>
             {CASE_STATUSES.map((s) => <option key={s} value={s}>{t(`sourcing.status.case.${s}`)}</option>)}
           </Select>
+          <CaseLocalOnly caseId={c.id} />
+          <CaseFolderButton caseId={c.id} />
           <Button icon="edit" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
         </>} />
       {c.inquiry_id && <SetadOrigin inquiryId={c.inquiry_id} />}

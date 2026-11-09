@@ -64,7 +64,12 @@
       "companyDocuments": "Company documents",
       "executionSettings": "Execution",
       "commandCenterHome": "Overview",
-      "myTasks": "My tasks"
+      "myTasks": "My tasks",
+      "aiSettings": "AI",
+      "codingSettings": "Codes and naming",
+      "referenceData": "Reference data",
+      "documentsList": "Documents",
+      "verifyDocument": "Verify a document"
     }
   },
   "placeholder": {
@@ -2873,7 +2878,10 @@
         "insurance_policy": "Insurance policy",
         "customs_declaration": "Customs declaration",
         "other": "Other"
-      }
+      },
+      "containerNumber": "Container number (ISO 6346)",
+      "containerType": "Container type",
+      "addContainer": "Add container"
     },
     "warnings": {
       "eta_passed": "ETA passed without arrival ({{days}} days)",
@@ -3353,5 +3361,258 @@
       "zero": "Zero VAT, with a reason",
       "becomesDefault": "Saved as the default (Settings → Finance)."
     }
+  },
+  "smart": {
+    "copyCode": "Copy code",
+    "copied": "Copied",
+    "clear": "Clear",
+    "typeNameOrCode": "Type a name or a code",
+    "noMatch": "No match",
+    "from": "from {{source}}",
+    "tabToAccept": "Tab to accept",
+    "valid": "Valid",
+    "invalid": {
+      "format": "Wrong format",
+      "length": "Wrong length",
+      "checksum": "Check digit does not match",
+      "invalid": "Not valid"
+    }
+  },
+  "ai": {
+    "tasks": {
+      "extraction": "Item extraction",
+      "party_parse": "Read party details",
+      "drafting": "Message drafting",
+      "classification": "Light classification",
+      "ping": "Connection test",
+      "extract_items": "Item extraction",
+      "parse_party": "Read party details",
+      "draft_message": "Message drafting"
+    },
+    "privacy": {
+      "cloud": "Cloud",
+      "cloud_redacted": "Cloud, names masked",
+      "local_only": "Local only"
+    },
+    "settings": {
+      "title": "AI",
+      "subtitle": "Connections, the route of each task, the cost cap and what was sent where",
+      "providers": "Providers",
+      "enabled": "Enabled",
+      "test": "Test connection",
+      "local": "Local",
+      "latency": "{{ms}} ms",
+      "models": "Models",
+      "baseUrl": "Address",
+      "key": "API key",
+      "keySet": "Key stored in Credential Manager",
+      "keyHint": "The key is stored only in Windows Credential Manager",
+      "saveKey": "Save key",
+      "priceIn": "Input $/M",
+      "priceOut": "Output $/M",
+      "savePrice": "Save price",
+      "priceMissing": "No price",
+      "cliFound": "Claude Code is available (SDK {{version}}); press «Test connection» to sign in with the Pro plan.",
+      "cliMissing": "Claude Code was not found; see the steps in OPERATIONS.",
+      "status": {
+        "unknown": "Not tested",
+        "ok": "Connected",
+        "error": "Error"
+      },
+      "cap": {
+        "title": "Monthly cost cap",
+        "label": "Cap (USD)",
+        "spent": "This month {{spent}} of {{cap}} USD ({{percent}} %)",
+        "warning": "{{level}} % warning",
+        "subscription": "{{count}} tasks on the subscription",
+        "disabled": "The cap is 0: the API key route is off."
+      },
+      "routes": {
+        "title": "Route per task",
+        "primary": "Primary",
+        "fallback": "Fallback",
+        "privacy": "Privacy"
+      },
+      "log": {
+        "title": "What was sent where",
+        "hint": "Only a description of the input is logged (file names, pages, characters), never the content.",
+        "task": "Task",
+        "status": "Status",
+        "allTasks": "All tasks",
+        "allStatuses": "All statuses",
+        "at": "Time",
+        "provider": "Provider",
+        "input": "Input",
+        "redactions": "Masked",
+        "tokens": "Tokens",
+        "cost": "Cost",
+        "subscription": "Subscription",
+        "inputDesc": "{{files}} files, {{pages}} pages, {{characters}} characters, {{images}} images"
+      }
+    },
+    "review": {
+      "title": "Review the AI proposal",
+      "working": "Reading… you can close this window.",
+      "failed": "This did not work.",
+      "accept": "Accept",
+      "edit": "Edit",
+      "reject": "Reject",
+      "acceptConfident": "Accept all confident fields",
+      "rejectAll": "Reject all",
+      "commit": "Save",
+      "summary": "{{accepted}} of {{total}} accepted",
+      "item": "Item {{n}}",
+      "other": "Terms and other fields",
+      "page": "page {{page}}",
+      "pages": "{{count}} pages",
+      "totalDiffers": "Item {{item}}: the stated total is {{stated}} but quantity × price is {{computed}}.",
+      "confidence": {
+        "high": "Confident",
+        "medium": "Medium",
+        "low": "Unsure"
+      },
+      "decision": {
+        "accepted": "Accepted",
+        "edited": "Edited",
+        "rejected": "Rejected"
+      },
+      "source": {
+        "pdf": "PDF",
+        "image": "Image",
+        "sheet": "Sheet",
+        "text": "Text",
+        "pasted": "Pasted text"
+      },
+      "status": {
+        "accepted": "Saved.",
+        "partly_accepted": "Partly saved.",
+        "rejected": "Rejected.",
+        "superseded": "A newer proposal replaced this one.",
+        "failed": "Failed."
+      }
+    },
+    "extract": {
+      "title": "Extract with AI",
+      "files": "Attached files",
+      "paste": "or paste the text (e-mail, WhatsApp)",
+      "start": "Start",
+      "notConfigured": "No provider is connected. Connect one in Settings → AI; manual entry always works.",
+      "supplier": "Supplier of the offer",
+      "offerButton": "Read an offer with AI",
+      "listingButton": "Extract items",
+      "partyButton": "Read from a signature or business card",
+      "partyPaste": "Paste the e-mail signature or the card text",
+      "draftButton": "Draft with AI",
+      "draftLanguage": "Message language",
+      "listingPrefilled": "{{count}} items from the AI proposal are used in the conversion."
+    },
+    "caseLocalOnly": "Local only (no cloud AI)"
+  },
+  "codes": {
+    "kinds": {
+      "inquiry": "Inquiry",
+      "case": "Case",
+      "rfq": "RFQ",
+      "tender": "Tender",
+      "shipment": "Shipment",
+      "receipt": "Receipt",
+      "delivery": "Delivery",
+      "payment": "Payment",
+      "claim": "Claim",
+      "inspection": "Inspection",
+      "guarantee": "Guarantee",
+      "contract": "Contract",
+      "letter": "Letter",
+      "party": "Party",
+      "product": "Product",
+      "quote": "Proforma invoice",
+      "sales_order": "Sales order",
+      "purchase_order": "Purchase order",
+      "sales_invoice": "Invoice",
+      "credit_note": "Credit note",
+      "debit_note": "Debit note"
+    },
+    "reserved": "Reserved",
+    "pattern": "Pattern",
+    "kind": "Kind",
+    "example": "Next example",
+    "default": "Default",
+    "invalidPattern": "Invalid pattern",
+    "settings": {
+      "title": "Codes and naming",
+      "subtitle": "A pattern change applies to new codes only; existing codes never change.",
+      "patterns": "Code patterns",
+      "tokens": "Tokens: {yyyy} year, {0000} number, {country} country, {role} SUP/CUS/BP, {hs4} HS heading",
+      "naming": "Output file name pattern",
+      "folders": "Readable case folders",
+      "syncNow": "Update now",
+      "folderRoot": "Location",
+      "copies": "Copies (hard links not possible)",
+      "hardlinks": "Hard links (no extra space)",
+      "lastSync": "Last update {{at}} · {{cases}} cases",
+      "folderHint": "These folders are read-only, built from the store and never backed up."
+    }
+  },
+  "reference": {
+    "title": "Reference data",
+    "subtitle": "Standard lists with the code next to the name; nothing is read from the internet.",
+    "datasets": "Datasets",
+    "importTitle": "Import from a file",
+    "dataset": "Dataset",
+    "release": "Release",
+    "file": "File",
+    "import": "Import",
+    "importHint": "Get the official file from its publisher (UN/LOCODE from UNECE, ELF from GLEIF) and upload it here. Importing again repeats nothing.",
+    "report": "{{inserted}} new, {{updated}} updated, {{deactivated}} deactivated, {{rejected}} rejected",
+    "verified": "{{count}} verified against the official file",
+    "col": {
+      "dataset": "Dataset",
+      "rows": "Rows",
+      "active": "Active",
+      "release": "Release",
+      "lastImport": "Last import"
+    },
+    "ds": {
+      "locations": "Locations (UN/LOCODE)",
+      "airports": "Airports (IATA)",
+      "legal_forms": "Legal forms (ISO 20275)",
+      "containers": "Containers (ISO 6346)",
+      "transport_modes": "Transport modes (Rec 19)",
+      "incoterms": "Incoterms 2020",
+      "units": "Units (Rec 20)",
+      "unlocode": "UN/LOCODE (official file)",
+      "elf": "ELF (official GLEIF file)"
+    }
+  },
+  "verify": {
+    "title": "Verify a document",
+    "subtitle": "Paste the QR text from the document, or type the code and the verification code.",
+    "payload": "QR text",
+    "payloadHint": "Read it with a phone scanner and paste the text here.",
+    "or": "or",
+    "code": "Document code",
+    "vc": "Verification code",
+    "check": "Check",
+    "genuine": "The document is genuine",
+    "version": "version {{v}}",
+    "currentStatus": "Current status",
+    "open": "Open the record",
+    "supersededHint": "A newer version ({{v}}) has been issued.",
+    "status": {
+      "issued": "Issued",
+      "draft": "Draft",
+      "superseded": "Superseded",
+      "void": "Void",
+      "unknown": "Unknown"
+    },
+    "reason": {
+      "unreadable": "The text is not readable",
+      "signature_mismatch": "The verification code does not match (forged or altered)"
+    }
+  },
+  "folder": {
+    "open": "Open folder",
+    "path": "Case folder: {{path}}",
+    "notWindows": "The folder opens on the PC that runs BOMS. Path: {{path}}"
   }
 }

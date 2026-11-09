@@ -382,7 +382,7 @@ def request_sync(db: Session) -> None:
         return
     queued = db.execute(text("SELECT 1 FROM sys.job WHERE type = :t AND status = 'queued' LIMIT 1"), {"t": JOB}).first()
     if queued is None:
-        jobs.enqueue(db, JOB, {}, max_attempts=3, source="system")
+        jobs.enqueue(db, JOB, {}, max_attempts=3, source="worker")
 
 
 def open_in_explorer(path: Path) -> bool:

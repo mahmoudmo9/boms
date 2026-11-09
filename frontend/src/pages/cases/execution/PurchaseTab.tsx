@@ -1,5 +1,6 @@
 /** Case tab «خرید» (v0.7.0): purchase orders per supplier, approval, outputs, sending (with the customer-prepayment
  * gate), confirmation, ready date, production status, revisions, supplier milestones and receipts. */
+import { DraftMessageButton } from "../../../components/AiActions";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
@@ -197,6 +198,8 @@ function PoCard({ po, caseId, receipts }: { po: PurchaseOrderRow; caseId: string
         <Field label={t("execution.purchase.terms")} htmlFor={`po-terms-${po.id}`}><Textarea id={`po-terms-${po.id}`} dir="auto" rows={4} disabled={!draft} value={terms}
           onChange={(e) => setTerms(e.target.value)} onBlur={() => terms !== (po.terms_text ?? "") && patch({ terms_text: terms })} /></Field>
         <OutputButtons base={`/api/purchase-orders/${po.id}`} outputs={po.outputs} />
+        {/* v0.9.0: the cover message drafted by AI opens in the mail client; BOMS sends nothing */}
+        <DraftMessageButton target="purchase_order" targetId={po.id} onCommitted={(r) => { if (typeof r.mailto === "string") window.location.href = r.mailto; }} />
         {po.followups.length > 0 && <p className="text-xs text-muted" data-testid="po-followups">{po.followups.map((x) => `${x.action} · ${f.day(x.due_on)}`).join("، ")}</p>}
         {po.changes.length > 0 && <ul className="text-xs text-muted" data-testid="po-changes">{po.changes.map((c) => (
           <li key={c.id}>{t(`execution.fields.${c.field}`, { defaultValue: c.field })}: <bdi dir="ltr">{c.old_value ?? "—"}</bdi> → <bdi dir="ltr">{c.new_value ?? "—"}</bdi> · <span dir="auto">{c.reason}</span></li>))}</ul>}

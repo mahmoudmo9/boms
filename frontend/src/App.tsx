@@ -23,6 +23,10 @@ import { SetadSettingsPage } from "./pages/settings/SetadSettingsPage";
 import { TendersSettingsPage } from "./pages/settings/TendersSettingsPage";
 import { CompanyDocumentsPage } from "./pages/settings/CompanyDocumentsPage";
 import { ExecutionSettingsPage } from "./pages/settings/ExecutionSettingsPage";
+import { AiSettingsPage } from "./pages/settings/AiSettingsPage";
+import { CodingSettingsPage } from "./pages/settings/CodingSettingsPage";
+import { ReferenceDataPage } from "./pages/settings/ReferenceDataPage";
+import { VerifyDocumentPage } from "./pages/documents/VerifyDocumentPage";
 import { ExecutionPage } from "./pages/cases/ExecutionPage";
 import { GuaranteesPage } from "./pages/cases/GuaranteesPage";
 import { CatalogPage, ProductPage } from "./pages/sourcing/CatalogPage";
@@ -66,6 +70,7 @@ export function App() {
         <Route path="cases/guarantees" element={<GuaranteesPage />} />
         <Route path="cases/:id" element={<CaseDetailPage />} />
         <Route path="documents" element={<DocumentsPage />} />
+        <Route path="documents/verify" element={<VerifyDocumentPage />} />
         <Route path="documents/:id" element={<DocumentDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/basedata" element={<Navigate to="/settings/basedata/countries" replace />} />
@@ -78,6 +83,9 @@ export function App() {
         <Route path="settings/tenders" element={<TendersSettingsPage />} />
         <Route path="settings/company-documents" element={<CompanyDocumentsPage />} />
         <Route path="settings/execution" element={<ExecutionSettingsPage />} />
+        <Route path="settings/ai" element={<AiSettingsPage />} />
+        <Route path="settings/coding" element={<CodingSettingsPage />} />
+        <Route path="settings/reference" element={<ReferenceDataPage />} />
         <Route path="execution" element={<ExecutionPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

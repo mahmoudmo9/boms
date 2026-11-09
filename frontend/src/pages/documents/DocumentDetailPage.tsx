@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DocumentFolderButton } from "../../components/CaseTools";
 import { type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
@@ -93,6 +94,7 @@ export function DocumentDetailPage() {
             <ButtonLink href={`/api/documents/${d.id}/preview`} icon="eye" newTab>{t("documents.openPreview")}</ButtonLink>
           )}
           <ButtonLink href={`/api/documents/${d.id}/download`} variant="primary" icon="download">{t("documents.download")}</ButtonLink>
+          {d.links.some((l) => l.entity_type !== "party" && l.entity_type !== "interaction") && <DocumentFolderButton documentId={d.id} />}
         </div>
       </div>
 

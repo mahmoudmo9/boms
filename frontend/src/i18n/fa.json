@@ -64,7 +64,12 @@
       "companyDocuments": "مدارک شرکت",
       "executionSettings": "اجرا",
       "commandCenterHome": "نمای کلی",
-      "myTasks": "کارهای من"
+      "myTasks": "کارهای من",
+      "aiSettings": "هوش مصنوعی",
+      "codingSettings": "کدگذاری و نام‌گذاری",
+      "referenceData": "داده‌های مرجع",
+      "documentsList": "اسناد",
+      "verifyDocument": "تأیید سند"
     }
   },
   "placeholder": {
@@ -2873,7 +2878,10 @@
         "insurance_policy": "بیمه‌نامه",
         "customs_declaration": "اظهارنامهٔ گمرکی",
         "other": "سایر"
-      }
+      },
+      "containerNumber": "شمارهٔ کانتینر (ISO 6346)",
+      "containerType": "نوع کانتینر",
+      "addContainer": "افزودن کانتینر"
     },
     "warnings": {
       "eta_passed": "ETA گذشته و هنوز نرسیده ({{days}} روز)",
@@ -3353,5 +3361,258 @@
       "zero": "مالیات صفر، با ذکر دلیل",
       "becomesDefault": "به‌عنوان پیش‌فرض ذخیره می‌شود (تنظیمات ← مالی)."
     }
+  },
+  "smart": {
+    "copyCode": "کپی کد",
+    "copied": "کپی شد",
+    "clear": "پاک کردن",
+    "typeNameOrCode": "نام یا کد را بنویسید",
+    "noMatch": "موردی پیدا نشد",
+    "from": "از {{source}}",
+    "tabToAccept": "Tab برای پذیرش",
+    "valid": "معتبر",
+    "invalid": {
+      "format": "قالب درست نیست",
+      "length": "تعداد نویسه‌ها درست نیست",
+      "checksum": "رقم کنترل درست نیست",
+      "invalid": "معتبر نیست"
+    }
+  },
+  "ai": {
+    "tasks": {
+      "extraction": "استخراج اقلام",
+      "party_parse": "خواندن مشخصات طرف",
+      "drafting": "نوشتن پیش‌نویس پیام",
+      "classification": "دسته‌بندی سبک",
+      "ping": "آزمون اتصال",
+      "extract_items": "استخراج اقلام",
+      "parse_party": "خواندن مشخصات طرف",
+      "draft_message": "نوشتن پیش‌نویس پیام"
+    },
+    "privacy": {
+      "cloud": "ابری",
+      "cloud_redacted": "ابری با پوشاندن نام‌ها",
+      "local_only": "فقط محلی"
+    },
+    "settings": {
+      "title": "هوش مصنوعی",
+      "subtitle": "اتصال‌ها، مسیر هر کار، سقف هزینه و اینکه چه چیزی کجا رفت",
+      "providers": "ارائه‌دهندگان",
+      "enabled": "فعال",
+      "test": "آزمون اتصال",
+      "local": "محلی",
+      "latency": "{{ms}} میلی‌ثانیه",
+      "models": "مدل‌ها",
+      "baseUrl": "نشانی",
+      "key": "کلید API",
+      "keySet": "کلید در Credential Manager ذخیره است",
+      "keyHint": "کلید فقط در Credential Manager ویندوز ذخیره می‌شود",
+      "saveKey": "ذخیرهٔ کلید",
+      "priceIn": "ورودی $/M",
+      "priceOut": "خروجی $/M",
+      "savePrice": "ثبت قیمت",
+      "priceMissing": "بدون قیمت",
+      "cliFound": "Claude Code در دسترس است (SDK {{version}}); برای ورود با اشتراک Pro «آزمون اتصال» را بزنید.",
+      "cliMissing": "Claude Code پیدا نشد؛ مراحل نصب در راهنمای OPERATIONS آمده است.",
+      "status": {
+        "unknown": "آزموده نشده",
+        "ok": "وصل",
+        "error": "خطا"
+      },
+      "cap": {
+        "title": "سقف هزینهٔ ماهانه",
+        "label": "سقف (دلار)",
+        "spent": "این ماه {{spent}} از {{cap}} دلار ({{percent}}٪)",
+        "warning": "هشدار {{level}}٪",
+        "subscription": "{{count}} کار از سهمیهٔ اشتراک",
+        "disabled": "سقف صفر است: مسیر کلید API خاموش است."
+      },
+      "routes": {
+        "title": "مسیر هر کار",
+        "primary": "اصلی",
+        "fallback": "جایگزین",
+        "privacy": "حریم"
+      },
+      "log": {
+        "title": "چه چیزی کجا رفت",
+        "hint": "فقط شرح ورودی ثبت می‌شود (نام فایل، صفحه، تعداد نویسه)، نه محتوا.",
+        "task": "کار",
+        "status": "وضعیت",
+        "allTasks": "همهٔ کارها",
+        "allStatuses": "همهٔ وضعیت‌ها",
+        "at": "زمان",
+        "provider": "ارائه‌دهنده",
+        "input": "ورودی",
+        "redactions": "پوشانده‌شده",
+        "tokens": "توکن",
+        "cost": "هزینه",
+        "subscription": "از سهمیهٔ اشتراک",
+        "inputDesc": "{{files}} فایل، {{pages}} صفحه، {{characters}} نویسه، {{images}} تصویر"
+      }
+    },
+    "review": {
+      "title": "بررسی پیشنهاد هوش مصنوعی",
+      "working": "در حال خواندن… می‌توانید این پنجره را ببندید.",
+      "failed": "این کار انجام نشد.",
+      "accept": "پذیرش",
+      "edit": "ویرایش",
+      "reject": "رد",
+      "acceptConfident": "پذیرش همهٔ موارد مطمئن",
+      "rejectAll": "رد همه",
+      "commit": "ثبت",
+      "summary": "{{accepted}} از {{total}} پذیرفته",
+      "item": "قلم {{n}}",
+      "other": "شرایط و موارد دیگر",
+      "page": "صفحهٔ {{page}}",
+      "pages": "{{count}} صفحه",
+      "totalDiffers": "قلم {{item}}: جمع نوشته‌شده {{stated}} است ولی حاصل‌ضرب {{computed}} است.",
+      "confidence": {
+        "high": "مطمئن",
+        "medium": "متوسط",
+        "low": "نامطمئن"
+      },
+      "decision": {
+        "accepted": "پذیرفته",
+        "edited": "ویرایش‌شده",
+        "rejected": "ردشده"
+      },
+      "source": {
+        "pdf": "PDF",
+        "image": "تصویر",
+        "sheet": "جدول",
+        "text": "متن",
+        "pasted": "متن چسبانده‌شده"
+      },
+      "status": {
+        "accepted": "ثبت شد.",
+        "partly_accepted": "بخشی ثبت شد.",
+        "rejected": "رد شد.",
+        "superseded": "پیشنهاد تازه‌تری جای این را گرفت.",
+        "failed": "انجام نشد."
+      }
+    },
+    "extract": {
+      "title": "استخراج با هوش مصنوعی",
+      "files": "فایل‌های پیوست",
+      "paste": "یا متن را بچسبانید (ایمیل، واتس‌اپ)",
+      "start": "شروع",
+      "notConfigured": "هیچ ارائه‌دهنده‌ای وصل نیست. در تنظیمات ← هوش مصنوعی یکی را وصل کنید؛ ورود دستی همیشه ممکن است.",
+      "supplier": "تأمین‌کنندهٔ پیشنهاد",
+      "offerButton": "خواندن پیشنهاد با هوش مصنوعی",
+      "listingButton": "استخراج اقلام",
+      "partyButton": "خواندن از امضا یا کارت ویزیت",
+      "partyPaste": "امضای ایمیل یا متن کارت را بچسبانید",
+      "draftButton": "پیش‌نویس با هوش مصنوعی",
+      "draftLanguage": "زبان پیام",
+      "listingPrefilled": "{{count}} قلم از پیشنهاد هوش مصنوعی در تبدیل استفاده می‌شود."
+    },
+    "caseLocalOnly": "فقط محلی (هوش مصنوعی ابری استفاده نشود)"
+  },
+  "codes": {
+    "kinds": {
+      "inquiry": "درخواست",
+      "case": "پرونده",
+      "rfq": "استعلام",
+      "tender": "مناقصه",
+      "shipment": "محموله",
+      "receipt": "رسید",
+      "delivery": "تحویل",
+      "payment": "پرداخت",
+      "claim": "ادعا",
+      "inspection": "بازرسی",
+      "guarantee": "ضمانت‌نامه",
+      "contract": "قرارداد",
+      "letter": "نامه",
+      "party": "طرف تجاری",
+      "product": "کالا",
+      "quote": "پیش‌فاکتور",
+      "sales_order": "سفارش فروش",
+      "purchase_order": "سفارش خرید",
+      "sales_invoice": "فاکتور",
+      "credit_note": "اعلامیهٔ بستانکار",
+      "debit_note": "اعلامیهٔ بدهکار"
+    },
+    "reserved": "برای بعد",
+    "pattern": "الگو",
+    "kind": "نوع",
+    "example": "نمونهٔ بعدی",
+    "default": "پیش‌فرض",
+    "invalidPattern": "الگو درست نیست",
+    "settings": {
+      "title": "کدگذاری و نام‌گذاری",
+      "subtitle": "تغییر الگو فقط روی کدهای تازه اثر دارد؛ کدهای موجود هرگز عوض نمی‌شوند.",
+      "patterns": "الگوی کدها",
+      "tokens": "نشانه‌ها: {yyyy} سال، {0000} شماره، {country} کشور، {role} SUP/CUS/BP، {hs4} سرفصل HS",
+      "naming": "الگوی نام فایل خروجی‌ها",
+      "folders": "نمای پوشه‌ای پرونده‌ها",
+      "syncNow": "به‌روزرسانی اکنون",
+      "folderRoot": "مسیر",
+      "copies": "رونوشت (پیوند سخت ممکن نبود)",
+      "hardlinks": "پیوند سخت (بدون فضای اضافه)",
+      "lastSync": "آخرین به‌روزرسانی {{at}} · {{cases}} پرونده",
+      "folderHint": "این پوشه‌ها فقط‌خواندنی و از روی بایگانی ساخته می‌شوند و در پشتیبان نیستند."
+    }
+  },
+  "reference": {
+    "title": "داده‌های مرجع",
+    "subtitle": "فهرست‌های استاندارد با کد کنار نام؛ هیچ داده‌ای از اینترنت خوانده نمی‌شود.",
+    "datasets": "مجموعه‌ها",
+    "importTitle": "ورود از فایل",
+    "dataset": "مجموعه",
+    "release": "نسخه",
+    "file": "فایل",
+    "import": "ورود",
+    "importHint": "فایل رسمی را از ناشر بگیرید (UN/LOCODE از UNECE، ELF از GLEIF) و اینجا بارگذاری کنید. ورود دوباره چیزی را تکرار نمی‌کند.",
+    "report": "{{inserted}} تازه، {{updated}} به‌روز، {{deactivated}} غیرفعال، {{rejected}} رد شد",
+    "verified": "{{count}} تأییدشده با فایل رسمی",
+    "col": {
+      "dataset": "مجموعه",
+      "rows": "ردیف",
+      "active": "فعال",
+      "release": "نسخه",
+      "lastImport": "آخرین ورود"
+    },
+    "ds": {
+      "locations": "مکان‌ها (UN/LOCODE)",
+      "airports": "فرودگاه‌ها (IATA)",
+      "legal_forms": "شکل حقوقی (ISO 20275)",
+      "containers": "کانتینر (ISO 6346)",
+      "transport_modes": "شیوهٔ حمل (Rec 19)",
+      "incoterms": "اینکوترمز ۲۰۲۰",
+      "units": "واحدها (Rec 20)",
+      "unlocode": "UN/LOCODE (فایل رسمی)",
+      "elf": "ELF (فایل رسمی GLEIF)"
+    }
+  },
+  "verify": {
+    "title": "تأیید سند",
+    "subtitle": "متن کد QR روی سند را بچسبانید یا کد و کد تأیید را بنویسید.",
+    "payload": "متن QR",
+    "payloadHint": "با کدخوان گوشی بخوانید و متن را اینجا بچسبانید.",
+    "or": "یا",
+    "code": "کد سند",
+    "vc": "کد تأیید",
+    "check": "بررسی",
+    "genuine": "سند معتبر است",
+    "version": "نسخهٔ {{v}}",
+    "currentStatus": "وضعیت کنونی",
+    "open": "باز کردن سابقه",
+    "supersededHint": "نسخهٔ تازه‌تری ({{v}}) صادر شده است.",
+    "status": {
+      "issued": "صادرشده",
+      "draft": "پیش‌نویس",
+      "superseded": "جایگزین‌شده",
+      "void": "باطل",
+      "unknown": "ناشناخته"
+    },
+    "reason": {
+      "unreadable": "متن خوانا نیست",
+      "signature_mismatch": "کد تأیید با سند نمی‌خواند (جعلی یا دست‌کاری‌شده)"
+    }
+  },
+  "folder": {
+    "open": "باز کردن پوشه",
+    "path": "پوشهٔ پرونده: {{path}}",
+    "notWindows": "پوشه روی رایانهٔ BOMS باز می‌شود. مسیر: {{path}}"
   }
 }

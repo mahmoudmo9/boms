@@ -1,4 +1,5 @@
 /** RFQ builder and collapsible RFQ cards: per-recipient text (editable while draft), copy, mailto, mark as sent, decline, xlsx. */
+import { DraftMessageButton } from "../../components/AiActions";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -219,6 +220,7 @@ function RecipientRow({ recipient, rfq, onChanged }: { recipient: RfqRecipient; 
           <StatusBadge group="recipient" status={recipient.status} />
           {recipient.sent_at && <span className="text-xs text-muted tabular-nums">{f.date(recipient.sent_at, true)}</span>}
         </button>
+        {draft && rfq.status !== "cancelled" && <DraftMessageButton target="rfq_recipient" targetId={recipient.id} onCommitted={() => onChanged()} />}
         {draft && rfq.status !== "cancelled" && <Button variant="primary" icon="check" onClick={() => setSending(true)}>{t("sourcing.rfq.markSent")}</Button>}
         {waiting && rfq.status !== "cancelled" && (
           <Button onClick={() => setParams({ tab: "offers", record: recipient.party_id })}>{t("sourcing.rfq.recordOffer")}</Button>

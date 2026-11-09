@@ -33,13 +33,20 @@ def test_folder_view_build_link_changes_rename_delete_and_rebuild(client, db):
     from app.core.files import store_relpath
     from app.modules.documents import folders
 
+    db.execute(text("UPDATE sys.job SET status = 'done' WHERE type = 'folders.sync' AND status = 'queued'"))
+    db.commit()
     case, items, party, sheet = ready_case(client)
     quote = new_quote(client, case)
     out = client.post(f"/api/quotes/{quote['id']}/outputs", json={"format": "docx"}).json()
+    db.execute(text("UPDATE sys.job SET status = 'done' WHERE type = 'folders.sync' AND status = 'queued'"))
+    db.commit()
     doc = upload(client, f"spec-{tag()}.txt", unique_bytes("spec")).json()
     link = client.post(f"/api/documents/{doc['id']}/links", json={"entity_type": "case", "entity_id": case["id"]}).json()
     queued = db.execute(text("SELECT count(*) FROM sys.job WHERE type = 'folders.sync' AND status = 'queued'")).scalar()
     assert queued == 1                                              # a link change queues one sync
+    enqueued = db.execute(text("SELECT count(*) FROM core.event WHERE entity_type = 'job' AND action = 'enqueue' "
+                               "AND data->>'type' = 'folders.sync' AND source = 'worker'")).scalar()
+    assert enqueued >= 1                                            # recorded like every job
     report = _sync(client)
     assert report["linked"] >= 2 and report["copied"] == 0
     root = folders.view_root(db)

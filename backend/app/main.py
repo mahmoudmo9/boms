@@ -29,6 +29,7 @@ from app.modules.reference.router import ROUTERS as reference_routers
 from app.modules.codes.router import ROUTERS as codes_routers
 from app.modules.documents.folder_router import ROUTERS as folder_routers
 from app.modules.ai.router import ROUTERS as ai_routers
+from app.modules.lookup.router import ROUTERS as lookup_routers
 from app.modules.system.router import router as system_router
 
 
@@ -47,7 +48,7 @@ def create_app() -> FastAPI:
     app.include_router(events_router)
     app.include_router(documents_router)
     app.include_router(search_router)
-    for router in parties_routers + sourcing_routers + catalog_routers + costing_routers + quotes_routers + listings_routers + tenders_routers + execution_routers + tasks_routers + finance_routers + reference_routers + codes_routers + folder_routers + ai_routers:
+    for router in parties_routers + sourcing_routers + catalog_routers + costing_routers + quotes_routers + listings_routers + tenders_routers + execution_routers + tasks_routers + finance_routers + reference_routers + codes_routers + folder_routers + ai_routers + lookup_routers:
         app.include_router(router)
 
     @app.get("/api/health")

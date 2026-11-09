@@ -70,38 +70,49 @@ DRAFT_SCHEMA = {
 
 # ---- inputs ----------------------------------------------------------------------------------------------------------
 
-def prepare_inputs(db: Session, document_ids: list, pasted: str | None) -> tuple[str, list[Attachment], dict, list]:
-    """(text, images, description for the privacy log, sources for the review screen). Never stores the content."""
+def prepare_inputs(db: Session, document_ids: list, pasted: str | None,
+                   files: list[tuple[str, str]] = ()) -> tuple[str, list[Attachment], dict, list]:
+    """(text, images, description for the privacy log, sources for the review screen). Never stores the content.
+    ``files``: (name, local path) of files outside the document store (Setad attachments before conversion)."""
+    import mimetypes
+    from pathlib import Path
+
     from app.modules.documents import service as documents
 
-    parts, images, files, sources = [], [], [], []
-    pages = 0
+    entries = []
     for doc_id in document_ids or []:
         doc = documents.get(db, doc_id)
-        data = documents.file_path(doc).read_bytes()
-        name = doc.original_filename or doc.title or "file"
-        files.append(name)
+        entries.append((str(doc.id), doc.original_filename or doc.title or "file", doc.mime_type or "",
+                        documents.file_path(doc).read_bytes(), doc.text_content))
+    for name, path in files or []:
+        p = Path(path)
+        if p.is_file():
+            entries.append((None, name, mimetypes.guess_type(name)[0] or "", p.read_bytes(), None))
+    parts, images, names, sources = [], [], [], []
+    pages = 0
+    for doc_id, name, mime, data, text_content in entries:
+        names.append(name)
         lower = name.lower()
-        if doc.mime_type == "application/pdf" or lower.endswith(".pdf"):
+        src = {"document_id": doc_id, "name": name} if doc_id else {"name": name}
+        if mime == "application/pdf" or lower.endswith(".pdf"):
             text_, imgs, n = _pdf(data, name)
             pages += n
             parts.append(text_)
             images += imgs
-            sources.append({"document_id": str(doc.id), "name": name, "kind": "pdf", "pages": n})
-        elif (doc.mime_type or "").startswith("image/"):
-            images.append(Attachment(name, doc.mime_type, data))
-            sources.append({"document_id": str(doc.id), "name": name, "kind": "image"})
+            sources.append({**src, "kind": "pdf", "pages": n})
+        elif mime.startswith("image/") or lower.endswith((".png", ".jpg", ".jpeg")):
+            images.append(Attachment(name, mime or "image/png", data))
+            sources.append({**src, "kind": "image"})
         elif lower.endswith((".xlsx", ".xlsm", ".csv")):
             from app.modules.sourcing import importing
 
             rows = importing.parse_upload(name, data)[:SHEET_ROWS]
             table = "\n".join(f"row {i}: " + " | ".join(f"[{j}] {c}" for j, c in enumerate(r)) for i, r in enumerate(rows, 1))
             parts.append(f"--- sheet {name} ({len(rows)} rows; columns by index) ---\n{table}")
-            sources.append({"document_id": str(doc.id), "name": name, "kind": "sheet", "rows": len(rows),
-                            "preview": rows[:SHEET_ROWS]})
+            sources.append({**src, "kind": "sheet", "rows": len(rows), "preview": rows[:SHEET_ROWS]})
         else:
-            parts.append(f"--- {name} ---\n{doc.text_content or ''}")
-            sources.append({"document_id": str(doc.id), "name": name, "kind": "text"})
+            parts.append(f"--- {name} ---\n{text_content or data.decode('utf-8', 'ignore')[:200000]}")
+            sources.append({**src, "kind": "text"})
     if pasted and pasted.strip():
         parts.append(f"--- pasted text ---\n{pasted.strip()}")
         sources.append({"kind": "pasted", "text": pasted.strip()[:20000]})
@@ -109,7 +120,7 @@ def prepare_inputs(db: Session, document_ids: list, pasted: str | None) -> tuple
     text_ = "\n\n".join(p for p in parts if p)
     if not text_.strip() and not images:
         raise AppError("nothing_to_read", "Give a file or paste the text to read", status=422)
-    desc = {"files": files, "pages": pages, "images": len(images), "pasted_characters": len(pasted or "")}
+    desc = {"files": names, "pages": pages, "images": len(images), "pasted_characters": len(pasted or "")}
     return text_, images, desc, sources
 
 
@@ -204,9 +215,16 @@ def start_extraction(db: Session, *, target_type: str, target_id, document_ids=(
         raise AppError("party_required", "Choose the supplier of the offer", status=422)
     if target_type == "inquiry":
         case_id = db.execute(text("SELECT id FROM ops.\"case\" WHERE inquiry_id = :i"), {"i": target_id}).scalar()
+    files = []
+    if target_type == "listing":   # the downloaded Setad attachments (not in the document store before conversion)
+        files = [[r.display_name, r.local_path] for r in db.execute(text(
+            "SELECT display_name, local_path FROM ext.listing_file WHERE listing_id = :l AND state = 'downloaded' "
+            "AND local_path IS NOT NULL ORDER BY group_key, display_name"), {"l": target_id})]
+        if not files and not document_ids and not text_:
+            raise AppError("files_not_downloaded", "Download the attachments first, or paste the text", status=409)
     return tasks.start(db, "extract_items", target_type=target_type, target_id=target_id, case_id=case_id,
                        payload={"document_ids": [str(d) for d in document_ids], "text": text_ or "",
-                                "party_id": str(party_id) if party_id else None},
+                                "party_id": str(party_id) if party_id else None, "files": files},
                        sources=[{"document_id": str(d)} for d in document_ids], source=source, actor=actor)
 
 
@@ -217,7 +235,8 @@ def _case_items(db: Session, case_id) -> list:
 
 
 def build_extraction(db: Session, draft, payload: dict, job_id) -> None:
-    text_, images, desc, sources = prepare_inputs(db, payload.get("document_ids") or [], payload.get("text"))
+    text_, images, desc, sources = prepare_inputs(db, payload.get("document_ids") or [], payload.get("text"),
+                                                  [tuple(f) for f in payload.get("files") or []])
     context = ""
     known = _case_items(db, draft.case_id) if draft.target_type == "offer" else []
     if known:

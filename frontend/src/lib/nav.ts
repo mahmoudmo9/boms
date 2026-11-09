@@ -50,7 +50,15 @@ export const WORKSPACES: Workspace[] = [
   { key: "tenders", path: "/tenders", icon: "gavel" },
   { key: "execution", path: "/execution", icon: "truck" },
   { key: "finance", path: "/finance", icon: "coins" },
-  { key: "documents", path: "/documents", icon: "file" },
+  {
+    key: "documents",
+    path: "/documents",
+    icon: "file",
+    children: [
+      { key: "documentsList", path: "/documents" },
+      { key: "verifyDocument", path: "/documents/verify" },
+    ],
+  },
   { key: "reports", path: "/reports", icon: "chart", phase: "10" },
   {
     key: "settings",
@@ -64,6 +72,9 @@ export const WORKSPACES: Workspace[] = [
       { key: "tenderSettings", path: "/settings/tenders" },
       { key: "companyDocuments", path: "/settings/company-documents" },
       { key: "executionSettings", path: "/settings/execution" },
+      { key: "aiSettings", path: "/settings/ai" },
+      { key: "codingSettings", path: "/settings/coding" },
+      { key: "referenceData", path: "/settings/reference" },
       { key: "basedata", path: "/settings/basedata/countries" },
       { key: "events", path: "/settings/events" },
       { key: "system", path: "/settings/system" },
