@@ -80,7 +80,7 @@ def test_render_with_all_placeholders_en_and_fa(client):
                                          {"party_id": domestic["id"]}], respond_by="2026-11-20")
     en, fa = body["recipients"]
     assert (en["channel"], en["language"], fa["channel"], fa["language"]) == ("email", "en", "whatsapp", "fa")
-    assert en["subject"] == f"Request for quotation: {case['title']}"
+    assert en["subject"] == f"[{body['code']}] Request for Quotation – {case['title']}"   # v0.9.0
     text_en = en["message_text"]
     assert text_en.startswith("Dear Wang Lei,")
     assert "1. Polyethylene HD — Quantity: 20 Metric ton" in text_en
@@ -93,7 +93,7 @@ def test_render_with_all_placeholders_en_and_fa(client):
     assert "مقدار: 20 تن" in text_fa and "مشخصات: Grade: PE100" in text_fa and "تا 1405/08/29" in text_fa
     assert text_fa.rstrip().endswith("با احترام\nبازرگانی کیمیا")
     assert "{" not in text_en + text_fa
-    assert en["mailto"].startswith(f"mailto:{person['methods'][0]['value']}?subject=Request%20for%20quotation")
+    assert en["mailto"].startswith(f"mailto:{person['methods'][0]['value']}?subject=%5B{body['code']}%5D%20Request%20for%20Quotation")
     assert fa["mailto"] is None
 
 

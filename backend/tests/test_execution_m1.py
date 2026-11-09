@@ -195,7 +195,7 @@ def test_acknowledgement_fa_with_jalali_and_persian_digits_whatever_the_user_and
     page = client.get(f"/api/sales-orders/{so['id']}/print", params={"language": "en"}).text
     assert "class='watermark'" not in page
     r = client.post(f"/api/sales-orders/{so['id']}/outputs", json={"format": "docx", "language": "fa"})
-    assert r.status_code == 201 and r.json()["filename"] == f"{so['number']}.docx"
+    assert r.status_code == 201 and r.json()["filename"].startswith(f"{so['number']}_سفارش‌فروش_") and r.json()["filename"].endswith(".docx")
     from docx import Document
 
     data = client.get(f"/api/documents/{r.json()['document_id']}/download").content

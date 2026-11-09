@@ -33,3 +33,12 @@ def extract_text(db, payload: dict) -> dict:
     events.record(db, "document", doc.id, "text_extracted",
                   {"pages": pages, "chars": len(content), "status": doc.text_status}, "worker")
     return {"status": doc.text_status, "chars": len(content)}
+
+
+@job_handler("folders.sync")
+def sync_folders(db, _payload: dict) -> dict:
+    """v0.9.0: bring the readable case folders up to date (links, renames, deletions)."""
+    from app.modules.documents import folders
+
+    report = folders.sync(db)
+    return {k: v for k, v in report.items() if k != "root"}

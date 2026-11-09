@@ -200,7 +200,8 @@ def render_terms(db: Session, quote: Quote) -> str:
                                else sourcing_templates.localize_digits(origin["setad_number"], lang, digits)),
               "valid_until": sourcing_templates.format_date(quote.valid_until, lang, digits),
               "payment_terms": quote.payment_terms or "", "lead_time": lead, "bank_details": bank,
-              "incoterm": " ".join(x for x in (quote.incoterm, quote.incoterm_place) if x)}
+              "incoterm": " ".join(x for x in (quote.incoterm, quote.incoterm_place) if x),
+              "code": quote.number or ""}
     return sourcing_templates.render(template.body_template, values, drop_empty_lines=True)
 
 

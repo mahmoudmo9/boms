@@ -13,6 +13,7 @@ from app.modules.documents import service as documents
 from app.modules.events import service as events
 from app.modules.parties import service as parties
 from app.modules.quotes import output as qo
+from app.modules.reference import service as ref_service
 from app.modules.sourcing import templates as sourcing_templates
 from app.modules.system import settings
 
@@ -81,6 +82,15 @@ def _base(db: Session, lang: str, currency: str, rows, draft: bool) -> dict:
 
 
 def sales_order_context(db: Session, order, language: str | None = None) -> dict:
+    """v0.9.0: the context with its document control (stamp, footer, QR)."""
+    from app.modules.documents import control
+
+    ctx = _sales_order_context(db, order, language)
+    ctx["control"] = control.control_for(db, "sales_order", order, ctx["lang"])
+    return ctx
+
+
+def _sales_order_context(db: Session, order, language: str | None = None) -> dict:
     from app.modules.execution.sales_orders import items_of
 
     lang = language or _language_for(db, order.customer_party_id)
@@ -95,7 +105,7 @@ def sales_order_context(db: Session, order, language: str | None = None) -> dict
         "meta": [(lb[k], v) for k, v in (
             ("customer_ref", order.customer_ref or ""), ("contract_date", fmt_date(order.contract_date)),
             ("delivery_due_on", fmt_date(order.delivery_due_on)), ("delivery_place", order.delivery_place or ""),
-            ("incoterm", " ".join(x for x in (order.incoterm, order.incoterm_place) if x)),
+            ("incoterm", ref_service.incoterm_text(db, order.incoterm, order.incoterm_place, order.incoterm_place_location_id, lang)),
             ("payment_terms", order.payment_terms or ""), ("delivery_terms", order.delivery_terms or ""),
             ("warranty", f"{sourcing_templates.localize_digits(str(order.warranty_months), lang, dig)} {lb['months']}"
              if order.warranty_months else "")) if v],
@@ -108,6 +118,15 @@ def sales_order_context(db: Session, order, language: str | None = None) -> dict
 
 
 def purchase_order_context(db: Session, po) -> dict:
+    """v0.9.0: the context with its document control (stamp, footer, QR)."""
+    from app.modules.documents import control
+
+    ctx = _purchase_order_context(db, po)
+    ctx["control"] = control.control_for(db, "purchase_order", po, ctx["lang"])
+    return ctx
+
+
+def _purchase_order_context(db: Session, po) -> dict:
     from app.modules.execution.purchase_orders import items_of
 
     lang = po.language
@@ -121,7 +140,7 @@ def purchase_order_context(db: Session, po) -> dict:
         "contact": _contact_name(db, po.contact_id, lang),
         "meta": [(lb[k], v) for k, v in (
             ("ready_due_on", fmt_date(po.ready_due_on)), ("delivery_place", po.delivery_place or ""),
-            ("incoterm", " ".join(x for x in (po.incoterm, po.incoterm_place) if x)),
+            ("incoterm", ref_service.incoterm_text(db, po.incoterm, po.incoterm_place, po.incoterm_place_location_id, lang)),
             ("payment_terms", po.payment_terms or ""), ("delivery_terms", po.delivery_terms or "")) if v],
         "subtotal": qo._fmt_num(po.subtotal, dec, dig), "vat": "", "grand": qo._fmt_num(po.total, dec, dig),
         "show_vat": False, "words": qo.total_in_words(po.total, po.currency) if lang == "fa" else "",
@@ -138,6 +157,12 @@ def _language_for(db: Session, party_id) -> str:
 
 
 def render_html(ctx: dict) -> str:
+    from app.modules.documents import control
+
+    return control.with_html(_render_html(ctx), ctx)   # v0.9.0: stamp, footer, QR
+
+
+def _render_html(ctx: dict) -> str:
     lb, c, e = ctx["labels"], ctx["company"], qo._e
     rows = "".join(f"<tr><td class='n'>{i}</td><td><bdi>{e(r['description'])}</bdi></td><td class='n'>{e(r['quantity'])}</td>"
                    f"<td>{e(r['unit'])}</td><td class='n'>{e(r['unit_price'])}</td><td class='n'>{e(r['total'])}</td></tr>"
@@ -187,6 +212,12 @@ table.totals td {{ padding: 3px 6px; }} table.totals tr.grand th, table.totals t
 
 
 def render_docx(ctx: dict) -> bytes:
+    from app.modules.documents import control
+
+    return control.with_docx(_render_docx(ctx), ctx)
+
+
+def _render_docx(ctx: dict) -> bytes:
     from docx import Document
     from docx.oxml import OxmlElement
     from docx.shared import Pt, RGBColor
@@ -260,7 +291,14 @@ def generate(db: Session, entity_type: str, row, ctx: dict, fmt: str, source: st
         data, ext = qo.html_to_pdf(render_html(ctx), qo.find_browser(db)), "pdf"
     else:
         data, ext = render_docx(ctx), "docx"
-    filename = f"{row.number}{'-DRAFT' if ctx['draft'] else ''}.{ext}"
+    from datetime import date as _date
+
+    from app.modules.documents import naming
+
+    on = getattr(row, "confirmed_at", None) if entity_type == "sales_order" else getattr(row, "approved_at", None)
+    filename = naming.output_name(db, kind=entity_type, code=row.number or f"{entity_type}-{str(row.id)[:8]}",
+                                  party=ctx.get("party") or "", on=on.date() if on else _date.today(),
+                                  lang=ctx["lang"], ext=ext, draft=ctx["draft"])   # v0.9.0
     try:
         doc = documents.upload(db, io.BytesIO(data), filename, title=filename.rsplit(".", 1)[0], language=ctx["lang"],
                                source=source, actor=actor)

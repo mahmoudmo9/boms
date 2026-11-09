@@ -115,6 +115,7 @@ def render_values(db: Session, rfq: Rfq, recipient: RfqRecipient) -> dict[str, s
         "items_table": templates.items_table(table_rows(db, rfq.id, lang, digits), lang, digits),
         "respond_by": templates.format_date(rfq.respond_by, lang, digits),
         "signature": signature(db, lang),
+        "code": rfq.code or "",
     }
 
 
@@ -126,8 +127,24 @@ def render_recipient(db: Session, rfq: Rfq, recipient: RfqRecipient) -> None:
                        {"language": recipient.language, "channel": recipient.channel}, status=422)
     recipient.template_id = template.id
     values = render_values(db, rfq, recipient)
-    recipient.subject = templates.render(template.subject_template, values).strip() or None
+    from app.modules.documents import naming
+
+    subject = templates.render(template.subject_template, values).strip()
+    recipient.subject = naming.subject(rfq.code, subject) if subject else None   # v0.9.0: [RFQ-1405-0009] …
     recipient.message_text = templates.render(template.body_template, values)
+    if recipient.channel == "letter":                                           # v0.9.0: «شماره» / «تاریخ»
+        recipient.message_text = letter_head(db, rfq.code, recipient.language) + recipient.message_text
+
+
+def letter_head(db: Session, code: str | None, lang: str) -> str:
+    from datetime import date
+
+    digits = templates.owner_digits(db) if lang == "fa" else "latin"
+    day = templates.format_date(date.today(), lang, digits)
+    number = code or ""          # codes stay in Latin letters and digits (searchable, the same on the QR)
+    if lang == "fa":
+        return f"شماره: {number}\nتاریخ: {day}\n\n"
+    return f"No.: {number}\nDate: {day}\n\n"
 
 
 def email_of(db: Session, recipient: RfqRecipient) -> str | None:

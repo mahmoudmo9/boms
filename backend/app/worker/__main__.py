@@ -34,6 +34,11 @@ def _request_stop(*_):
 def main() -> int:
     setup_logging("worker")
     handlers = load_handlers()
+    from app.modules.codes.service import ensure_loaded
+    from app.modules.documents import folders
+
+    ensure_loaded()     # v0.9.0: records created by jobs get their codes
+    folders.install()   # v0.9.0: and keep the readable case folders in step
     log.info("worker starting; handlers: %s", ", ".join(sorted(handlers)))
 
     lock_conn = get_engine().connect()

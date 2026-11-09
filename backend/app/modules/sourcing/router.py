@@ -525,9 +525,16 @@ def delete_rfq(rfq_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
 
 @rfqs_router.get("/{rfq_id}/export.xlsx")
 def export_rfq(rfq_id: uuid.UUID, _: CurrentUser, db: Db, language: Literal["en", "fa"] = "en"):
+    from datetime import date
+
+    from app.modules.documents import naming
+
     data = rfq.export_xlsx(db, rfq_id, language)
+    row = rfq.get_rfq(db, rfq_id)
+    name = naming.output_name(db, kind="rfq", code=row.code or f"RFQ-{str(rfq_id)[:8]}", party=None,
+                              on=date.today(), lang=language, ext="xlsx")      # v0.9.0 (was rfq-<uuid>.xlsx)
     return Response(data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    headers={"Content-Disposition": f'attachment; filename="rfq-{rfq_id}.xlsx"'})
+                    headers={"Content-Disposition": naming.content_disposition(name)})
 
 
 @rfqs_router.post("/{rfq_id}/recipients", status_code=201)
@@ -594,13 +601,13 @@ def preview_template(body: TemplatePreviewIn, _: CurrentUser, db: Db):
         values = {"supplier_name": "ACME Trading", "contact_name": "Mr. Smith", "payment_terms": "30% advance",
                   "incoterm": "FOB Shanghai", "ready_due_on": templates.format_date(date.today(), body.language),
                   "delivery_place": "Bandar Abbas", "delivery_terms": "", "case_title": "Sample case",
-                  "signature": rfq.signature(db, body.language)}
+                  "signature": rfq.signature(db, body.language), "code": "PO-1405-0007"}
         return {"subject": templates.render(body.subject_template, values),
                 "body": templates.render(body.body_template, values, drop_empty_lines=True)}
     if body.kind == "quote_terms":
         values = {"buyer_name": "ACME Trading", "valid_until": templates.format_date(date.today(), body.language),
                   "payment_terms": "30% advance, 70% before shipment", "incoterm": "CIF Bandar Abbas",
-                  "lead_time": "45 days", "bank_details": "Bank / account / IBAN"}
+                  "lead_time": "45 days", "bank_details": "Bank / account / IBAN", "code": "PI-1405-0005"}
         return {"subject": templates.render(body.subject_template, values),
                 "body": templates.render(body.body_template, values)}
     sample = templates.items_table([{"name": "Polyethylene HD", "quantity": Decimal("20"), "unit": "t",
@@ -608,7 +615,7 @@ def preview_template(body: TemplatePreviewIn, _: CurrentUser, db: Db):
                                    body.language)
     values = {"supplier_name": "ACME Trading", "contact_name": "Mr. Smith", "case_title": "Sample case",
               "items_table": sample, "respond_by": templates.format_date(date.today(), body.language),
-              "signature": rfq.signature(db, body.language)}
+              "signature": rfq.signature(db, body.language), "code": "RFQ-1405-0009"}
     return {"subject": templates.render(body.subject_template, values),
             "body": templates.render(body.body_template, values)}
 

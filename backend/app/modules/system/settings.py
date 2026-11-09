@@ -195,6 +195,33 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "finance.vat_default_domestic": (None, _vat_decision),        # v0.9.0: decided on the first domestic invoice
 }
 
+def _folder_mapping(value: Any) -> dict:
+    from app.modules.documents.folders import FOLDERS
+
+    if not isinstance(value, dict) or len(value) > 100:
+        raise ValueError("expected {link kind: folder}")
+    for kind, folder in value.items():
+        if not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", str(kind)) or folder not in FOLDERS:
+            raise ValueError(f"folder must be one of {', '.join(FOLDERS)}")
+    return value
+
+
+DEFINITIONS.update({
+    # v0.9.0: readable folder view (section 6.1)
+    "folders.enabled": (True, _bool),
+    "folders.root": (None, _optional_path),          # None = <data folder>/پرونده‌ها (never backed up)
+    "folders.mapping": ({}, _folder_mapping),        # overrides of documents.folders.DEFAULT_MAPPING
+})
+
+
+def _naming(value: Any) -> str:
+    from app.modules.documents.naming import check
+
+    return check(value)
+
+
+DEFINITIONS["naming.output"] = ("{code}_{type}_{party}_{date}{version}{draft}", _naming)   # v0.9.0 section 6.2
+
 # v0.9.0: code patterns per kind (a change applies to new codes only)
 from app.modules.codes.patterns import DEFAULTS as _CODE_PATTERNS, check as _code_pattern  # noqa: E402
 

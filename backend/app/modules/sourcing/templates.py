@@ -18,11 +18,12 @@ from app.modules.events import service as events
 from app.modules.sourcing.common import diff, flush, jsonable, row_snapshot
 from app.modules.sourcing.models import MessageTemplate, RfqRecipient
 
-PLACEHOLDERS = ("supplier_name", "contact_name", "case_title", "items_table", "respond_by", "signature")
+PLACEHOLDERS = ("supplier_name", "contact_name", "case_title", "items_table", "respond_by", "signature",
+                "code")  # v0.9.0: the record's code (RFQ-1405-0009)
 QUOTE_PLACEHOLDERS = ("buyer_name", "valid_until", "payment_terms", "incoterm", "lead_time", "bank_details",
-                      "addressee", "setad_number")  # v0.5.0: Setad proforma
+                      "addressee", "setad_number", "code")  # v0.5.0: Setad proforma; v0.9.0: code
 PO_PLACEHOLDERS = ("supplier_name", "contact_name", "payment_terms", "incoterm", "ready_due_on", "delivery_place",
-                   "delivery_terms", "case_title", "signature")  # v0.7.0: purchase order terms (module execution)
+                   "delivery_terms", "case_title", "signature", "code")  # v0.7.0: purchase order terms (module execution)
 PLACEHOLDERS_BY_KIND = {"rfq": PLACEHOLDERS, "quote_terms": QUOTE_PLACEHOLDERS, "po_terms": PO_PLACEHOLDERS}
 _TOKEN = re.compile(r"\{\{|\}\}|\{([^{}]*)\}|[{}]")
 

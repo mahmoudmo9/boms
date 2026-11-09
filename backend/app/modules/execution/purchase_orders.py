@@ -88,7 +88,8 @@ def render_terms(db: Session, po: PurchaseOrder) -> str:
               "incoterm": " ".join(x for x in (po.incoterm, po.incoterm_place) if x),
               "ready_due_on": sourcing_templates.format_date(po.ready_due_on, lang, "fa" if lang == "fa" else "latin"),
               "delivery_place": po.delivery_place or "", "delivery_terms": po.delivery_terms or "",
-              "case_title": sourcing.get_case(db, po.case_id).title or "", "signature": rfq.signature(db, lang)}
+              "case_title": sourcing.get_case(db, po.case_id).title or "", "signature": rfq.signature(db, lang),
+              "code": po.number or ""}
     return sourcing_templates.render(template.body_template, values, drop_empty_lines=True)
 
 

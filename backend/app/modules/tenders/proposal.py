@@ -191,6 +191,15 @@ def approve(db: Session, proposal_id: uuid.UUID, source: str, actor: str | None 
 # ---- outputs --------------------------------------------------------------------------------------------------------
 
 def build_context(db: Session, row: TenderProposal, calendar: str = "jalali", digits: str = "fa", language: str = "fa") -> dict:
+    """v0.9.0: the context with its document control (stamp, footer, QR)."""
+    from app.modules.documents import control
+
+    ctx = _build_context(db, row, calendar, digits, language)
+    ctx["control"] = control.control_for(db, "tender_proposal", row, ctx.get("lang", language))
+    return ctx
+
+
+def _build_context(db: Session, row: TenderProposal, calendar: str = "jalali", digits: str = "fa", language: str = "fa") -> dict:
     tender = get_tender(db, row.tender_id)
     lb = LABELS[language]
     calendar, digits = quote_output.output_style(language)  # v0.7.0: always Jalali / Persian digits in fa
@@ -224,6 +233,12 @@ def build_context(db: Session, row: TenderProposal, calendar: str = "jalali", di
 
 
 def render_html(ctx: dict) -> str:
+    from app.modules.documents import control
+
+    return control.with_html(_render_html(ctx), ctx)   # v0.9.0: stamp, footer, QR
+
+
+def _render_html(ctx: dict) -> str:
     lb, c, e = ctx["labels"], ctx["company"], quote_output._e
     ids = " · ".join(f"{lb[k]}: {c[k]}" for k in ("national_id", "economic_code") if c[k])
     rows = "".join(f"<tr><td class='n'>{i}</td><td><bdi>{e(r['description'])}</bdi></td><td class='n'>{e(r['quantity'])}</td>"
@@ -270,6 +285,12 @@ table.totals td {{ padding: 3px 6px; }} table.totals tr.grand th, table.totals t
 
 
 def render_docx(ctx: dict) -> bytes:
+    from app.modules.documents import control
+
+    return control.with_docx(_render_docx(ctx), ctx)
+
+
+def _render_docx(ctx: dict) -> bytes:
     from docx import Document
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
@@ -341,8 +362,14 @@ def generate(db: Session, proposal_id: uuid.UUID, fmt: str, calendar: str, digit
         data, ext = quote_output.html_to_pdf(render_html(ctx), quote_output.find_browser(db)), "pdf"
     else:
         data, ext = render_docx(ctx), "docx"
-    number = (tender.tender_no or str(tender.id)[:8]).replace("/", "-")
-    filename = f"Tender-{number}-proposal-v{row.version}{'-DRAFT' if ctx['draft'] else ''}.{ext}"
+    from datetime import date as _date
+
+    from app.modules.documents import naming
+
+    filename = naming.output_name(db, kind="tender_proposal", code=tender.code or (tender.tender_no or str(tender.id)[:8]),
+                                  party=naming.party_name(db, tender.organizer_party_id, "fa"),
+                                  on=row.approved_at.date() if row.approved_at else _date.today(), lang="fa", ext=ext,
+                                  version=row.version, draft=ctx["draft"])   # v0.9.0
     try:
         doc = documents.upload(db, io.BytesIO(data), filename, title=filename.rsplit(".", 1)[0], language="fa",
                                source=source, actor=actor)

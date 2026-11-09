@@ -98,7 +98,7 @@ def test_outputs_pdf_one_page_word_reopens_and_draft_mark(client):
     assert "پیش‌نویس" in html
     r = client.post(f"/api/tender-proposals/{p['id']}/outputs", json={"format": "docx"})
     assert r.status_code == 201, r.text
-    assert r.json()["draft"] is True and r.json()["filename"].endswith("-DRAFT.docx")
+    assert r.json()["draft"] is True and r.json()["filename"].endswith("_DRAFT.docx")
     doc = Document(io.BytesIO(client.get(f"/api/documents/{r.json()['document_id']}/download").content))
     body = "\n".join(x.text for x in doc.paragraphs)
     cells = [c.text for tb in doc.tables for row in tb.rows for c in row.cells]

@@ -5,7 +5,9 @@ quote / sales order / PO / invoice sequences are carried over into it (no number
 is added to inquiries, cases, RFQs, tenders, guarantees, shipments, receipts, deliveries, payment records, claims,
 inspections, parties and products, and every existing row gets its code in creation order per kind and year of the
 owner's calendar (party: SUP- / CUS- / BP- by the roles it had at creation and its country; product: its HS heading).
-An event ``codes`` / ``backfill`` records the counts per kind.
+An event ``codes`` / ``backfill`` records the counts per kind. The seeded RFQ e-mail templates start their subject
+with the code in brackets (``[{code}] Request for Quotation – {case_title}``, section 6.2) where the seeded text is
+unchanged; the owner's own wording stays.
 
 Downgrade keeps the codes in ``sys.downgrade_archive``; a later upgrade gives every row its archived code back before
 coding the rest (no code changes on a down / up cycle).
@@ -39,6 +41,18 @@ CODED = {"inquiry": ("ops.inquiry", "INQ"), "case": ('ops."case"', "CS"), "rfq":
 OLD_SEQUENCES = [("quote", "ops.quote_sequence", "PI"), ("sales_order", "ops.sales_order_sequence", "SO"),
                  ("purchase_order", "ops.purchase_order_sequence", "PO")]
 INVOICE_PREFIX = {"INV": "sales_invoice", "CN": "credit_note", "DN": "debit_note"}
+
+
+SUBJECTS = [("en", "Request for quotation: {case_title}", "[{code}] Request for Quotation – {case_title}"),
+            ("fa", "درخواست استعلام قیمت: {case_title}", "[{code}] درخواست استعلام قیمت – {case_title}")]
+
+
+def _subjects(old_index: int, new_index: int) -> None:
+    conn = op.get_bind()
+    for row in SUBJECTS:
+        conn.execute(text("UPDATE ops.message_template SET subject_template = :new WHERE kind = 'rfq' AND language = :lang "
+                          "AND channel = 'email' AND subject_template = :old"),
+                     {"lang": row[0], "old": row[old_index], "new": row[new_index]})
 
 
 def _jalali_year(d: date) -> int:
@@ -132,9 +146,11 @@ def upgrade() -> None:
     conn.execute(text("INSERT INTO core.event (actor, entity_type, entity_id, action, data, source) "
                       "VALUES ('migration-0018', 'codes', NULL, 'backfill', CAST(:d AS jsonb), 'script')"),
                  {"d": json.dumps(counts)})
+    _subjects(1, 2)
 
 
 def downgrade() -> None:
+    _subjects(2, 1)
     op.execute("CREATE TABLE IF NOT EXISTS sys.downgrade_archive (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, "
                "migration text NOT NULL, table_name text NOT NULL, row_id uuid, data jsonb NOT NULL, "
                "archived_at timestamptz NOT NULL DEFAULT now(), restored_at timestamptz)")

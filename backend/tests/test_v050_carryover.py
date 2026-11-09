@@ -209,4 +209,4 @@ def test_revisions_keep_the_base_number_with_a_version_suffix(client):
     assert following.rsplit("-", 1)[0] == base.rsplit("-", 1)[0]
     assert int(following.rsplit("-", 1)[1]) == int(base.rsplit("-", 1)[1]) + 1
     out = client.post(f"/api/quotes/{v3['id']}/outputs", json={"format": "docx"}).json()
-    assert out["filename"] == f"{base}-v3-DRAFT.docx"
+    assert out["filename"].startswith(f"{base}_ProformaInvoice_") and out["filename"].endswith("_v3_DRAFT.docx")

@@ -128,7 +128,7 @@ def test_outputs_pdf_one_page_word_reopens_draft_mark_and_fa_jalali(client, db):
     usd = pos["USD"]
     client.patch(f"/api/purchase-orders/{usd['id']}", json={"language": "en"})
     r = client.post(f"/api/purchase-orders/{usd['id']}/outputs", json={"format": "docx"})
-    assert r.status_code == 201 and r.json()["filename"] == f"{usd['number']}-DRAFT.docx"
+    assert r.status_code == 201 and re.fullmatch(rf"{usd['number']}_PurchaseOrder_\w+_\d{{8}}_DRAFT\.docx", r.json()["filename"])
     doc = Document(io.BytesIO(client.get(f"/api/documents/{r.json()['document_id']}/download").content))
     body = "\n".join(p.text for p in doc.paragraphs)
     cells = [c.text for t in doc.tables for row in t.rows for c in row.cells]

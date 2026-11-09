@@ -310,14 +310,14 @@ def test_outputs_fa_jalali_persian_digits_words_and_en_gregorian_draft_mark(clie
     assert not re.search("[۰-۹]", _text(page))
     # Word re-opens; DRAFT in the file name before issue
     r = client.post(f"/api/sales-invoices/{inv2['id']}/outputs", json={"format": "docx"})
-    assert r.status_code == 201 and r.json()["filename"].endswith("-DRAFT.docx")
+    assert r.status_code == 201 and r.json()["filename"].endswith("_DRAFT.docx") and "_Invoice_" in r.json()["filename"]
     from docx import Document
 
     data = client.get(f"/api/documents/{r.json()['document_id']}/download").content
     doc = Document(io.BytesIO(data))
     assert "Commercial invoice" in "\n".join(p.text for p in doc.paragraphs) and doc.tables
     r = client.post(f"/api/sales-invoices/{inv['id']}/outputs", json={"format": "docx"})
-    assert r.json()["filename"] == f"{inv['number']}.docx"
+    assert r.json()["filename"].startswith(f"{inv['number']}_فاکتور_") and r.json()["filename"].endswith(".docx")
     text_all = "\n".join(p.text for p in Document(io.BytesIO(client.get(
         f"/api/documents/{r.json()['document_id']}/download").content)).paragraphs)
     assert "صورتحساب فروش کالا و خدمات" in text_all and "مبلغ به حروف" in text_all

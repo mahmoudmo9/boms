@@ -274,7 +274,7 @@ def test_setad_quote_template_validity_words_and_filename(client, db):
     assert "مبلغ به حروف" in html and "علی رضایی" in html and "مدیرعامل" in html
     r = client.post(f"/api/quotes/{quote['id']}/outputs", json={"format": "docx"})
     assert r.status_code in (200, 201), r.text
-    assert number in r.json()["filename"] and r.json()["filename"].endswith("-DRAFT.docx")
+    assert number in r.json()["filename"] and r.json()["filename"].endswith("_DRAFT.docx")
 
 
 def test_required_validity_beyond_the_offers_shows_both_dates(client, db):

@@ -111,6 +111,15 @@ def _fmt_qty(value: Decimal, digits: str) -> str:
 
 
 def build_context(db: Session, quote: Quote, calendar: str = "gregorian", digits: str = "latin") -> dict:
+    """v0.9.0: the context with its document control (stamp, footer, QR)."""
+    from app.modules.documents import control
+
+    ctx = _build_context(db, quote, calendar, digits)
+    ctx["control"] = control.control_for(db, "quote", quote, ctx["lang"])
+    return ctx
+
+
+def _build_context(db: Session, quote: Quote, calendar: str = "gregorian", digits: str = "latin") -> dict:
     lang = quote.language
     calendar, digits = output_style(lang)  # v0.7.0: the document's language decides, not the user's settings
     decimals = costing.currency_decimals(db, quote.currency)
@@ -213,6 +222,12 @@ def page_footer_css(footer: str) -> str:
 
 
 def render_html(ctx: dict) -> str:
+    from app.modules.documents import control
+
+    return control.with_html(_render_html(ctx), ctx)   # v0.9.0: stamp, footer, QR
+
+
+def _render_html(ctx: dict) -> str:
     lb, c = ctx["labels"], ctx["company"]
     logo = ""
     if c["logo"]:
@@ -365,6 +380,12 @@ def html_to_pdf(page: str, browser: str) -> bytes:
 # ---- Word ------------------------------------------------------------------------------------------------------
 
 def render_docx(ctx: dict) -> bytes:
+    from app.modules.documents import control
+
+    return control.with_docx(_render_docx(ctx), ctx)
+
+
+def _render_docx(ctx: dict) -> bytes:
     from docx import Document
     from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -519,9 +540,16 @@ def generate(db: Session, quote_id, fmt: str, calendar: str, digits: str, source
         data, mime_ext = html_to_pdf(render_html(ctx), find_browser(db)), "pdf"
     else:
         data, mime_ext = render_docx(ctx), "docx"
-    suffix = "-DRAFT" if ctx["draft"] else ""
-    setad = f"-Setad-{ctx['setad_number']}" if ctx["setad_number"] else ""  # v0.5.0: the Setad need number
-    filename = f"{quote.number}{setad}{suffix}.{mime_ext}"  # the number carries the revision (-v2, v0.5.0)
+    from datetime import date as _date
+
+    from app.modules.documents import naming
+
+    # v0.9.0: {code}_{type}_{party}_{date}[_v{n}][_DRAFT] in the quote's language
+    filename = naming.output_name(db, kind="quote", code=naming.base_code(quote.number) or f"PI-DRAFT-{str(quote.id)[:8]}",
+                                  party=naming.party_name(db, quote.buyer_party_id, quote.language),
+                                  on=quote.approved_at.date() if quote.approved_at else _date.today(),
+                                  lang=quote.language, ext=mime_ext, version=quote.version, draft=ctx["draft"],
+                                  extra=f"Setad-{ctx['setad_number']}" if ctx["setad_number"] else None)  # v0.5.0
     try:
         doc = documents.upload(db, io.BytesIO(data), filename, title=filename.rsplit(".", 1)[0],
                                language=quote.language, source=source, actor=actor)

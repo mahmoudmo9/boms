@@ -27,6 +27,7 @@ from app.modules.finance.router import ROUTERS as finance_routers
 from app.modules.search.router import router as search_router
 from app.modules.reference.router import ROUTERS as reference_routers
 from app.modules.codes.router import ROUTERS as codes_routers
+from app.modules.documents.folder_router import ROUTERS as folder_routers
 from app.modules.system.router import router as system_router
 
 
@@ -38,11 +39,14 @@ def create_app() -> FastAPI:
     from app.modules.codes.service import ensure_loaded
 
     ensure_loaded()   # v0.9.0: new coded rows get their codes in the creating flush
+    from app.modules.documents import folders
+
+    folders.install()  # v0.9.0: link / case changes queue a sync of the readable case folders
     app.include_router(system_router)
     app.include_router(events_router)
     app.include_router(documents_router)
     app.include_router(search_router)
-    for router in parties_routers + sourcing_routers + catalog_routers + costing_routers + quotes_routers + listings_routers + tenders_routers + execution_routers + tasks_routers + finance_routers + reference_routers + codes_routers:
+    for router in parties_routers + sourcing_routers + catalog_routers + costing_routers + quotes_routers + listings_routers + tenders_routers + execution_routers + tasks_routers + finance_routers + reference_routers + codes_routers + folder_routers:
         app.include_router(router)
 
     @app.get("/api/health")

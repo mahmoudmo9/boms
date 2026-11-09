@@ -76,6 +76,15 @@ def _unit_text(units: dict, unit: str | None, lang: str) -> str:
 
 
 def build_context(db: Session, inv) -> dict:
+    """v0.9.0: the context with its document control (stamp, footer, QR)."""
+    from app.modules.documents import control
+
+    ctx = _build_context(db, inv)
+    ctx["control"] = control.control_for(db, "sales_invoice", inv, ctx["lang"])
+    return ctx
+
+
+def _build_context(db: Session, inv) -> dict:
     lang = inv.language
     calendar, digits = qo.output_style(lang)
     dec = decimals(db, inv.currency)
@@ -122,6 +131,12 @@ def build_context(db: Session, inv) -> dict:
 
 
 def render_html(ctx: dict) -> str:
+    from app.modules.documents import control
+
+    return control.with_html(_render_html(ctx), ctx)   # v0.9.0: stamp, footer, QR
+
+
+def _render_html(ctx: dict) -> str:
     lb, c, b, e = ctx["labels"], ctx["company"], ctx["buyer"], qo._e
     fa = ctx["lang"] == "fa"
     if fa:
@@ -204,6 +219,12 @@ table.totals td {{ padding: 2px 6px; }} table.totals tr.grand th, table.totals t
 
 
 def render_docx(ctx: dict) -> bytes:
+    from app.modules.documents import control
+
+    return control.with_docx(_render_docx(ctx), ctx)
+
+
+def _render_docx(ctx: dict) -> bytes:
     from docx import Document
     from docx.oxml import OxmlElement
     from docx.shared import Pt, RGBColor
@@ -284,8 +305,15 @@ def generate(db: Session, inv, fmt: str, source: str, actor: str | None) -> dict
         data, ext = qo.html_to_pdf(render_html(ctx), qo.find_browser(db)), "pdf"
     else:
         data, ext = render_docx(ctx), "docx"
-    stem = inv.number or f"invoice-draft-{str(inv.id)[:8]}"
-    filename = f"{stem}{'-DRAFT' if ctx['draft'] else ''}.{ext}"
+    from datetime import date as _date
+
+    from app.modules.documents import naming
+
+    kind = {"invoice": "sales_invoice"}.get(inv.kind, inv.kind)
+    filename = naming.output_name(db, kind=kind, code=inv.number or f"INV-DRAFT-{str(inv.id)[:8]}",
+                                  party=naming.party_name(db, inv.customer_party_id, ctx["lang"]),
+                                  on=inv.issue_date or _date.today(), lang=ctx["lang"], ext=ext,
+                                  draft=ctx["draft"])   # v0.9.0
     try:
         doc = documents.upload(db, io.BytesIO(data), filename, title=filename.rsplit(".", 1)[0], language=ctx["lang"],
                                source=source, actor=actor)
