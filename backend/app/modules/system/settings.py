@@ -195,6 +195,11 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "finance.vat_default_domestic": (None, _vat_decision),        # v0.9.0: decided on the first domestic invoice
 }
 
+# v0.9.0: code patterns per kind (a change applies to new codes only)
+from app.modules.codes.patterns import DEFAULTS as _CODE_PATTERNS, check as _code_pattern  # noqa: E402
+
+DEFINITIONS.update({f"codes.pattern.{kind}": (pattern, _code_pattern) for kind, pattern in _CODE_PATTERNS.items()})
+
 
 def get_all(db: Session) -> dict[str, Any]:
     values = {key: default for key, (default, _) in DEFINITIONS.items()}

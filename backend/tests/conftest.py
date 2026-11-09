@@ -66,6 +66,11 @@ def database():
         seed_base_data(db)
         users.create_user(db, "admin", TEST_PASSWORD, language="en")
         db.commit()
+    from app.modules.reference import importer   # v0.9.0: what `seed` loads after the base data
+
+    with new_session() as db:
+        importer.run_shipped(db)
+        db.commit()
     yield
     reset_engine()
 

@@ -1,0 +1,25 @@
+code,country_iso2,local_name,transliterated,name_fa,abbreviations
+IR-PJS,IR,شرکت سهامی خاص,Sherkat-e Sahami-e Khass,سهامی خاص,سهامی خاص|سهامي خاص|PJS|Private Joint Stock
+IR-PUB,IR,شرکت سهامی عام,Sherkat-e Sahami-e Am,سهامی عام,سهامی عام|سهامي عام|PJSC|Public Joint Stock
+IR-LLC,IR,شرکت با مسئولیت محدود,Sherkat-e ba Masuliyat-e Mahdud,با مسئولیت محدود,با مسئولیت محدود|مسئولیت محدود|مسؤولیت محدود|LLC|Ltd
+IR-GP,IR,شرکت تضامنی,Sherkat-e Tazamoni,تضامنی,تضامنی
+IR-MXS,IR,شرکت مختلط سهامی,Sherkat-e Mokhtalet-e Sahami,مختلط سهامی,مختلط سهامی
+IR-MXN,IR,شرکت مختلط غیرسهامی,Sherkat-e Mokhtalet-e Gheyr-e Sahami,مختلط غیرسهامی,مختلط غیرسهامی|مختلط غیر سهامی
+IR-PRL,IR,شرکت نسبی,Sherkat-e Nesbi,نسبی,نسبی
+IR-COOP,IR,شرکت تعاونی,Sherkat-e Ta'avoni,تعاونی,تعاونی
+IR-NCI,IR,مؤسسهٔ غیرتجاری,Moassese-ye Gheyr-e Tejari,مؤسسهٔ غیرتجاری,مؤسسه|موسسه
+CN-LTD,CN,有限公司,Youxian Gongsi,شرکت با مسئولیت محدود (چین),有限公司|Co. Ltd|Co., Ltd.|Co Ltd
+CN-JSC,CN,股份有限公司,Gufen Youxian Gongsi,سهامی (چین),股份有限公司|Co. Ltd.
+DE-GMBH,DE,Gesellschaft mit beschränkter Haftung,,با مسئولیت محدود (آلمان),GmbH|GmbH & Co. KG
+DE-AG,DE,Aktiengesellschaft,,سهامی (آلمان),AG
+TR-AS,TR,Anonim Şirketi,,سهامی (ترکیه),A.Ş.|AŞ|A.S.
+TR-LTD,TR,Limited Şirketi,,با مسئولیت محدود (ترکیه),Ltd. Şti.|Ltd Şti|LTD.ŞTİ.
+AE-LLC,AE,Limited Liability Company,,با مسئولیت محدود (امارات),LLC|L.L.C.
+AE-FZE,AE,Free Zone Establishment,,مؤسسهٔ منطقهٔ آزاد (امارات),FZE|FZCO|FZ-LLC
+IN-PVT,IN,Private Limited Company,,سهامی خاص (هند),Pvt Ltd|Pvt. Ltd.|Private Limited
+IT-SPA,IT,Società per Azioni,,سهامی (ایتالیا),S.p.A.|SpA
+IT-SRL,IT,Società a responsabilità limitata,,با مسئولیت محدود (ایتالیا),S.r.l.|Srl
+RU-OOO,RU,Общество с ограниченной ответственностью,Obshchestvo s ogranichennoy otvetstvennostyu,با مسئولیت محدود (روسیه),ООО|OOO|LLC
+RU-AO,RU,Акционерное общество,Aktsionernoye obshchestvo,سهامی (روسیه),АО|AO|JSC|PJSC|ПАО
+GB-LTD,GB,Private limited company,,با مسئولیت محدود (بریتانیا),Ltd|Limited|PLC
+US-INC,US,Corporation,,شرکت سهامی (آمریکا),Inc|Inc.|Corp|Corporation|LLC

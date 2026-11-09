@@ -37,3 +37,10 @@ def _terms(db, quote):
 register_terms_source(_terms)
 register_product_quote_rows(proposal.proposals_for_product)
 register_section("tenders", dashboard.summary)
+
+from app.modules.codes.service import register as _register_code  # noqa: E402
+from app.modules.tenders.models import Guarantee, Tender  # noqa: E402
+
+# v0.9.0: record codes TDR- (not TND: a currency code), GTE-
+_register_code("tender", Tender, link=lambda _db, r: f"/cases/{r.case_id}?tab=tender")
+_register_code("guarantee", Guarantee, link=lambda _db, r: f"/cases/{r.case_id}?tab=tender" if r.case_id else "/cases/guarantees")

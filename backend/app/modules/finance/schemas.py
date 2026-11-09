@@ -39,6 +39,7 @@ class InvoiceHead(InputModel):
     discount: Amount | None = None
     incoterm: Annotated[str, Field(max_length=10)] | None = None
     incoterm_place: Text300 | None = None
+    incoterm_place_location_id: uuid.UUID | None = None   # v0.9.0: UN/LOCODE place
     country_of_origin: Text300 | None = None
     shipping_marks: Text2000 | None = None
     gross_weight: Text300 | None = None

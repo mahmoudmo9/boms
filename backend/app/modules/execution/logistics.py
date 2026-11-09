@@ -31,7 +31,8 @@ from app.modules.system import settings
 
 SHIPMENT_FIELDS = ("mode", "carrier_party_id", "forwarder_party_id", "transport_doc_kind", "transport_doc_no", "containers",
                    "vessel_or_flight", "origin", "destination", "incoterm", "etd", "eta", "atd", "ata", "status",
-                   "insurer_party_id", "policy_no", "insured_amount", "insured_amount_currency", "notes")
+                   "insurer_party_id", "policy_no", "insured_amount", "insured_amount_currency", "notes",
+                   "origin_location_id", "destination_location_id")
 EVENT_SUGGESTIONS = ("booked", "loaded", "departed", "transshipment", "arrived", "customs_entry", "released", "delivered",
                      "delay", "other")
 STATUS_EVENT = {"booked": "booked", "in_transit": "departed", "arrived": "arrived", "at_customs": "customs_entry",
@@ -137,6 +138,9 @@ def create_shipment(db: Session, data: dict, source: str, actor: str | None = No
     db.add(shipment)
     flush(db, "invalid_shipment")
     _set_items(db, shipment, data.get("items") or [])
+    _check_locations(db, shipment)
+    if data.get("container_units") is not None:
+        _set_containers(db, shipment, data["container_units"])
     events.record(db, "shipment", shipment.id, "create", jsonable({**row_snapshot(shipment), "items": data.get("items") or []}),
                   source, actor=actor)
     return shipment
@@ -147,6 +151,7 @@ def update_shipment(db: Session, shipment_id: uuid.UUID, changes: dict, source: 
     shipment = get_shipment(db, shipment_id)
     _check_parties(db, changes)
     items = changes.pop("items", None)
+    units = changes.pop("container_units", None)
     old = {k: getattr(shipment, k) for k in ("eta", "etd", "status")}
     changed = diff(shipment, {k: v for k, v in changes.items() if k in SHIPMENT_FIELDS})
     if shipment.first_eta is None and shipment.eta is not None:
@@ -163,6 +168,10 @@ def update_shipment(db: Session, shipment_id: uuid.UUID, changes: dict, source: 
     if items is not None:
         _set_items(db, shipment, items)
         changed["items"] = len(items)
+    _check_locations(db, shipment)
+    if units is not None:
+        _set_containers(db, shipment, units)
+        changed["container_units"] = [u["number"] for u in units]
     if changed:
         events.record(db, "shipment", shipment.id, "update", jsonable({"changes": changed}), source, actor=actor)
     return shipment
@@ -176,6 +185,10 @@ def add_event(db: Session, shipment_id: uuid.UUID, data: dict, source: str, acto
     if not kind:
         raise AppError("kind_required", "What happened?", status=422)
     row = _add_event(db, shipment, kind, data.get("note"), data.get("at"), data.get("document_id"))
+    if data.get("location_id"):
+        from app.modules.reference import service as reference
+
+        row.location_id = reference.get_location(db, data["location_id"]).id
     flush(db, "invalid_shipment_event")
     events.record(db, "shipment", shipment.id, "event", jsonable(row_snapshot(row)), source, actor=actor)
     return row
@@ -249,10 +262,62 @@ def delay_warnings(db: Session, case_id: uuid.UUID | None = None, on: date | Non
     return jsonable(out)
 
 
+def _check_locations(db: Session, shipment: Shipment) -> None:
+    from app.modules.reference import service as reference
+
+    for loc_id in (shipment.origin_location_id, shipment.destination_location_id):
+        if loc_id:
+            reference.get_location(db, loc_id)
+
+
+def _set_containers(db: Session, shipment: Shipment, units: list[dict]) -> None:
+    """v0.9.0: container numbers (ISO 6346, check digit validated) with their size/type; the plain ``containers``
+    list follows them so older screens keep working."""
+    from app.modules.execution.models import ShipmentContainer
+    from app.modules.reference import service as reference
+
+    numbers = []
+    for row in db.scalars(select(ShipmentContainer).where(ShipmentContainer.shipment_id == shipment.id)):
+        db.delete(row)
+    db.flush()
+    for unit in units:
+        number = reference.normalize_container(unit["number"])
+        if number in numbers:
+            raise AppError("duplicate_container", "A container number is listed twice", {"number": number}, status=422)
+        numbers.append(number)
+        db.add(ShipmentContainer(shipment_id=shipment.id, number=number, container_type=unit.get("container_type"),
+                                 seal_no=unit.get("seal_no")))
+    flush(db, "invalid_container")
+    shipment.containers = numbers
+    flush(db, "invalid_shipment")
+
+
+def shipment_containers(db: Session, shipment_id) -> list:
+    from app.modules.execution.models import ShipmentContainer
+
+    return list(db.scalars(select(ShipmentContainer).where(ShipmentContainer.shipment_id == shipment_id)
+                           .order_by(ShipmentContainer.created_at, ShipmentContainer.number)))
+
+
+def route_out(db: Session, s: Shipment) -> dict | None:
+    """v0.9.0 display rule: «شانگهای SHA ← بوشهر BUZ» / "Shanghai SHA → Bushehr BUZ"; air by IATA code."""
+    if not (s.origin_location_id or s.destination_location_id):
+        return None
+    from app.modules.reference import service as reference
+    from app.modules.reference.models import Location
+
+    o = db.get(Location, s.origin_location_id) if s.origin_location_id else None
+    d = db.get(Location, s.destination_location_id) if s.destination_location_id else None
+    return {"fa": reference.route_label(db, o, d, s.mode, "fa"), "en": reference.route_label(db, o, d, s.mode, "en"),
+            "origin": o and {"id": o.id, "unlocode": o.unlocode, "name": o.name, "name_fa": o.name_fa},
+            "destination": d and {"id": d.id, "unlocode": d.unlocode, "name": d.name, "name_fa": d.name_fa}}
+
+
 def shipment_out(db: Session, s: Shipment) -> dict:
     return jsonable({**row_snapshot(s), "items": [row_snapshot(i) for i in shipment_items(db, s.id)],
                      "events": [row_snapshot(e) for e in shipment_events(db, s.id)],
-                     "documents": [row_snapshot(d) for d in shipment_documents(db, s.id)]})
+                     "documents": [row_snapshot(d) for d in shipment_documents(db, s.id)],
+                     "container_units": [row_snapshot(c) for c in shipment_containers(db, s.id)], "route": route_out(db, s)})
 
 
 # ---- inspections ------------------------------------------------------------------------------------------------------

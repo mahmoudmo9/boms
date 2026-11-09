@@ -1,0 +1,11 @@
+code,name_en,name_fa
+0,Transport mode not specified,نامشخص
+1,Maritime transport,حمل دریایی
+2,Rail transport,حمل ریلی
+3,Road transport,حمل جاده‌ای
+4,Air transport,حمل هوایی
+5,Mail,پست
+6,Multimodal transport,حمل چندوجهی
+7,Fixed transport installation,تأسیسات ثابت (لوله، کابل)
+8,Inland water transport,حمل آبراه داخلی
+9,Transport mode not applicable,کاربرد ندارد

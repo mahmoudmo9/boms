@@ -31,7 +31,7 @@ from app.modules.sourcing import templates as sourcing_templates
 from app.modules.sourcing.common import diff, flush, jsonable, row_snapshot
 from app.modules.system import settings
 
-EDITABLE = ("language", "price_basis", "valid_until", "incoterm", "incoterm_place", "payment_terms", "delivery_terms",
+EDITABLE = ("language", "price_basis", "valid_until", "incoterm", "incoterm_place", "incoterm_place_location_id", "payment_terms", "delivery_terms",
             "lead_time_days", "terms_text", "notes", "buyer_party_id", "contact_id")
 OPEN_STATUSES = ("draft", "approved", "sent")
 # a change of any of these rebuilds the terms text of a draft quote (unless edited by hand, v0.5.0)

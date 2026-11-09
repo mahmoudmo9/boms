@@ -55,6 +55,7 @@ class SalesInvoice(Timestamps, Base):
     moadian_note: Mapped[str | None] = mapped_column(Text)
     incoterm: Mapped[str | None] = mapped_column(Text)
     incoterm_place: Mapped[str | None] = mapped_column(Text)
+    incoterm_place_location_id: Mapped[uuid.UUID | None] = mapped_column(UUID)   # v0.9.0
     country_of_origin: Mapped[str | None] = mapped_column(Text)
     shipping_marks: Mapped[str | None] = mapped_column(Text)
     gross_weight: Mapped[str | None] = mapped_column(Text)

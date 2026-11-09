@@ -33,6 +33,7 @@ class SalesOrder(Timestamps, Base):
     price_basis: Mapped[str] = mapped_column(Text, default="before_vat")
     incoterm: Mapped[str | None] = mapped_column(Text)
     incoterm_place: Mapped[str | None] = mapped_column(Text)
+    incoterm_place_location_id: Mapped[uuid.UUID | None] = mapped_column(UUID)   # v0.9.0
     payment_terms: Mapped[str | None] = mapped_column(Text)
     delivery_terms: Mapped[str | None] = mapped_column(Text)
     delivery_due_on: Mapped[date | None] = mapped_column(Date)
@@ -98,6 +99,7 @@ class PurchaseOrder(Timestamps, Base):
     currency: Mapped[str] = mapped_column(Text)
     incoterm: Mapped[str | None] = mapped_column(Text)
     incoterm_place: Mapped[str | None] = mapped_column(Text)
+    incoterm_place_location_id: Mapped[uuid.UUID | None] = mapped_column(UUID)   # v0.9.0
     payment_terms: Mapped[str | None] = mapped_column(Text)
     delivery_terms: Mapped[str | None] = mapped_column(Text)
     ready_due_on: Mapped[date | None] = mapped_column(Date)
@@ -188,6 +190,7 @@ class PaymentRecord(Timestamps, Base):
     __table_args__ = {"schema": "ops"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     milestone_id: Mapped[uuid.UUID] = mapped_column(UUID, ForeignKey("ops.payment_milestone.id"))
     amount: Mapped[Decimal] = mapped_column(AMOUNT)
     amount_currency: Mapped[str] = mapped_column(Text)
@@ -274,6 +277,7 @@ class Shipment(Timestamps, Base):
     __table_args__ = {"schema": "ops"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     case_id: Mapped[uuid.UUID] = mapped_column(UUID)
     direction: Mapped[str] = mapped_column(Text)
     purchase_order_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
@@ -298,6 +302,8 @@ class Shipment(Timestamps, Base):
     policy_no: Mapped[str | None] = mapped_column(Text)
     insured_amount: Mapped[Decimal | None] = mapped_column(AMOUNT)
     insured_amount_currency: Mapped[str | None] = mapped_column(Text)
+    origin_location_id: Mapped[uuid.UUID | None] = mapped_column(UUID)        # v0.9.0: UN/LOCODE
+    destination_location_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     notes: Mapped[str | None] = mapped_column(Text)
 
 
@@ -322,6 +328,19 @@ class ShipmentEvent(Timestamps, Base):
     kind: Mapped[str] = mapped_column(Text)
     note: Mapped[str | None] = mapped_column(Text)
     document_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
+    location_id: Mapped[uuid.UUID | None] = mapped_column(UUID)   # v0.9.0: a transshipment port
+
+
+class ShipmentContainer(Timestamps, Base):
+    """v0.9.0: a container number (ISO 6346, check digit validated) with its size/type code."""
+    __tablename__ = "shipment_container"
+    __table_args__ = {"schema": "ops"}
+
+    id: Mapped[uuid.UUID] = _id()
+    shipment_id: Mapped[uuid.UUID] = mapped_column(UUID, ForeignKey("ops.shipment.id"))
+    number: Mapped[str] = mapped_column(Text)
+    container_type: Mapped[str | None] = mapped_column(Text)
+    seal_no: Mapped[str | None] = mapped_column(Text)
 
 
 class ShipmentDocument(Timestamps, Base):
@@ -341,6 +360,7 @@ class Inspection(Timestamps, Base):
     __table_args__ = {"schema": "ops"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     case_id: Mapped[uuid.UUID] = mapped_column(UUID)
     shipment_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     purchase_order_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
@@ -359,6 +379,7 @@ class Receipt(Timestamps, Base):
     __table_args__ = {"schema": "ops"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     purchase_order_id: Mapped[uuid.UUID] = mapped_column(UUID, ForeignKey("ops.purchase_order.id"))
     shipment_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     received_on: Mapped[date] = mapped_column(Date)
@@ -383,6 +404,7 @@ class Delivery(Timestamps, Base):
     __table_args__ = {"schema": "ops"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     sales_order_id: Mapped[uuid.UUID] = mapped_column(UUID, ForeignKey("ops.sales_order.id"))
     shipment_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     delivered_on: Mapped[date] = mapped_column(Date)
@@ -407,6 +429,7 @@ class Claim(Timestamps, Base):
     __table_args__ = {"schema": "ops"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     case_id: Mapped[uuid.UUID] = mapped_column(UUID)
     direction: Mapped[str] = mapped_column(Text)
     counterparty_id: Mapped[uuid.UUID] = mapped_column(UUID)

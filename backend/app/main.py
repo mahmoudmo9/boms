@@ -25,6 +25,8 @@ from app.modules.execution.router import ROUTERS as execution_routers
 from app.modules.tasks.router import ROUTERS as tasks_routers
 from app.modules.finance.router import ROUTERS as finance_routers
 from app.modules.search.router import router as search_router
+from app.modules.reference.router import ROUTERS as reference_routers
+from app.modules.codes.router import ROUTERS as codes_routers
 from app.modules.system.router import router as system_router
 
 
@@ -33,11 +35,14 @@ def create_app() -> FastAPI:
     app = FastAPI(title="BOMS", version=VERSION, docs_url=None, redoc_url=None, openapi_url=None)
     install_handlers(app)
     install_security(app)
+    from app.modules.codes.service import ensure_loaded
+
+    ensure_loaded()   # v0.9.0: new coded rows get their codes in the creating flush
     app.include_router(system_router)
     app.include_router(events_router)
     app.include_router(documents_router)
     app.include_router(search_router)
-    for router in parties_routers + sourcing_routers + catalog_routers + costing_routers + quotes_routers + listings_routers + tenders_routers + execution_routers + tasks_routers + finance_routers:
+    for router in parties_routers + sourcing_routers + catalog_routers + costing_routers + quotes_routers + listings_routers + tenders_routers + execution_routers + tasks_routers + finance_routers + reference_routers + codes_routers:
         app.include_router(router)
 
     @app.get("/api/health")

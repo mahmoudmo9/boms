@@ -20,6 +20,7 @@ from app.modules.finance import sales_invoices
 from app.modules.finance.common import ZERO, decimals
 from app.modules.parties import service as parties
 from app.modules.quotes import output as qo
+from app.modules.reference import service as ref_service
 from app.modules.system import settings
 
 LABELS = {
@@ -66,6 +67,14 @@ def _digits(value: str, digits: str) -> str:
     return value.translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")) if digits == "fa" and value else value
 
 
+def _unit_text(units: dict, unit: str | None, lang: str) -> str:
+    """An English invoice shows the UN/ECE code next to a known unit; text units stay as typed."""
+    row = units.get(unit or "")
+    if row is None or lang == "fa":
+        return unit or ""
+    return ref_service.unit_label_en(row.name_en, row.unece_code)
+
+
 def build_context(db: Session, inv) -> dict:
     lang = inv.language
     calendar, digits = qo.output_style(lang)
@@ -76,10 +85,13 @@ def build_context(db: Session, inv) -> dict:
     p = parties.get_party(db, inv.customer_party_id)
     rate = (inv.vat_rate or ZERO) / Decimal(100)
     lines = []
+    from app.modules.sourcing.coverage import unit_index
+
+    units = unit_index(db)
     for r in sales_invoices.lines_of(db, inv.id):
         after = r.total
         line_vat = after * rate
-        lines.append({"description": r.description, "quantity": qo._fmt_qty(r.quantity, digits), "unit": r.unit or "",
+        lines.append({"description": r.description, "quantity": qo._fmt_qty(r.quantity, digits), "unit": _unit_text(units, r.unit, lang),
                       "unit_price": num(r.unit_price), "amount": num(r.quantity * r.unit_price), "discount": num(r.discount),
                       "after_discount": num(after), "vat": num(line_vat), "total": num(after + line_vat), "hs": r.hs_code or ""})
     base = sales_invoices.get_invoice(db, inv.corrects_invoice_id) if inv.corrects_invoice_id else None
@@ -87,7 +99,7 @@ def build_context(db: Session, inv) -> dict:
 
     order = get_sales_order(db, inv.sales_order_id)
     export = [(lb.get(k, k), v) for k, v in (
-        ("incoterm", " ".join(x for x in (inv.incoterm, inv.incoterm_place) if x)), ("origin", inv.country_of_origin or ""),
+        ("incoterm", ref_service.incoterm_text(db, inv.incoterm, inv.incoterm_place, inv.incoterm_place_location_id, lang)), ("origin", inv.country_of_origin or ""),
         ("marks", inv.shipping_marks or ""), ("gross", inv.gross_weight or ""), ("net", inv.net_weight or ""),
         ("packages", inv.packages or ""), ("transport", inv.transport_doc_no or ""),
         ("payment_terms", order.payment_terms or "")) if v] if lang == "en" else []

@@ -373,11 +373,13 @@ def test_audit_rows_and_events_for_every_new_table(client, db):
     tables = ["sales_order", "sales_order_item", "sales_order_change", "purchase_order", "purchase_order_item",
               "purchase_order_change", "payment_milestone", "payment_record", "process", "process_step", "shipment",
               "shipment_item", "shipment_event", "shipment_document", "inspection", "receipt", "receipt_item", "delivery",
-              "delivery_item", "claim", "execution_followup", "sales_order_sequence", "purchase_order_sequence",
+              "delivery_item", "claim", "execution_followup",
               "process_template", "process_template_step"]
     for table in tables:
         n = db.execute(text("SELECT count(*) FROM core.audit WHERE table_name = :t"), {"t": f"ops.{table}"}).scalar()
         assert n > 0, table
+    # v0.9.0: SO / PO numbers come from core.code_sequence (the old sequence tables were carried over)
+    assert db.execute(text("SELECT count(*) FROM core.audit WHERE table_name = 'core.code_sequence'")).scalar() > 0
     for entity in ("sales_order", "purchase_order", "payment_milestone", "process", "shipment", "inspection", "receipt",
                    "claim", "delivery"):
         assert db.execute(text("SELECT count(*) FROM core.event WHERE entity_type = :e"), {"e": entity}).scalar() > 0, entity

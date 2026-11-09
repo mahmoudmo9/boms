@@ -1,0 +1,14 @@
+code,description_en,description_fa,length_ft,teu
+22G1,20' general purpose (dry),۲۰ فوت معمولی (خشک),20,1
+25G1,20' high cube,۲۰ فوت های‌کیوب,20,1
+42G1,40' general purpose (dry),۴۰ فوت معمولی (خشک),40,2
+45G1,40' high cube,۴۰ فوت های‌کیوب,40,2
+L5G1,45' high cube,۴۵ فوت های‌کیوب,45,2.25
+22R1,20' reefer,۲۰ فوت یخچالی,20,1
+42R1,40' reefer,۴۰ فوت یخچالی,40,2
+45R1,40' high cube reefer,۴۰ فوت های‌کیوب یخچالی,40,2
+22U1,20' open top,۲۰ فوت روباز,20,1
+42U1,40' open top,۴۰ فوت روباز,40,2
+22P1,20' flat rack,۲۰ فوت فلت‌رک,20,1
+42P1,40' flat rack,۴۰ فوت فلت‌رک,40,2
+22T6,20' tank,۲۰ فوت مخزن‌دار (تانک),20,1

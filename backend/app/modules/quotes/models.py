@@ -38,6 +38,7 @@ class Quote(Timestamps, Base):
     valid_until: Mapped[date] = mapped_column(Date)
     incoterm: Mapped[str | None] = mapped_column(Text)
     incoterm_place: Mapped[str | None] = mapped_column(Text)
+    incoterm_place_location_id: Mapped[uuid.UUID | None] = mapped_column(UUID)   # v0.9.0
     payment_terms: Mapped[str | None] = mapped_column(Text)
     delivery_terms: Mapped[str | None] = mapped_column(Text)
     lead_time_days: Mapped[int | None] = mapped_column(Integer)

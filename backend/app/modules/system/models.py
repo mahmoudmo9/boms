@@ -73,6 +73,7 @@ class Unit(Timestamps, Base):
     kind: Mapped[str] = mapped_column(Text)
     base_factor: Mapped[Decimal] = mapped_column(Numeric(30, 12))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    unece_code: Mapped[str | None] = mapped_column(Text)      # v0.9.0: UN/ECE Recommendation 20
 
 
 class Job(Timestamps, Base):

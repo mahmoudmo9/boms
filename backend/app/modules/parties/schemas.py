@@ -46,6 +46,7 @@ class PartyCreate(_Names):
     notes: LongText | None = None
     national_id: ShortText | None = None       # v0.8.0: required on a domestic invoice to this buyer
     economic_code: ShortText | None = None
+    legal_form_id: uuid.UUID | None = None     # v0.9.0: ISO 20275 / BOMS-curated legal form
     roles: list[Role] = Field(default_factory=list, max_length=6)
     confirm_duplicate: bool = False
 
@@ -65,6 +66,7 @@ class PartyPatch(_Names):
     notes: LongText | None = None
     national_id: ShortText | None = None       # v0.8.0: required on a domestic invoice to this buyer
     economic_code: ShortText | None = None
+    legal_form_id: uuid.UUID | None = None     # v0.9.0: ISO 20275 / BOMS-curated legal form
     do_not_contact: bool | None = None
     do_not_contact_reason: ShortText | None = None
 
@@ -104,6 +106,8 @@ class PartyOut(ApiModel):
     status: str
     national_id: str | None = None
     economic_code: str | None = None
+    legal_form_id: uuid.UUID | None = None
+    code: str | None = None
     created_at: datetime
     updated_at: datetime
 

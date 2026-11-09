@@ -672,7 +672,7 @@ def test_backup_and_restore_test_cover_every_table_with_quote_data(client):
     assert result["status"] == "passed", result
     assert result["details"]["tables_checked"] == len(counts) and result["details"]["row_count_mismatches"] == {}
     for table in ("ops.cost_sheet", "ops.cost_line", "ops.fx_rate_entry", "ops.quote", "ops.quote_item",
-                  "ops.quote_sequence", "ops.tax_kind", "ops.outcome_reason"):
+                  "core.code_sequence", "ops.tax_kind", "ops.outcome_reason"):
         assert counts[table] > 0, table
 
 
@@ -686,7 +686,7 @@ def test_audit_rows_and_events_for_every_new_table(client, db):
         {"kind": "purchase", "label_en": "Purchase", "basis": "per_unit"}]})
     audited = set(db.execute(text("SELECT DISTINCT table_name FROM core.audit")).scalars())
     for table in ("ops.tax_parameter", "ops.cost_template", "ops.cost_template_line", "ops.cost_sheet",
-                  "ops.fx_rate_entry", "ops.cost_line", "ops.quote", "ops.quote_item", "ops.quote_sequence"):
+                  "ops.fx_rate_entry", "ops.cost_line", "ops.quote", "ops.quote_item", "core.code_sequence"):
         assert table in audited, table
     entity_types = set(db.execute(text("SELECT DISTINCT entity_type FROM core.event")).scalars())
     assert {"tax_parameter", "cost_template", "cost_sheet", "quote"} <= entity_types

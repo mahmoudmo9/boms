@@ -30,6 +30,7 @@ class Tender(Timestamps, Base):
     __table_args__ = {"schema": "ops"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     case_id: Mapped[uuid.UUID] = mapped_column(UUID)
     tender_no: Mapped[str | None] = mapped_column(Text)
     listing_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
@@ -178,6 +179,7 @@ class Guarantee(Timestamps, Base):
     __table_args__ = {"schema": "ops"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     case_id: Mapped[uuid.UUID] = mapped_column(UUID)
     tender_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     purpose: Mapped[str] = mapped_column(Text)

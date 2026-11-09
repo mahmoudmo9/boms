@@ -25,6 +25,7 @@ class QuoteCreate(InputModel):
     valid_until: date | None = None
     incoterm: Incoterm | None = None
     incoterm_place: Text300 | None = None
+    incoterm_place_location_id: uuid.UUID | None = None   # v0.9.0: UN/LOCODE place
     payment_terms: Text500 | None = None
     delivery_terms: Text500 | None = None
     lead_time_days: Days | None = None
@@ -40,6 +41,7 @@ class QuotePatch(InputModel):
     valid_until: date | None = None
     incoterm: Incoterm | None = None
     incoterm_place: Text300 | None = None
+    incoterm_place_location_id: uuid.UUID | None = None   # v0.9.0: UN/LOCODE place
     payment_terms: Text500 | None = None
     delivery_terms: Text500 | None = None
     lead_time_days: Days | None = None

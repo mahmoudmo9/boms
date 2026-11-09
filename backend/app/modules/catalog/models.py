@@ -24,6 +24,7 @@ class Product(Timestamps, Base):
     __table_args__ = {"schema": "core"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     name_fa: Mapped[str | None] = mapped_column(Text)
     name_en: Mapped[str | None] = mapped_column(Text)
     name_norm: Mapped[str] = mapped_column(Text, Computed("x", persisted=True))

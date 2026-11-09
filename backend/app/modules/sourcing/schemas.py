@@ -173,6 +173,7 @@ class RejectIn(InputModel):
 
 class InquiryOut(ApiModel):
     id: uuid.UUID
+    code: str | None = None          # v0.9.0
     party_id: uuid.UUID | None
     source_channel: str
     kind: str
@@ -259,6 +260,7 @@ class CasePatch(InputModel):
 
 class CaseOut(ApiModel):
     id: uuid.UUID
+    code: str | None = None          # v0.9.0
     inquiry_id: uuid.UUID | None
     party_id: uuid.UUID | None
     title: str

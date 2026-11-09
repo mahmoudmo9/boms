@@ -81,6 +81,33 @@ def cmd_seed(_: argparse.Namespace) -> None:
         counts = seed_base_data(db, source="script")
         db.commit()
     print(f"Seed inserted: {counts}")
+    # v0.9.0: the shipped reference data (idempotent; the installer and every update run seed)
+    from app.modules.reference import importer
+
+    with new_session() as db:
+        reference = importer.run_shipped(db, source_ev="script")
+        db.commit()
+    print("Reference data: " + ", ".join(f"{k} +{v['inserted']} ~{v['updated']}" for k, v in reference.items()))
+
+
+def cmd_reference_import(args: argparse.Namespace) -> None:
+    """v0.9.0: load a reference dataset from the shipped file or ``--file`` (idempotent, with a report)."""
+    from app.modules.reference import importer
+
+    with new_session() as db:
+        report = importer.run(db, args.dataset, args.file, args.release)
+        db.commit()
+    print(json.dumps(report, indent=2, ensure_ascii=False, default=str))
+
+
+def cmd_folders_rebuild(_: argparse.Namespace) -> None:
+    """v0.9.0: rebuild the readable folder view of every case."""
+    from app.modules.documents import folders
+
+    with new_session() as db:
+        report = folders.rebuild_all(db)
+        db.commit()
+    print(json.dumps(report, indent=2, ensure_ascii=False, default=str))
 
 
 def cmd_create_user(args: argparse.Namespace) -> None:
@@ -181,6 +208,14 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--kind", choices=["manual", "nightly", "pre_update"], default="manual")
     p.set_defaults(func=cmd_backup)
     sub.add_parser("restore-test").set_defaults(func=cmd_restore_test)
+    from app.modules.reference.importer import DATASETS
+
+    p = sub.add_parser("reference-import", help="load a reference dataset (v0.9.0)")
+    p.add_argument("dataset", choices=DATASETS)
+    p.add_argument("--file", help="the official file (CSV, .zip or a folder of CSV parts)")
+    p.add_argument("--release", help="the release name to record (default: from the file)")
+    p.set_defaults(func=cmd_reference_import)
+    sub.add_parser("folders-rebuild", help="rebuild the readable case folders (v0.9.0)").set_defaults(func=cmd_folders_rebuild)
     p = sub.add_parser("restore", help="disaster recovery onto a clean PC")
     p.add_argument("--backup-dir", required=True)
     p.add_argument("--dump", help="specific .dump file (default: latest in <backup-dir>/db)")

@@ -1,0 +1,49 @@
+code,unece_code,name_fa,name_en,kind,base_factor
+pc,H87,,,,
+pr,PR,,,,
+doz,DZN,,,,
+set,SET,,,,
+box,XBX,,,,
+ctn,XCT,,,,
+plt,XPX,,,,
+roll,XRO,,,,
+drum,XDR,,,,
+bag,XBG,,,,
+coil,XCL,,,,
+bdl,XBE,,,,
+mg,MGM,,,,
+g,GRM,,,,
+kg,KGM,,,,
+t,TNE,,,,
+lb,LBR,,,,
+mm,MMT,,,,
+cm,CMT,,,,
+m,MTR,,,,
+km,KMT,,,,
+in,INH,,,,
+ft,FOT,,,,
+m2,MTK,,,,
+m3,MTQ,,,,
+l,LTR,,,,
+ml,MLT,,,,
+gal,GLL,,,,
+bbl,BLL,,,,
+min,MIN,,,,
+h,HUR,,,,
+d,DAY,,,,
+wk,WEE,,,,
+sheet,ST,برگ,Sheet,count,1
+lot,LO,لات,Lot,other,1
+unit,C62,واحد,One (unit),count,1
+mon,MON,ماه,Month,time,2592000
+ann,ANN,سال,Year,time,31536000
+kw,KWT,کیلووات,Kilowatt,other,1
+kwh,KWH,کیلووات‌ساعت,Kilowatt hour,other,1
+bar,BAR,بار,Bar,other,1
+mpa,MPA,مگاپاسکال,Megapascal,other,1
+cel,CEL,درجهٔ سلسیوس,Degree Celsius,other,1
+m3h,MQH,مترمکعب بر ساعت,Cubic metre per hour,other,1
+rpm,RPM,دور در دقیقه,Revolutions per minute,other,1
+v,VLT,ولت,Volt,other,1
+a,AMP,آمپر,Ampere,other,1
+hz,HTZ,هرتز,Hertz,other,1

@@ -37,6 +37,7 @@ class Party(Timestamps, Base):
     __table_args__ = {"schema": "core"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     name_fa: Mapped[str | None] = mapped_column(Text)
     name_en: Mapped[str | None] = mapped_column(Text)
     name_norm: Mapped[str] = mapped_column(Text, Computed("x", persisted=True))
@@ -50,6 +51,7 @@ class Party(Timestamps, Base):
     ref_company_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     national_id: Mapped[str | None] = mapped_column(Text)      # v0.8.0: the buyer IDs of a domestic invoice
     economic_code: Mapped[str | None] = mapped_column(Text)
+    legal_form_id: Mapped[uuid.UUID | None] = mapped_column(UUID)   # v0.9.0: ref.legal_form
 
 
 class PartyRole(Timestamps, Base):

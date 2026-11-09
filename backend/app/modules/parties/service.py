@@ -84,7 +84,21 @@ def get_party(db: Session, party_id: uuid.UUID) -> Party:
 
 def find_duplicates(db: Session, name_fa: str | None, name_en: str | None,
                     exclude_id: uuid.UUID | None = None, limit: int = 10) -> list[dict]:
-    """Parties whose name is similar (pg_trgm similarity >= 0.6, per language or combined)."""
+    """Parties whose name is similar (pg_trgm similarity >= 0.6, per language or combined); v0.9.0: also compared
+    without legal-form words and abbreviations («سهامی خاص», "Co., Ltd.", "GmbH", from ``ref.legal_form``)."""
+    found = {d["id"]: d for d in _similar(db, name_fa, name_en, exclude_id, limit)}
+    from app.modules.reference import service as reference
+
+    words = reference.legal_form_words(db)
+    bare_fa, bare_en = reference.strip_legal_form(name_fa or "", words), reference.strip_legal_form(name_en or "", words)
+    if (bare_fa or bare_en) and (bare_fa != (name_fa or "").strip() or bare_en != (name_en or "").strip()):
+        for d in _similar(db, bare_fa, bare_en, exclude_id, limit):
+            if d["id"] not in found:
+                found[d["id"]] = {**d, "reason": "similar_name_without_legal_form"}
+    return sorted(found.values(), key=lambda d: -d["score"])[:limit]
+
+
+def _similar(db: Session, name_fa: str | None, name_en: str | None, exclude_id, limit: int) -> list[dict]:
     q_fa = normalize_fa(name_fa or "") or ""
     q_en = normalize_fa(name_en or "") or ""
     q_all = normalize_fa(f"{name_fa or ''} {name_en or ''}") or ""
@@ -118,6 +132,7 @@ def create_party(db: Session, data: dict, source: str, actor: str | None = None)
     if fields.get("country_iso2"):
         fields["country_iso2"] = fields["country_iso2"].upper()
     party = Party(**fields)
+    party._code_roles = roles          # v0.9.0: the code's SUP / CUS / BP prefix comes from the roles at creation
     db.add(party)
     _flush(db, "invalid_party")
     events.record(db, "party", party.id, "create", jsonable({

@@ -39,6 +39,7 @@ class Inquiry(Timestamps, Base):
     __table_args__ = {"schema": "ops"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     party_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     source_channel: Mapped[str] = mapped_column(Text)
     kind: Mapped[str] = mapped_column(Text, default="rfq")
@@ -86,6 +87,7 @@ class Case(Timestamps, Base):
     __table_args__ = {"schema": "ops"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     inquiry_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     party_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     title: Mapped[str] = mapped_column(Text)
@@ -150,6 +152,7 @@ class Rfq(Timestamps, Base):
     __table_args__ = {"schema": "ops"}
 
     id: Mapped[uuid.UUID] = _id()
+    code: Mapped[str | None] = mapped_column(Text)     # v0.9.0: the record's code (codes module)
     case_id: Mapped[uuid.UUID] = mapped_column(UUID)
     title: Mapped[str] = mapped_column(Text)
     title_norm: Mapped[str] = mapped_column(Text, Computed("x", persisted=True))

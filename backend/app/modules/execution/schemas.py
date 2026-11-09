@@ -49,6 +49,7 @@ class SalesOrderManual(SalesOrderHead):
     price_basis: PriceBasis | None = None
     incoterm: Text300 | None = None
     incoterm_place: Text300 | None = None
+    incoterm_place_location_id: uuid.UUID | None = None   # v0.9.0: UN/LOCODE place
 
 
 class SalesOrderPatch(InputModel):
@@ -63,6 +64,7 @@ class SalesOrderPatch(InputModel):
     price_basis: PriceBasis | None = None
     incoterm: Text300 | None = None
     incoterm_place: Text300 | None = None
+    incoterm_place_location_id: uuid.UUID | None = None   # v0.9.0: UN/LOCODE place
     payment_terms: Text2000 | None = None
     delivery_terms: Text2000 | None = None
     delivery_due_on: date | None = None
@@ -91,7 +93,7 @@ class AmendItem(InputModel):
 class AmendIn(InputModel):
     reason: Text2000
     document_id: uuid.UUID | None = None
-    changes: dict[Literal["price_basis", "incoterm", "incoterm_place", "payment_terms", "delivery_terms",
+    changes: dict[Literal["price_basis", "incoterm", "incoterm_place", "incoterm_place_location_id", "payment_terms", "delivery_terms",
                           "delivery_due_on"], str | date | None] = {}
     items: list[AmendItem] = []
 
@@ -180,6 +182,7 @@ class PurchaseOrderPatch(InputModel):
     language: Language | None = None
     incoterm: Text300 | None = None
     incoterm_place: Text300 | None = None
+    incoterm_place_location_id: uuid.UUID | None = None   # v0.9.0: UN/LOCODE place
     payment_terms: Text2000 | None = None
     delivery_terms: Text2000 | None = None
     ready_due_on: date | None = None
@@ -312,6 +315,12 @@ class ShipmentItemIn(InputModel):
     quantity: Positive
 
 
+class ContainerIn(InputModel):
+    number: Annotated[str, Field(min_length=11, max_length=15)]
+    container_type: Annotated[str, Field(pattern=r"^[0-9A-Z]{4}$")] | None = None
+    seal_no: Annotated[str, Field(max_length=40)] | None = None
+
+
 class ShipmentBase(InputModel):
     mode: Mode | None = None
     carrier_party_id: uuid.UUID | None = None
@@ -319,6 +328,10 @@ class ShipmentBase(InputModel):
     transport_doc_kind: DocKind | None = None
     transport_doc_no: Text300 | None = None
     containers: Annotated[list[Annotated[str, Field(max_length=40)]], Field(max_length=200)] | None = None
+    # v0.9.0: ISO 6346 numbers (check digit validated) with their size/type code; the plain list above stays
+    container_units: Annotated[list["ContainerIn"], Field(max_length=200)] | None = None
+    origin_location_id: uuid.UUID | None = None
+    destination_location_id: uuid.UUID | None = None
     vessel_or_flight: Text300 | None = None
     origin: Text300 | None = None
     destination: Text300 | None = None
@@ -349,6 +362,7 @@ class ShipmentPatch(ShipmentBase):
 
 class ShipmentEventIn(InputModel):
     kind: Annotated[str, Field(min_length=1, max_length=60)]
+    location_id: uuid.UUID | None = None          # v0.9.0: e.g. the transshipment port
     at: datetime | None = None
     note: Text2000 | None = None
     document_id: uuid.UUID | None = None

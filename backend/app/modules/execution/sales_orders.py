@@ -33,7 +33,7 @@ OPEN = ("draft", "confirmed", "in_progress")
 LIVE = ("confirmed", "in_progress", "delivered")
 FREE_FIELDS = ("contact_id", "customer_ref", "contract_date", "signed_document_id", "delivery_place", "warranty_months",
                "performance_guarantee_id", "notes")
-AMENDABLE = ("price_basis", "incoterm", "incoterm_place", "payment_terms", "delivery_terms", "delivery_due_on")
+AMENDABLE = ("price_basis", "incoterm", "incoterm_place", "incoterm_place_location_id", "payment_terms", "delivery_terms", "delivery_due_on")
 ITEM_AMENDABLE = ("quantity", "unit_price", "delivery_due_on")
 NO_DOCUMENT = "بدون سند امضاشده"
 

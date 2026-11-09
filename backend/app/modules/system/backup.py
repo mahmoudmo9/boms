@@ -350,6 +350,25 @@ def _pick_run(db: Session, run_id: uuid.UUID | None) -> BackupRun:
     raise AppError("no_backup", "No successful backup with a dump file exists", status=404)
 
 
+def _drop_temp_db(name: str, attempts: int = 5) -> None:
+    """Drop the restore-test database. A plain DROP stops autovacuum workers on it by itself, which ``WITH (FORCE)``
+    cannot do without superuser rights (v0.9.0: a restored database with the reference data is often being
+    vacuumed right after the restore); FORCE stays the last resort for a session left behind."""
+    import time
+
+    from sqlalchemy.exc import DBAPIError
+
+    for attempt in range(attempts):
+        try:
+            with _admin_engine().connect() as conn:
+                conn.execute(text(f'DROP DATABASE IF EXISTS "{name}"'))
+            return
+        except DBAPIError:
+            time.sleep(0.5 * (attempt + 1))
+    with _admin_engine().connect() as conn:
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+
+
 def restore_test(run_id: uuid.UUID | None = None, source: str = "worker", actor: str | None = None) -> dict:
     config = get_config()
     with new_session() as db:
@@ -369,8 +388,8 @@ def restore_test(run_id: uuid.UUID | None = None, source: str = "worker", actor:
         failures.append(f"manifest unreadable: {exc}")
 
     if not failures:
+        _drop_temp_db(temp_db)
         with _admin_engine().connect() as conn:
-            conn.execute(text(f'DROP DATABASE IF EXISTS "{temp_db}" WITH (FORCE)'))
             conn.execute(text(f'CREATE DATABASE "{temp_db}" TEMPLATE template0 ENCODING \'UTF8\''))
         try:
             _run([pg_tool("pg_restore"), *_pg_args(temp_db), "--exit-on-error", "--no-owner", str(dump)],
@@ -405,8 +424,7 @@ def restore_test(run_id: uuid.UUID | None = None, source: str = "worker", actor:
         except AppError as exc:
             failures.append(exc.message)
         finally:
-            with _admin_engine().connect() as conn:
-                conn.execute(text(f'DROP DATABASE IF EXISTS "{temp_db}" WITH (FORCE)'))
+            _drop_temp_db(temp_db)
 
     status = "failed" if failures else "passed"
     details["failures"] = failures

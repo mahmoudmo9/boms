@@ -30,6 +30,7 @@ from app.modules.documents import service as documents
 from app.modules.parties import service as parties
 from app.modules.quotes import service
 from app.modules.quotes.models import Quote
+from app.modules.reference import service as ref_service
 from app.modules.sourcing import coverage as sourcing_coverage
 from app.modules.sourcing import items as sourcing_items
 from app.modules.sourcing import templates as sourcing_templates
@@ -120,7 +121,8 @@ def build_context(db: Session, quote: Quote, calendar: str = "gregorian", digits
         unit = units.get(row.unit_code or "")
         rows.append({"description": row.description_override or names.get(row.line_item_id, ""),
                      "note": row.note or "", "quantity": _fmt_qty(row.quantity, digits),
-                     "unit": ((unit.name_fa if lang == "fa" else unit.name_en) if unit else (row.unit_text or "")),
+                     "unit": ((unit.name_fa if lang == "fa" else ref_service.unit_label_en(unit.name_en, getattr(unit, "unece_code", None)))
+                              if unit else (row.unit_text or "")),
                      "unit_price": _fmt_num(row.unit_price, decimals, digits),
                      "total": _fmt_num(row.total, decimals, digits),
                      "lead_time": f"{row.lead_time_days} {LABELS[lang]['days']}" if row.lead_time_days is not None else ""})
@@ -167,7 +169,7 @@ def build_context(db: Session, quote: Quote, calendar: str = "gregorian", digits
         "vat": _fmt_num(quote.vat_amount, decimals, digits),
         "total": _fmt_num(quote.total, decimals, digits),
         "with_vat": quote.price_basis == "with_vat",
-        "incoterm": " ".join(x for x in (quote.incoterm, quote.incoterm_place) if x),
+        "incoterm": ref_service.incoterm_text(db, quote.incoterm, quote.incoterm_place, quote.incoterm_place_location_id, lang),
         "payment_terms": quote.payment_terms or "", "delivery_terms": quote.delivery_terms or "",
         "lead_time": f"{quote.lead_time_days} {LABELS[lang]['days']}" if quote.lead_time_days is not None else "",
         "terms_text": sourcing_templates.drop_empty_labels(quote.terms_text or ""),

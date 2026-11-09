@@ -42,7 +42,7 @@ LOCKED = ("cancelled", "superseded", "closed")
 SENT_OR_LATER = ("sent", "confirmed", "in_production", "ready", "shipped", "received", "closed")
 MANUAL_STATUSES = {"in_production": ("confirmed",), "ready": ("confirmed", "in_production"),
                    "shipped": ("confirmed", "in_production", "ready"), "closed": ("received", "shipped", "ready")}
-HEAD_FIELDS = ("contact_id", "language", "incoterm", "incoterm_place", "payment_terms", "delivery_terms", "ready_due_on",
+HEAD_FIELDS = ("contact_id", "language", "incoterm", "incoterm_place", "incoterm_place_location_id", "payment_terms", "delivery_terms", "ready_due_on",
                "delivery_place", "direct_to_customer", "terms_text", "notes")
 FREE_AFTER_APPROVAL = ("contact_id", "delivery_place", "direct_to_customer", "notes")
 CHANNELS = {"email": "email", "whatsapp": "whatsapp", "phone": "call", "in_person": "in_person", "letter": "other",

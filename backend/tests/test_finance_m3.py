@@ -304,7 +304,7 @@ def test_audit_rows_and_events_for_every_new_table(client, db):
                                                                 "currency": "IRR"})
     client.post(f"/api/cases/{case['id']}/close", json={"reasons": {"costs_unpaid": "x"}, "confirm_cancel_open": True})
     client.post(f"/api/cases/{case['id']}/ratings", json={"party_id": sup["id"], "role": "supplier", "quality": 4})
-    for table in ("invoice_sequence", "sales_invoice", "sales_invoice_line", "purchase_invoice", "purchase_invoice_line",
+    for table in ("sales_invoice", "sales_invoice_line", "purchase_invoice", "purchase_invoice_line",
                   "actual_cost", "payment_allocation", "deal_result", "party_rating"):
         n = db.execute(text("SELECT count(*) FROM core.audit WHERE table_name = :t"), {"t": f"ops.{table}"}).scalar()
         assert n > 0, table
@@ -401,6 +401,6 @@ def test_backup_and_restore_test_cover_every_table_with_finance_data(client):
     assert result["status"] == "passed", result
     assert result["details"]["tables_checked"] == len(counts) and result["details"]["row_count_mismatches"] == {}
     for table in ("ops.sales_invoice", "ops.sales_invoice_line", "ops.purchase_invoice", "ops.payment_allocation",
-                  "ops.actual_cost", "ops.deal_result", "ops.party_rating", "ops.invoice_sequence", "core.task"):
+                  "ops.actual_cost", "ops.deal_result", "ops.party_rating", "core.code_sequence", "core.task"):
         assert counts[table] > 0, table
 

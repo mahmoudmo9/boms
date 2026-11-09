@@ -31,7 +31,7 @@ from app.modules.system import settings
 
 PREFIX = {"invoice": "INV", "credit_note": "CN", "debit_note": "DN"}
 OPEN_ORDER = ("confirmed", "in_progress", "delivered", "closed")
-EDITABLE = ("issue_date", "due_date", "language", "discount", "vat_rate", "vat_note", "incoterm", "incoterm_place",
+EDITABLE = ("issue_date", "due_date", "language", "discount", "vat_rate", "vat_note", "incoterm", "incoterm_place", "incoterm_place_location_id",
             "country_of_origin", "shipping_marks", "gross_weight", "net_weight", "packages", "transport_doc_no",
             "shipment_id", "notes")
 
@@ -57,12 +57,12 @@ def invoices_of(db: Session, *, case_id=None, sales_order_id=None, customer_id=N
 
 
 def next_number(db: Session, kind: str, year: int) -> str:
-    key = f"{PREFIX[kind]}-{year}"
-    seq = db.execute(text(
-        "INSERT INTO ops.invoice_sequence (key, last_number) VALUES (:k, 1) "
-        "ON CONFLICT (key) DO UPDATE SET last_number = ops.invoice_sequence.last_number + 1 RETURNING last_number"
-    ), {"k": key}).scalar_one()
-    return f"{key}-{seq:04d}"
+    """v0.9.0: through the codes service (``codes.pattern.sales_invoice`` / ``credit_note`` / ``debit_note``); the
+    old ``ops.invoice_sequence`` was carried over into ``core.code_sequence`` by migration 0018."""
+    from app.modules.codes import service as codes
+
+    return codes.next(db, "sales_invoice" if kind == "invoice" else kind, {"yyyy": year}, table="ops.sales_invoice",
+                      column="number")
 
 
 # ---- quantities --------------------------------------------------------------------------------------------------------

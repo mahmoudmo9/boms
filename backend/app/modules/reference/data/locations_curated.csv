@@ -1,0 +1,131 @@
+unlocode,name,name_fa,functions,iata
+IRTHR,Tehran,تهران,rda,THR
+IRBND,Bandar Abbas,بندرعباس,prda,BND
+IRBUZ,Bushehr,بوشهر,pda,BUZ
+IRBKM,Bandar Imam Khomeini,بندر امام خمینی,prd,
+IRCHB,Chabahar,چابهار,pda,ZBR
+IRKHO,Khorramshahr,خرمشهر,prd,
+IRABD,Abadan,آبادان,pda,ABD
+IRAWZ,Ahvaz,اهواز,rda,AWZ
+IRIFN,Isfahan,اصفهان,rda,IFN
+IRMHD,Mashhad,مشهد,rda,MHD
+IRTBZ,Tabriz,تبریز,rda,TBZ
+IRSYZ,Shiraz,شیراز,rda,SYZ
+IRKIH,Kish Island,جزیره کیش,pda,KIH
+CNSHA,Shanghai,شانگهای,prda,SHA
+CNNGB,Ningbo,نینگبو,prda,NGB
+CNSZX,Shenzhen,شنژن,prda,SZX
+CNYTN,Yantian,یانتیان,p,
+CNSHK,Shekou,شکو,p,
+CNTAO,Qingdao,چینگدائو,prda,TAO
+CNTSN,Tianjin,تیانجین,prda,TSN
+CNTXG,Tianjin Xingang,تیانجین شینگانگ,p,
+CNXMN,Xiamen,شیامن,prda,XMN
+CNCAN,Guangzhou,گوانگژو,prda,CAN
+CNNSA,Nansha,نانشا,p,
+CNDLC,Dalian,دالیان,prda,DLC
+CNLYG,Lianyungang,لیان‌یون‌گانگ,prd,
+CNFOC,Fuzhou,فوژو,prda,FOC
+CNBJS,Beijing,پکن,rda,
+HKHKG,Hong Kong,هنگ‌کنگ,prda,HKG
+AEJEA,Jebel Ali,جبل علی,pd,
+AEDXB,Dubai,دبی,prda,DXB
+AESHJ,Sharjah,شارجه,pda,SHJ
+AEAUH,Abu Dhabi,ابوظبی,pda,AUH
+AEKLF,Khor Fakkan,خورفکان,p,
+AEFJR,Fujairah,فجیره,pda,FJR
+AEAJM,Ajman,عجمان,p,
+AEKHL,Khalifa Port,بندر خلیفه,p,
+AERKT,Ras al Khaimah,راس‌الخیمه,pda,RKT
+TRIST,Istanbul,استانبول,prda,IST
+TRAMR,Ambarli,آمبارلی,p,
+TRMER,Mersin,مرسین,prd,
+TRIZM,Izmir,ازمیر,prda,ADB
+TRGEM,Gemlik,گملیک,p,
+TRIZT,Izmit,ازمیت,prd,
+TRANK,Ankara,آنکارا,rda,ESB
+TRISK,Iskenderun,اسکندرون,prd,
+TRTZX,Trabzon,ترابزون,pda,TZX
+INNSA,Nhava Sheva,ناوا شوا,prd,
+INBOM,Mumbai,بمبئی,prda,BOM
+INMUN,Mundra,موندرا,prd,
+INMAA,Chennai,چنای,prda,MAA
+INIXY,Kandla,کاندلا,prd,
+INDEL,Delhi,دهلی,rda,DEL
+INCCU,Kolkata,کلکته,prda,CCU
+INPAV,Pipavav,پیپاواو,prd,
+INCOK,Cochin,کوچین,prda,COK
+INTUT,Tuticorin,توتیکورین,prd,
+INVTZ,Visakhapatnam,ویساکاپاتنام,prda,VTZ
+DEHAM,Hamburg,هامبورگ,prda,HAM
+DEBRV,Bremerhaven,برمرهاون,prd,
+DEBRE,Bremen,برمن,prda,BRE
+DEFRA,Frankfurt am Main,فرانکفورت,rda,FRA
+DEDUS,Düsseldorf,دوسلدورف,prda,DUS
+DEMUC,München,مونیخ,rda,MUC
+DEDUI,Duisburg,دویسبورگ,prd,
+DEBER,Berlin,برلین,rda,BER
+DESTR,Stuttgart,اشتوتگارت,rda,STR
+ITGOA,Genova,جنوا,prda,GOA
+ITSPE,La Spezia,لاسپتزیا,prd,
+ITTRS,Trieste,تریسته,prda,TRS
+ITVCE,Venezia,ونیز,prda,VCE
+ITNAP,Napoli,ناپل,prda,NAP
+ITLIV,Livorno,لیورنو,prd,
+ITGIT,Gioia Tauro,جویا تاورو,prd,
+ITMIL,Milano,میلان,rda,
+ITRAN,Ravenna,راونا,prd,
+ITSAL,Salerno,سالرنو,prd,
+RUNVS,Novorossiysk,نووروسیسک,prd,
+RUAST,Astrakhan,آستاراخان,prda,ASF
+RULED,Saint Petersburg,سن‌پترزبورگ,prda,LED
+RUMOW,Moskva,مسکو,rda,
+RUMCX,Makhachkala,ماخاچ‌قلعه,prda,MCX
+RUOLY,Olya,اولیا,p,
+RUVVO,Vladivostok,ولادی‌وستوک,prda,VVO
+OMSOH,Sohar,صحار,pd,
+OMSLL,Salalah,صلاله,pda,SLL
+OMMCT,Muscat,مسقط,pda,MCT
+OMDQM,Duqm,دقم,pd,
+KZAKT,Aktau,آکتائو,prda,SCO
+AZBAK,Baku,باکو,prda,GYD
+TMTMZ,Turkmenbashi,ترکمن‌باشی,prda,
+IQUQR,Umm Qasr,ام‌القصر,p,
+PKKHI,Karachi,کراچی,prda,KHI
+SGSIN,Singapore,سنگاپور,prda,SIN
+MYPKG,Port Klang,پورت کلنگ,p,
+KRPUS,Busan,بوسان,prda,PUS
+JPYOK,Yokohama,یوکوهاما,prd,
+NLRTM,Rotterdam,روتردام,prda,RTM
+BEANR,Antwerpen,آنتورپ,prda,ANR
+ESVLC,Valencia,والنسیا,prda,VLC
+ESALG,Algeciras,الخسیراس,prd,
+ESBCN,Barcelona,بارسلون,prda,BCN
+GRPIR,Piraeus,پیرئوس,prd,
+EGPSD,Port Said,پورت سعید,prd,
+SAJED,Jeddah,جده,prda,JED
+SADMM,Dammam,دمام,prda,DMM
+QAHMD,Hamad Port,بندر حمد,p,
+KWSWK,Shuwaikh,شویخ,p,
+GEPTI,Poti,پوتی,prd,
+GEBUS,Batumi,باتومی,prda,BUS
+AMEVN,Yerevan,ایروان,rda,EVN
+AFKBL,Kabul,کابل,da,KBL
+UZTAS,Tashkent,تاشکند,rda,TAS
+VNSGN,Ho Chi Minh City,هوشی‌مین,prda,SGN
+THLCH,Laem Chabang,لم‌چابانگ,prd,
+IDJKT,Jakarta,جاکارتا,prda,
+LKCMB,Colombo,کلمبو,prda,CMB
+USNYC,New York,نیویورک,prda,
+USLAX,Los Angeles,لس‌آنجلس,prda,LAX
+USHOU,Houston,هیوستون,prda,
+GBFXT,Felixstowe,فلیکس‌استو,prd,
+GBLON,London,لندن,prda,
+FRLEH,Le Havre,لوهاور,prd,
+FRMRS,Marseille,مارسی,prda,MRS
+FRPAR,Paris,پاریس,rda,
+ATVIE,Wien,وین,rda,VIE
+PLGDN,Gdansk,گدانسک,prda,GDN
+ROCND,Constanta,کنستانتا,prd,
+UAODS,Odesa,اودسا,prda,ODS
+BGVAR,Varna,وارنا,prda,VAR

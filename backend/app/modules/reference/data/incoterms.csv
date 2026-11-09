@@ -1,0 +1,12 @@
+code,name_en,name_fa,any_mode,position
+EXW,Ex Works,تحویل در محل کار فروشنده,true,1
+FCA,Free Carrier,تحویل به حمل‌کننده,true,2
+CPT,Carriage Paid To,کرایه پرداخت‌شده تا,true,3
+CIP,Carriage and Insurance Paid To,کرایه و بیمه پرداخت‌شده تا,true,4
+DAP,Delivered at Place,تحویل در محل,true,5
+DPU,Delivered at Place Unloaded,تحویل در محل تخلیه‌شده,true,6
+DDP,Delivered Duty Paid,تحویل با حقوق گمرکی پرداخت‌شده,true,7
+FAS,Free Alongside Ship,تحویل در کنار کشتی,false,8
+FOB,Free On Board,تحویل روی عرشهٔ کشتی,false,9
+CFR,Cost and Freight,هزینه و کرایه,false,10
+CIF,"Cost, Insurance and Freight",هزینه، بیمه و کرایه,false,11
