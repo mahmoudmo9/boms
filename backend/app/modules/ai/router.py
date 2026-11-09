@@ -294,4 +294,73 @@ def reject_draft(draft_id: uuid.UUID, request: Request, user: CurrentUser, db: D
     return drafts.out(db, drafts.get(db, draft_id))
 
 
+# ---- the tasks (v0.9.0 section 3): each starts a job and returns the pending draft ------------------------------------
+
+class ExtractIn(InputModel):
+    target_type: Literal["case", "inquiry", "offer", "listing"]
+    target_id: uuid.UUID
+    document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
+    text: Annotated[str, Field(max_length=200000)] | None = None
+    party_id: uuid.UUID | None = None
+
+
+class PartyParseIn(InputModel):
+    text: Annotated[str, Field(max_length=20000)] | None = None
+    document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=5)
+    roles: list[Literal["buyer", "supplier", "forwarder", "customs_broker", "agent", "other"]] = []
+    confirm_duplicate: bool = False
+
+
+class DraftMessageIn(InputModel):
+    target_type: Literal["rfq_recipient", "purchase_order"]
+    target_id: uuid.UUID
+    language: Literal["en", "fa"] | None = None
+
+
+def _ensure_tasks() -> None:
+    from app.modules.ai import builtin, tasks
+
+    if "extract_items" not in tasks.TASKS:
+        builtin.register()
+
+
+@router.post("/extract", status_code=202)
+def extract(body: ExtractIn, request: Request, user: CurrentUser, db: Db):
+    """«استخراج با هوش مصنوعی»: items from files or pasted text into a draft the owner reviews."""
+    from app.modules.ai import builtin
+
+    _ensure_tasks()
+    draft = builtin.start_extraction(db, target_type=body.target_type, target_id=body.target_id,
+                                     document_ids=body.document_ids, text_=body.text, party_id=body.party_id,
+                                     source=request_source(request), actor=user.username)
+    db.commit()
+    return drafts.out(db, draft)
+
+
+@router.post("/parse-party", status_code=202)
+def parse_party(body: PartyParseIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.ai import tasks
+
+    _ensure_tasks()
+    if not (body.text and body.text.strip()) and not body.document_ids:
+        raise AppError("nothing_to_read", "Paste the signature or give a card image", status=422)
+    draft = tasks.start(db, "parse_party", target_type="party",
+                        payload={"text": body.text or "", "document_ids": [str(d) for d in body.document_ids],
+                                 "roles": body.roles, "confirm_duplicate": body.confirm_duplicate},
+                        source=request_source(request), actor=user.username)
+    db.commit()
+    return drafts.out(db, draft)
+
+
+@router.post("/draft-message", status_code=202)
+def draft_message(body: DraftMessageIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.ai import builtin
+
+    _ensure_tasks()
+    draft = builtin.start_drafting(db, target_type=body.target_type, target_id=body.target_id, language=body.language,
+                                   source=request_source(request), actor=user.username)
+    db.commit()
+    return drafts.out(db, draft)
+
+
 ROUTERS = [router]

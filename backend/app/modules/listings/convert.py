@@ -229,7 +229,15 @@ def convert(db: Session, listing_id: uuid.UUID, data: dict, source: str, actor: 
 
     products = {int(k): v for k, v in (data.get("products") or {}).items()}  # position -> chosen product id
     items = []
-    for it in items_for(db, x, d):
+    if data.get("items"):          # v0.9.0: items accepted from an AI draft of the attachments
+        allowed = ("position", "name", "quantity", "unit_code", "unit_text", "hs_code", "specs", "template_id",
+                   "attributes", "canonical_fa", "canonical_en", "canonical_override", "notes")
+        for i, it in enumerate(data["items"], 1):
+            row = {k: it[k] for k in allowed if it.get(k) not in (None, "", [], {})}
+            if row.get("name"):
+                row.setdefault("position", i)
+                items.append(row)
+    for it in ([] if items else items_for(db, x, d)):
         row = {k: it[k] for k in ("position", "name", "quantity", "unit_text", "required_by")}
         if it["goods_code"]:
             row["specs"] = [{"key": GOODS_CODE_KEY, "value": it["goods_code"]}]

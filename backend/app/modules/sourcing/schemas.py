@@ -3,7 +3,7 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, field_validator
 
@@ -65,6 +65,12 @@ class LineItemFields(InputModel):
     route: Route | None = None
     notes: LongText | None = None
     specs: list[SpecIn] | None = Field(default=None, max_length=200)
+    # v0.9.0: noun-modifier description (section 7)
+    template_id: uuid.UUID | None = None
+    attributes: dict[str, Any] | None = None
+    canonical_fa: Annotated[str, Field(max_length=1000)] | None = None
+    canonical_en: Annotated[str, Field(max_length=1000)] | None = None
+    canonical_override: bool | None = None
 
 
 class LineItemCreate(LineItemFields):
@@ -112,6 +118,11 @@ class LineItemOut(ApiModel):
     route: str
     notes: str | None
     specs: list[dict]
+    template_id: uuid.UUID | None = None          # v0.9.0
+    attributes: dict = {}
+    canonical_fa: str | None = None
+    canonical_en: str | None = None
+    canonical_override: bool = False
     status: str
     no_coverage_confirmed: bool
     no_coverage_reason: str | None

@@ -1,10 +1,11 @@
 """The AI module registers itself with earlier modules: the case cascade (drafts, the case's «فقط محلی») and the
 command center (the month's AI spending against the cap)."""
-from app.modules.ai import drafts
+from app.modules.ai import builtin, drafts
 from app.modules.parties.command_center import register_section
 from app.modules.sourcing.inquiries import register_case_cleanup
 
 register_case_cleanup(30, drafts.case_cleanup)
+builtin.register()                                 # the v0.9.0 tasks and their committers
 
 
 def _spending(db, _today) -> dict:
@@ -14,3 +15,18 @@ def _spending(db, _today) -> dict:
 
 
 register_section("ai", _spending)     # command center: the month's AI spending and the cap
+
+
+
+def _extractor_status(db) -> dict:
+    from app.modules.ai import service
+
+    return {"name": "ai", "configured": service.configured(db)}
+
+
+try:   # the «استخراج با هوش مصنوعی» button of the items card asks the sourcing slot
+    from app.modules.sourcing.extract import register_status
+
+    register_status(_extractor_status)
+except ImportError:   # pragma: no cover
+    pass

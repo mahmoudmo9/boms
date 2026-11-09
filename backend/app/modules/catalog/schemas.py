@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import Field
 
@@ -19,6 +19,12 @@ class ProductCreate(InputModel):
     category_id: uuid.UUID | None = None
     notes: Annotated[str, Field(max_length=20000)] | None = None
     aliases: list[Annotated[str, Field(max_length=300)]] = Field(default_factory=list, max_length=100)
+    # v0.9.0: noun-modifier description (section 7)
+    template_id: uuid.UUID | None = None
+    attributes: dict[str, Any] | None = None
+    canonical_fa: Annotated[str, Field(max_length=1000)] | None = None
+    canonical_en: Annotated[str, Field(max_length=1000)] | None = None
+    canonical_override: bool | None = None
     confirm_duplicate: bool = False
 
 
@@ -30,6 +36,12 @@ class ProductPatch(InputModel):
     hs_code: HsCode | None = None
     category_id: uuid.UUID | None = None
     notes: Annotated[str, Field(max_length=20000)] | None = None
+    # v0.9.0: noun-modifier description (section 7)
+    template_id: uuid.UUID | None = None
+    attributes: dict[str, Any] | None = None
+    canonical_fa: Annotated[str, Field(max_length=1000)] | None = None
+    canonical_en: Annotated[str, Field(max_length=1000)] | None = None
+    canonical_override: bool | None = None
     confirm_duplicate: bool = False
 
 
@@ -41,3 +53,19 @@ class CategoryIn(InputModel):
     parent_id: uuid.UUID | None = None
     name_fa: Name | None = None
     name_en: Name | None = None
+
+
+class TemplateIn(InputModel):
+    key: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{1,60}$")]
+    category_id: uuid.UUID | None = None
+    noun_fa: Annotated[str, Field(min_length=1, max_length=200)]
+    noun_en: Annotated[str, Field(min_length=1, max_length=200)]
+    attributes: list[dict[str, Any]] = Field(default_factory=list, max_length=40)
+
+
+class TemplatePatch(InputModel):
+    category_id: uuid.UUID | None = None
+    noun_fa: Annotated[str, Field(min_length=1, max_length=200)] | None = None
+    noun_en: Annotated[str, Field(min_length=1, max_length=200)] | None = None
+    attributes: list[dict[str, Any]] | None = Field(default=None, max_length=40)
+    status: Annotated[str, Field(pattern=r"^(active|archived)$")] | None = None

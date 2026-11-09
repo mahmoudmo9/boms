@@ -1,7 +1,7 @@
 """Request models of the listings module (Setad screening). Every request body forbids unknown fields."""
 
 import uuid
-from typing import Annotated, Literal
+from typing import Any, Annotated, Literal
 
 from pydantic import Field
 
@@ -71,3 +71,5 @@ class ConvertIn(InputModel):
     confirm_duplicate: bool = False
     products: dict[int, uuid.UUID] = {}
     without_missing_files: bool = False
+    # v0.9.0: the items accepted from an AI draft («استخراج اقلام») replace the listing's own items table
+    items: list[dict[str, Any]] | None = Field(default=None, max_length=500)

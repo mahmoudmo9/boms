@@ -170,6 +170,10 @@ def upgrade() -> None:
                    "FOR EACH ROW EXECUTE FUNCTION core.audit_row('id')")
     op.execute("ALTER TABLE sys.job DROP CONSTRAINT IF EXISTS job_lane_check")
     op.execute("ALTER TABLE sys.job ADD CONSTRAINT job_lane_check CHECK (lane IN ('default', 'setad', 'ai'))")
+    # writes from an accepted AI draft are recorded with their own source (section 2)
+    op.execute("ALTER TABLE core.event DROP CONSTRAINT IF EXISTS event_source_check")
+    op.execute("ALTER TABLE core.event ADD CONSTRAINT event_source_check "
+               "CHECK (source IN ('ui', 'api', 'worker', 'script', 'ai_draft'))")
 
     for kind, label, base in PROVIDERS:
         op.execute(f"INSERT INTO ai.provider (kind, label, base_url) VALUES ('{kind}', '{label}', "
@@ -250,6 +254,15 @@ def downgrade() -> None:
                "last_error = coalesce(last_error, 'AI lane removed by a downgrade') WHERE lane = 'ai'")
     op.execute("ALTER TABLE sys.job DROP CONSTRAINT IF EXISTS job_lane_check")
     op.execute("ALTER TABLE sys.job ADD CONSTRAINT job_lane_check CHECK (lane IN ('default', 'setad'))")
+    # the event log is append-only: when AI-draft events exist they stay as recorded and the wider CHECK stays with them
+    op.execute("""
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM core.event WHERE source = 'ai_draft') THEN
+            ALTER TABLE core.event DROP CONSTRAINT event_source_check;
+            ALTER TABLE core.event ADD CONSTRAINT event_source_check CHECK (source IN ('ui', 'api', 'worker', 'script'));
+          END IF;
+        END $$""")
     for table in reversed(TABLES):
         op.execute(f"DROP TABLE ai.{table}")
     op.execute("DROP SCHEMA ai")

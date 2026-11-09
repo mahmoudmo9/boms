@@ -121,7 +121,8 @@ def create_from_quote(db: Session, quote_id: uuid.UUID, data: dict, calendar: st
     existing = _existing(db, quote_id=quote.id)
     if existing:
         raise _order_exists(existing)
-    names = {i.id: i.name for i in sourcing_items.items_of(db, case_id=quote.case_id)}
+    names = {i.id: getattr(i, f"canonical_{quote.language}", None) or i.name   # v0.9.0: canonical description
+             for i in sourcing_items.items_of(db, case_id=quote.case_id)}
     rows = [{"line_item_id": q.line_item_id, "description": q.description_override or names.get(q.line_item_id, ""),
              "quantity": q.quantity, "unit": _unit_label(q), "unit_price": q.unit_price, "total": q.total,
              "vat_amount": q.vat_amount or ZERO}
@@ -150,7 +151,7 @@ def create_from_proposal(db: Session, proposal_id: uuid.UUID, data: dict, calend
     existing = _existing(db, proposal_id=row.id)
     if existing:
         raise _order_exists(existing)
-    names = {i.id: i.name for i in sourcing_items.items_of(db, case_id=tender.case_id)}
+    names = {i.id: i.canonical_fa or i.name for i in sourcing_items.items_of(db, case_id=tender.case_id)}
     lines = tender_proposals.lines_of(db, row.id)
     vat_rate = (row.vat_amount / row.subtotal) if row.subtotal else ZERO
     rows = [{"line_item_id": x.line_item_id, "description": names.get(x.line_item_id, ""), "quantity": x.quantity,

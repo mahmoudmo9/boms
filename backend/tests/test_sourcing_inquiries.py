@@ -353,7 +353,8 @@ def test_pdf_text_beside_item_form_and_extractor_disabled(client):
     runner.run_until_idle(backoff_base=0)
     r = client.get(f"/api/line-items/document-text/{doc['id']}").json()
     assert "Gear pump 5 pcs" in r["text"]
-    assert client.get("/api/line-items/extractor").json() == {"name": "disabled", "configured": False}
+    # v0.9.0: the AI module answers for the extractor; with no provider connected it is not configured
+    assert client.get("/api/line-items/extractor").json() == {"name": "ai", "configured": False}
     r = client.post("/api/line-items/extract", json={"text": "anything"})
     assert r.status_code == 409 and r.json()["error"]["code"] == "extractor_not_configured"
 

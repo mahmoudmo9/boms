@@ -120,6 +120,8 @@ def clean_ai(db):
     db.commit()
     yield
     _reset(db)
+    db.execute(text("UPDATE ai.draft SET created_by_call_id = NULL"))
+    db.execute(text("UPDATE ai.call SET fallback_of_id = NULL"))
     db.execute(text("DELETE FROM ai.call WHERE task IN ('classification', 'extraction', 'drafting', 'party_parse', 'ping')"))
     db.execute(text("UPDATE sys.setting SET value = '20' WHERE key = 'ai.monthly_cap_usd'"))
     db.commit()

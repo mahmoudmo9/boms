@@ -4,8 +4,10 @@ from app.worker.registry import job_handler
 
 @job_handler("ai.task")
 def run_task(db, payload: dict) -> dict:
-    from app.modules.ai import tasks
+    from app.modules.ai import builtin, tasks
 
+    if payload.get("task") not in tasks.TASKS:
+        builtin.register()
     return tasks.run_job(db, payload)
 
 

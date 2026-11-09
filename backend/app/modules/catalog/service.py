@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import AppError, Conflict, NotFound
 from app.core.text import WORD_SIMILARITY, normalize_fa
+from app.modules.catalog import nounmod
 from app.modules.catalog.models import Product, ProductAlias, ProductCategory
 from app.modules.events import service as events
 from app.modules.parties.service import jsonable
@@ -129,6 +130,7 @@ def create_product(db: Session, data: dict, source: str, actor: str | None = Non
     """(product, possible_duplicates); (None, duplicates) when similar products exist and it is not confirmed."""
     aliases = [a.strip() for a in data.pop("aliases", []) if a and a.strip()]
     confirm = data.pop("confirm_duplicate", False)
+    noun = {k: data.pop(k) for k in nounmod.NOUN_FIELDS if k in data and data[k] is not None}
     data = _clean(data)
     if not (data.get("name_fa") or data.get("name_en")):
         raise AppError("name_required", "A Persian or English name is required", status=422)
@@ -136,12 +138,14 @@ def create_product(db: Session, data: dict, source: str, actor: str | None = Non
     if duplicates and not confirm:
         return None, duplicates
     product = Product(**{k: data.get(k) for k in FIELDS})
+    nounmod.apply(db, product, noun)                         # v0.9.0: template attributes and canonical description
     db.add(product)
     _flush(db, "invalid_product")
     for alias in dict.fromkeys(aliases):
         db.add(ProductAlias(product_id=product.id, alias=alias))
     _flush(db, "duplicate_alias")
     events.record(db, "product", product.id, "create", jsonable({**{k: data.get(k) for k in FIELDS},
+                                                                 **{k: getattr(product, k) for k in nounmod.NOUN_FIELDS},
                                                                  "aliases": aliases,
                                                                  "confirmed_duplicates": [d["id"] for d in duplicates]}),
                   source, actor=actor)
@@ -151,6 +155,7 @@ def create_product(db: Session, data: dict, source: str, actor: str | None = Non
 def update_product(db: Session, product_id: uuid.UUID, changes: dict, source: str, actor: str | None = None) -> Product:
     product = get_product(db, product_id)
     confirm_duplicate = changes.pop("confirm_duplicate", False)
+    noun = {k: changes[k] for k in nounmod.NOUN_FIELDS if k in changes}
     changes = _clean({k: v for k, v in changes.items() if k in FIELDS})
     name_fa = changes.get("name_fa", product.name_fa) if "name_fa" in changes else product.name_fa
     name_en = changes.get("name_en", product.name_en) if "name_en" in changes else product.name_en
@@ -163,6 +168,9 @@ def update_product(db: Session, product_id: uuid.UUID, changes: dict, source: st
             raise Conflict("possible_duplicate", "Similar products exist; confirm to save anyway",
                            {"possible_duplicates": jsonable(duplicates)})
     changed = _diff(product, changes)
+    before = {k: getattr(product, k) for k in nounmod.NOUN_FIELDS}
+    after = nounmod.apply(db, product, noun)
+    changed.update({k: {"old": before[k], "new": v} for k, v in after.items() if before[k] != v})
     if changed:
         _flush(db, "invalid_product")
         events.record(db, "product", product.id, "update", jsonable({"changes": changed}), source, actor=actor)

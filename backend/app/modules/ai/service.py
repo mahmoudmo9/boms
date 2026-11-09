@@ -203,7 +203,7 @@ def run(db: Session, task: str, *, text: str, images: list[Attachment] | None = 
                 attempts.append(previous)
                 continue
         redactor = redact.for_context(db, case_id, party_ids, private_prices) if privacy == "cloud_redacted" \
-            and not is_local(provider) else redact.Redactor()
+            and not is_local(provider) else redact.Redactor(patterns=False)
         user_text = prompt.render(input=text, examples=examples, **(prompt_values or {}))
         sent = redactor.redact(user_text)
         base["redactions"] = redactor.summary()

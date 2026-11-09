@@ -29,6 +29,7 @@ def register_committer(target_type: str, fn: Callable) -> None:
 def create(db: Session, *, task: str, target_type: str, target_id: str | None = None, case_id=None,
            sources: list | None = None, source: str = "api", actor: str | None = None) -> Draft:
     """A pending draft (the job fills it); earlier open drafts of the same target are superseded."""
+    target_id = str(target_id) if target_id else None
     for old in db.scalars(select(Draft).where(Draft.target_type == target_type, Draft.target_id == target_id,
                                               Draft.task == task, Draft.status.in_(OPEN))):
         old.status = "superseded"

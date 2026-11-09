@@ -17,6 +17,9 @@ from app.modules.sourcing.common import diff, document_count, flush, jsonable, r
 from app.modules.sourcing.models import Case, Inquiry, LineItem, OfferItem, Rfq, RfqItem, RfqRecipient, SupplierOffer
 
 OPEN_CASE = "open"
+from app.modules.catalog import nounmod  # noqa: E402  (v0.9.0: noun-modifier descriptions)
+from app.modules.catalog.nounmod import NOUN_FIELDS  # noqa: E402
+
 ITEM_FIELDS = ("position", "name", "description", "product_id", "quantity", "unit_code", "unit_text",
                   "target_price", "target_currency", "destination_country_iso2", "incoterm", "incoterm_place",
                   "required_by", "packaging", "hs_code", "route", "notes", "specs")
@@ -94,7 +97,7 @@ def _check_product(db: Session, product_id: uuid.UUID | None) -> None:
 
 
 def _prepare(data: dict) -> dict:
-    data = {k: v for k, v in data.items() if k in ITEM_FIELDS}
+    data = {k: v for k, v in data.items() if k in ITEM_FIELDS or k in NOUN_FIELDS}
     if "specs" in data:
         data["specs"] = clean_specs(data["specs"])
     if "name" in data and data["name"] is not None:
@@ -124,8 +127,10 @@ def add_items(db: Session, inquiry_id: uuid.UUID | None, case_id: uuid.UUID | No
         else:
             position = max(position, data["position"])
         data.setdefault("specs", [])
+        noun = {k: data.pop(k) for k in NOUN_FIELDS if k in data and data[k] is not None}
         data = {k: v for k, v in data.items() if v is not None}
         row = LineItem(inquiry_id=inquiry_id, case_id=case_id, **data)
+        nounmod.apply(db, row, noun)        # v0.9.0: template attributes and canonical description
         db.add(row)
         flush(db, "invalid_item")
         events.record(db, "line_item", row.id, "create", jsonable({
@@ -146,7 +151,11 @@ def update_item(db: Session, item_id: uuid.UUID, changes: dict, source: str, act
         changes["specs"] = []
     if "name" in changes and changes["name"] is None:
         changes.pop("name")
+    noun = {k: changes.pop(k) for k in NOUN_FIELDS if k in changes}
     changed = diff(item, changes)
+    before = {k: getattr(item, k) for k in NOUN_FIELDS}
+    after = nounmod.apply(db, item, noun)
+    changed.update({k: {"old": before[k], "new": v} for k, v in after.items() if before[k] != v})
     if changed:
         flush(db, "invalid_item")
         events.record(db, "line_item", item.id, "update", jsonable({"changes": changed}), source, actor=actor)

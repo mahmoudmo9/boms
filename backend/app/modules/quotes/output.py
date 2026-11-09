@@ -124,7 +124,8 @@ def _build_context(db: Session, quote: Quote, calendar: str = "gregorian", digit
     calendar, digits = output_style(lang)  # v0.7.0: the document's language decides, not the user's settings
     decimals = costing.currency_decimals(db, quote.currency)
     units = sourcing_coverage.unit_index(db)
-    names = {i.id: i.name for i in sourcing_items.items_of(db, case_id=quote.case_id)}
+    # v0.9.0: the canonical (noun-modifier) description in the document's language, else the free name
+    names = {i.id: getattr(i, f"canonical_{lang}", None) or i.name for i in sourcing_items.items_of(db, case_id=quote.case_id)}
     rows = []
     for row in service.items_of(db, quote.id):
         unit = units.get(row.unit_code or "")

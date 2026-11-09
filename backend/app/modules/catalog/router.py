@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.orm import Session
@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.schemas import page_params
 from app.core.web import request_source
-from app.modules.catalog import service
-from app.modules.catalog.schemas import AliasIn, CategoryIn, ProductCreate, ProductPatch
+from app.core.schemas import InputModel
+from app.modules.catalog import nounmod, service
+from app.modules.catalog.schemas import AliasIn, CategoryIn, ProductCreate, ProductPatch, TemplateIn, TemplatePatch
 from app.modules.parties.service import jsonable
 from app.modules.system.auth import CurrentUser
 
@@ -123,4 +124,69 @@ def remove_alias(alias_id: uuid.UUID, request: Request, user: CurrentUser, db: D
     db.commit()
 
 
-ROUTERS = [products_router]
+# ---- noun-modifier templates (v0.9.0 section 7) ------------------------------------------------------------------
+
+templates_router = APIRouter(prefix="/api/product-templates", tags=["catalog"])
+
+
+class _PreviewIn(InputModel):
+    attributes: dict[str, Any] = {}
+
+
+@templates_router.get("")
+def list_templates(_: CurrentUser, db: Db, include_archived: bool = False):
+    from sqlalchemy import select
+
+    from app.modules.catalog.models import ProductTemplate
+
+    stmt = select(ProductTemplate).order_by(ProductTemplate.key)
+    if not include_archived:
+        stmt = stmt.where(ProductTemplate.status == "active")
+    return [nounmod.template_out(t) for t in db.scalars(stmt)]
+
+
+@templates_router.post("", status_code=201)
+def create_template(body: TemplateIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.catalog.models import ProductTemplate
+    from app.modules.events import service as events
+    from app.modules.sourcing.common import flush
+
+    data = body.model_dump()
+    data["attributes"] = nounmod.check_template(data)
+    row = ProductTemplate(**data)
+    db.add(row)
+    flush(db, "invalid_template")
+    events.record(db, "product_template", row.id, "create", jsonable(data), request_source(request), actor=user.username)
+    db.commit()
+    return nounmod.template_out(row)
+
+
+@templates_router.patch("/{template_id}")
+def patch_template(template_id: uuid.UUID, body: TemplatePatch, request: Request, user: CurrentUser, db: Db):
+    from app.modules.events import service as events
+    from app.modules.sourcing.common import flush
+
+    row = nounmod.get_template(db, template_id)
+    changes = body.model_dump(exclude_unset=True)
+    if "attributes" in changes:
+        changes["attributes"] = nounmod.check_template(changes)
+    for key, value in changes.items():
+        setattr(row, key, value)
+    flush(db, "invalid_template")
+    events.record(db, "product_template", row.id, "update", jsonable(changes), request_source(request), actor=user.username)
+    db.commit()
+    return nounmod.template_out(row)
+
+
+@templates_router.post("/{template_id}/preview")
+def preview_template(template_id: uuid.UUID, body: _PreviewIn, _: CurrentUser, db: Db):
+    """The canonical description fa/en the attributes give (validated against the template)."""
+    row = nounmod.get_template(db, template_id)
+    attrs = nounmod.validate(row, body.attributes)
+    return {"attributes": attrs, "canonical_fa": nounmod.canonical(row, attrs, "fa"),
+            "canonical_en": nounmod.canonical(row, attrs, "en"),
+            "long_fa": nounmod.canonical(row, attrs, "fa", short_only=False),
+            "long_en": nounmod.canonical(row, attrs, "en", short_only=False)}
+
+
+ROUTERS = [products_router, templates_router]

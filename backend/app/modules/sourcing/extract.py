@@ -39,3 +39,22 @@ _extractor: ItemExtractor = DisabledExtractor()
 
 def get_extractor() -> ItemExtractor:
     return _extractor
+
+
+# v0.9.0: the AI module reports here whether extraction is available (the items card enables its button)
+_status_fn = None
+
+
+def register_status(fn) -> None:
+    global _status_fn
+    _status_fn = fn
+
+
+def status(db) -> dict:
+    from app.core.modules import load_hooks
+
+    load_hooks()
+    if _status_fn is not None:
+        return _status_fn(db)
+    ex = get_extractor()
+    return {"name": ex.name, "configured": ex.is_configured()}

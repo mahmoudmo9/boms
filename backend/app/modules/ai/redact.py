@@ -23,6 +23,7 @@ class Redactor:
     mapping: dict[str, str] = field(default_factory=dict)      # placeholder -> original
     _seen: dict[str, str] = field(default_factory=dict)        # original -> placeholder
     counts: dict[str, int] = field(default_factory=dict)
+    patterns: bool = True                                      # False: nothing is replaced (local models)
 
     def add(self, value: str | None, kind: str) -> None:
         if value and len(value.strip()) >= 3:
@@ -37,7 +38,7 @@ class Redactor:
         return self._seen[value]
 
     def redact(self, text: str) -> str:
-        if not text:
+        if not text or not self.patterns:
             return text
         for value in sorted(self.names, key=len, reverse=True):
             if value in text:

@@ -337,9 +337,8 @@ def import_preview(body: ImportPreviewIn, _: CurrentUser, db: Db):
 
 
 @items_router.get("/extractor")
-def extractor_status(_: CurrentUser):
-    ex = extract.get_extractor()
-    return {"name": ex.name, "configured": ex.is_configured()}
+def extractor_status(_: CurrentUser, db: Db):
+    return extract.status(db)       # v0.9.0: configured when an AI provider is connected
 
 
 @items_router.post("/extract")

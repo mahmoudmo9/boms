@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.time import ensure_aware
 from app.modules.events.models import Event
 
-SOURCES = {"ui", "api", "worker", "script"}
+SOURCES = {"ui", "api", "worker", "script", "ai_draft"}   # v0.9.0: writes from an accepted AI draft
 
 
 def record(
