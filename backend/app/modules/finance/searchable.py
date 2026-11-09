@@ -18,7 +18,7 @@ def _sales_invoices(db, needle: str, raw: str, limit: int) -> list[SearchHit]:
            FROM ops.sales_invoice i JOIN core.party p ON p.id = i.customer_party_id
            WHERE coalesce(i.number, '') ILIKE :raw_like OR coalesce(i.moadian_tax_id, '') ILIKE :raw_like
            ORDER BY i.created_at DESC LIMIT :limit"""), _params(needle, raw, limit)).all()
-    return [SearchHit(id=str(r.id), title=f"{r.number or '—'}{' · ' + r.moadian_tax_id if r.moadian_tax_id else ''}",
+    return [SearchHit(id=str(r.id), code=r.number, title=f"{r.number or '—'}{' · ' + r.moadian_tax_id if r.moadian_tax_id else ''}",
                       subtitle=r.name_fa or r.name_en, score=1.0, link=f"/cases/{r.case_id}?tab=finance&invoice={r.id}",
                       extra={"status": r.status, "kind": r.kind}) for r in rows]
 
@@ -29,7 +29,7 @@ def _purchase_invoices(db, needle: str, raw: str, limit: int) -> list[SearchHit]
            FROM ops.purchase_invoice i JOIN core.party p ON p.id = i.supplier_party_id
            WHERE i.supplier_invoice_no ILIKE :raw_like ORDER BY i.created_at DESC LIMIT :limit"""),
         _params(needle, raw, limit)).all()
-    return [SearchHit(id=str(r.id), title=r.supplier_invoice_no, subtitle=r.name_fa or r.name_en, score=1.0,
+    return [SearchHit(id=str(r.id), code=r.supplier_invoice_no, title=r.supplier_invoice_no, subtitle=r.name_fa or r.name_en, score=1.0,
                       link=f"/cases/{r.case_id}?tab=finance&purchase_invoice={r.id}", extra={"status": r.status}) for r in rows]
 
 
@@ -44,6 +44,20 @@ def _payments(db, needle: str, raw: str, limit: int) -> list[SearchHit]:
             for r in rows]
 
 
+def _actual_costs(db, needle: str, raw: str, limit: int) -> list[SearchHit]:
+    """v0.9.0: actual costs by description, party or amount."""
+    amount = (raw or "").strip().replace(",", "").replace("٬", "")
+    rows = db.execute(text(
+        """SELECT c.id, c.case_id, c.kind, c.description, c.amount, c.currency, c.incurred_on, p.name_fa, p.name_en
+           FROM ops.actual_cost c LEFT JOIN core.party p ON p.id = c.party_id
+           WHERE core.normalize_fa(c.description) LIKE :like OR coalesce(p.name_norm, '') LIKE :like
+              OR (:amount ~ '^[0-9]+([.][0-9]+)?$' AND c.amount = CAST(CASE WHEN :amount ~ '^[0-9]+([.][0-9]+)?$' THEN :amount END AS numeric))
+           ORDER BY c.created_at DESC LIMIT :limit"""), {**_params(needle, raw, limit), "amount": amount}).all()
+    return [SearchHit(id=str(r.id), title=r.description, subtitle=f"{r.amount.normalize():f} {r.currency} · {r.name_fa or r.name_en or r.kind}",
+                      score=1.0, link=f"/cases/{r.case_id}?tab=finance&cost={r.id}", extra={"kind": r.kind}) for r in rows]
+
+
+register(SearchProvider(type="actual_cost", label_key="search.type.actual_cost", search=_actual_costs, order=64))
 register(SearchProvider(type="sales_invoice", label_key="search.type.sales_invoice", search=_sales_invoices, order=61))
 register(SearchProvider(type="purchase_invoice", label_key="search.type.purchase_invoice", search=_purchase_invoices, order=62))
 register(SearchProvider(type="payment", label_key="search.type.payment", search=_payments, order=63))

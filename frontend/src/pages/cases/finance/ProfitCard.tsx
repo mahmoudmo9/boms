@@ -66,9 +66,15 @@ export function ProfitCard({ profit }: { profit: Profit }) {
           <Stat label={t("finance.profit.markup")} value={<span>{pct(profit.markup_percent.actual)} <span className="text-xs text-muted">/ {pct(profit.markup_percent.planned)}</span></span>} />
           <Stat label={t("finance.profit.fxEffect")} tone={Number(profit.fx_effect.base) < 0 ? "danger" : Number(profit.fx_effect.base) > 0 ? "success" : undefined}
             value={<bdi dir="ltr" data-testid="fx-effect">{signed(profit.fx_effect.base, f.num)} {base}</bdi>} />
-          {profit.expected && <Stat label={t("finance.profit.expected")} value={<bdi dir="ltr">{f.num(profit.expected.profit)} {profit.deal_currency}</bdi>} />}
+          {profit.expected && <Stat label={t("finance.profit.expected")} value={<span data-testid="expected-profit">
+            <bdi dir="ltr">{f.num(profit.expected.profit)} {profit.deal_currency}</bdi>
+            {profit.expected.margin_percent !== null && <span className="text-xs text-muted"> · {f.num(profit.expected.margin_percent)}%</span>}</span>} />}
         </div>
         <ProfitTable profit={profit} />
+        {profit.expected && (Number(profit.expected.estimated.goods) !== 0 || Number(profit.expected.estimated.planned_costs) !== 0) && (
+          <p className="text-xs text-warning" data-testid="expected-estimated">{t("finance.profit.expectedEstimated", {
+            revenue: f.num(profit.expected.revenue), cost: f.num(profit.expected.cost), goods: f.num(profit.expected.estimated.goods),
+            planned: f.num(profit.expected.estimated.planned_costs), cur: profit.deal_currency })}</p>)}
         <div className="grid gap-2 text-sm sm:grid-cols-3" data-testid="vat-summary">
           <span>{t("finance.vat.output")}: <bdi dir="ltr">{f.num(profit.vat.output.base)} {base}</bdi></span>
           <span>{t("finance.vat.input")}: <bdi dir="ltr">{f.num(profit.vat.input.base)} {base}</bdi></span>

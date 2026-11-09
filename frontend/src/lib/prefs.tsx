@@ -60,11 +60,17 @@ export interface Formatters {
   day: (value: string | null | undefined) => string;
 }
 
+/** v0.9.0: digits follow the UI language everywhere in the UI (Persian digits in fa, Latin in en); the calendar stays
+ * the user's own setting. */
+export function digitsFor(lang: Language): Digits {
+  return lang === "fa" ? "fa" : "latin";
+}
+
 export function useFormat(): Formatters {
   const { user } = useAuth();
   const lang = (user?.language ?? (i18n.language as Language)) || "fa";
   const calendar: Calendar = user?.calendar ?? (lang === "fa" ? "jalali" : "gregorian");
-  const digits: Digits = user?.digits ?? (lang === "fa" ? "fa" : "latin");
+  const digits: Digits = digitsFor(lang);
   return useMemo(
     () => ({
       lang,

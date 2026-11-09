@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, Modal, Select } from "../../../components/ui";
-import { api } from "../../../lib/api";
+import { api, ApiError } from "../../../lib/api";
 import { MOADIAN_TONE, PAYMENT_TONE, type SalesInvoice } from "../../../lib/finance";
 import { useFormat } from "../../../lib/prefs";
 import type { CaseExecution } from "../../../lib/types";
@@ -105,6 +105,32 @@ function Moadian({ caseId, invoice }: { caseId: string; invoice: SalesInvoice })
   );
 }
 
+/** v0.9.0: the first domestic invoice asks how VAT applies; the choice becomes the default for later invoices. */
+function VatDecisionDialog({ caseId, invoiceId, rate, onClose }: { caseId: string; invoiceId: string; rate: string | null; onClose: () => void }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const run = useFinanceRun(caseId);
+  const [mode, setMode] = useState<"apply" | "zero">(rate ? "apply" : "zero");
+  const [reason, setReason] = useState("");
+  return (
+    <Modal open title={t("finance.vatDecision.title")} onClose={onClose}
+      footer={<><Button onClick={onClose}>{t("common.cancel")}</Button><Button variant="primary" data-testid="vat-decision-save" busy={run.isPending}
+        disabled={mode === "zero" ? !reason.trim() : !rate}
+        onClick={() => void run.mutateAsync({ path: `/api/sales-invoices/${invoiceId}/issue`, body: { vat_decision: mode,
+          ...(mode === "zero" ? { vat_reason: reason.trim() } : {}) } }).then(onClose)}>{t("finance.invoices.issue")}</Button></>}>
+      <div className="flex flex-col gap-3 text-sm" data-testid="vat-decision">
+        <p>{t("finance.vatDecision.text")}</p>
+        <label className="flex items-center gap-2"><input type="radio" checked={mode === "apply"} disabled={!rate} onChange={() => setMode("apply")} />
+          {rate ? t("finance.vatDecision.apply", { rate: f.num(rate) }) : t("finance.vatDecision.noParameter")}</label>
+        <label className="flex items-center gap-2"><input type="radio" checked={mode === "zero"} onChange={() => setMode("zero")} />{t("finance.vatDecision.zero")}</label>
+        {mode === "zero" && <Field label={t("finance.reason")} htmlFor="vat-zero-reason"><Input id="vat-zero-reason" dir="auto" value={reason} onChange={(e) => setReason(e.target.value)} /></Field>}
+        <p className="text-xs text-muted">{t("finance.vatDecision.becomesDefault")}</p>
+        <ErrorNote error={run.error} />
+      </div>
+    </Modal>
+  );
+}
+
 function InvoiceItem({ caseId, invoice, readOnly }: { caseId: string; invoice: SalesInvoice; readOnly?: boolean }) {
   const { t } = useTranslation();
   const f = useFormat();
@@ -112,6 +138,7 @@ function InvoiceItem({ caseId, invoice, readOnly }: { caseId: string; invoice: S
   const [open, setOpen] = useState(invoice.status === "draft");
   const [dialog, setDialog] = useState<"credit-note" | "debit-note" | "cancel" | null>(null);
   const [vat, setVat] = useState({ rate: invoice.vat_rate, note: invoice.vat_note ?? "" });
+  const [vatAsk, setVatAsk] = useState<{ rate: string | null } | null>(null);
   const go = (path: string, body?: Body, method: "POST" | "PATCH" | "DELETE" = "POST") => run.mutate({ path, body, method });
   return (
     <li className="flex flex-col gap-2 px-4 py-2 text-sm" data-testid="sales-invoice" data-invoice={invoice.id} data-status={invoice.status}>
@@ -143,7 +170,8 @@ function InvoiceItem({ caseId, invoice, readOnly }: { caseId: string; invoice: S
                 <Field label={t("finance.invoices.vatRate")} htmlFor={`vat-${invoice.id}`}><Input id={`vat-${invoice.id}`} className="w-20" dir="ltr" inputMode="decimal" value={vat.rate} onChange={(e) => setVat({ ...vat, rate: e.target.value })} /></Field>
                 <Field label={t("finance.invoices.vatNote")} htmlFor={`vatn-${invoice.id}`}><Input id={`vatn-${invoice.id}`} className="w-56" dir="auto" value={vat.note} onChange={(e) => setVat({ ...vat, note: e.target.value })} /></Field>
                 <Button onClick={() => go(`/api/sales-invoices/${invoice.id}`, { vat_rate: vat.rate, vat_note: vat.note || null }, "PATCH")}>{t("finance.invoices.saveVat")}</Button>
-                <Button variant="primary" data-testid="invoice-issue" onClick={() => go(`/api/sales-invoices/${invoice.id}/issue`)}>{t("finance.invoices.issue")}</Button>
+                <Button variant="primary" data-testid="invoice-issue" onClick={() => void run.mutateAsync({ path: `/api/sales-invoices/${invoice.id}/issue` })
+                  .catch((err) => { if (err instanceof ApiError && err.code === "vat_decision_required") setVatAsk({ rate: (err.details.rate as string | null) ?? null }); })}>{t("finance.invoices.issue")}</Button>
                 <Button variant="ghost" onClick={() => go(`/api/sales-invoices/${invoice.id}`, undefined, "DELETE")}>{t("common.remove")}</Button>
               </div>
             </div>)}
@@ -160,6 +188,7 @@ function InvoiceItem({ caseId, invoice, readOnly }: { caseId: string; invoice: S
           <ErrorNote error={run.error} />
         </div>)}
       {(dialog === "credit-note" || dialog === "debit-note") && <NoteDialog caseId={caseId} invoice={invoice} kind={dialog} onClose={() => setDialog(null)} />}
+      {vatAsk && <VatDecisionDialog caseId={caseId} invoiceId={invoice.id} rate={vatAsk.rate} onClose={() => setVatAsk(null)} />}
       {dialog === "cancel" && <ReasonDialog title={t("finance.invoices.cancel")} label={t("finance.reason")} busy={run.isPending} error={run.error}
         onClose={() => setDialog(null)} onSave={(reason) => void run.mutateAsync({ path: `/api/sales-invoices/${invoice.id}/cancel`, body: { reason } }).then(() => setDialog(null))} />}
     </li>

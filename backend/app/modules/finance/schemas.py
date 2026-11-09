@@ -63,6 +63,8 @@ class SalesInvoicePatch(InvoiceHead):
 
 class IssueIn(InputModel):
     issue_date: date | None = None
+    vat_decision: Literal["apply", "zero"] | None = None     # v0.9.0: answers vat_decision_required
+    vat_reason: Text300 | None = None
 
 
 class NoteIn(InputModel):

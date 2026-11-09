@@ -27,6 +27,7 @@ class SearchHit:
     subtitle: str | None = None
     title_i18n: dict[str, str] | None = None
     extra: dict = field(default_factory=dict)
+    code: str | None = None          # v0.9.0: the record's code / number; an exact match ranks first
 
 
 @dataclass(frozen=True)

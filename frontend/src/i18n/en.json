@@ -26,7 +26,8 @@
     "add": "Add",
     "yes": "Yes",
     "no": "No",
-    "remove": "Remove"
+    "remove": "Remove",
+    "moreTabs": "More tabs"
   },
   "nav": {
     "label": "Main navigation",
@@ -115,7 +116,8 @@
       "claim": "Claim",
       "sales_invoice": "Sales invoice",
       "purchase_invoice": "Supplier invoice",
-      "payment": "Payment"
+      "payment": "Payment",
+      "actual_cost": "Actual cost"
     }
   },
   "date": {
@@ -1137,7 +1139,8 @@
       },
       "cascadeHint": "For test data only: deletes this case with its items, RFQs, recipients, offers and document links. Files stay in Documents and interactions stay in the parties' history. The deletion is recorded in the event log.",
       "typeTitle": "Type the case title to confirm",
-      "cascadeButton": "Delete case and everything in it"
+      "cascadeButton": "Delete case and everything in it",
+      "tabsLabel": "Case sections"
     },
     "item": {
       "add": "Add item",
@@ -3213,8 +3216,11 @@
         "other": "Other",
         "revenue": "Revenue",
         "cost_total": "Total cost",
-        "profit": "Profit"
-      }
+        "profit": "Profit",
+        "guarantee": "Guarantee fees",
+        "cost_of_money": "Cost of money"
+      },
+      "expectedEstimated": "Expected: revenue {{revenue}}, cost {{cost}} {{cur}}, of which estimated goods still to buy {{goods}} and planned costs with no actual yet {{planned}}."
     },
     "vat": {
       "output": "Output VAT",
@@ -3338,6 +3344,14 @@
         "deals": "Deals CSV",
         "receivables": "Aging CSV"
       }
+    },
+    "vatDecision": {
+      "title": "VAT on domestic invoices",
+      "text": "This is the first domestic invoice. How does VAT apply? Your choice becomes the default; each invoice stays editable with a note.",
+      "apply": "Apply the tax parameter in force: {{rate}}%",
+      "noParameter": "No VAT tax parameter in force on the issue date",
+      "zero": "Zero VAT, with a reason",
+      "becomesDefault": "Saved as the default (Settings → Finance)."
     }
   }
 }

@@ -17,6 +17,9 @@ import { PartyPicker } from "../parties/QuickLog";
 import { DueDatePicker, PartyName } from "../parties/shared";
 import { ContactName, CurrencySelect, IncotermSelect, Money, OFFER_CHANNELS, StatusBadge, UnitInput, useInvalidateSourcing, useUnitLabel } from "../sourcing/shared";
 
+// v0.9.0: every status from selected onward counts as covered
+const COVERED = ["selected", "sold", "delivered", "closed", "cancelled"];
+
 interface Row {
   line_item_id: string;
   name: string;
@@ -423,7 +426,7 @@ export function CoverageCard({ caseId, onChanged }: { caseId: string; onChanged:
                 <td className="p-2"><div className="flex flex-wrap gap-1"><StatusBadge group="item" status={i.status} />{i.no_coverage_confirmed && <Badge tone="danger">{t("sourcing.noCoverage")}</Badge>}{i.selection_lost && <Badge tone="warning">{t("sourcing.selectionLost")}</Badge>}</div></td>
                 <td className="p-2 tabular-nums">{i.valid_offers}</td>
                 <td className="p-2"><div className="flex flex-col gap-0.5">{i.best_prices.map((b) => <Money key={`${b.currency}${b.unit_group}`} amount={b.unit_price} currency={b.currency} per={b.price_per_quantity} unit={unitLabel(b.unit_code, b.unit_text)} />)}</div></td>
-                <td className="p-2 text-end">{!i.no_coverage_confirmed && i.status !== "selected" && <Button variant="ghost" onClick={() => setMarking(i.item_id)}>{t("sourcing.markNoCoverage")}</Button>}</td>
+                <td className="p-2 text-end">{!i.no_coverage_confirmed && !COVERED.includes(i.status) && <Button variant="ghost" onClick={() => setMarking(i.item_id)}>{t("sourcing.markNoCoverage")}</Button>}</td>
               </tr>
             ))}
           </tbody>

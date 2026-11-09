@@ -63,6 +63,7 @@ class SalesInvoice(Timestamps, Base):
     transport_doc_no: Mapped[str | None] = mapped_column(Text)
     shipment_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     notes: Mapped[str | None] = mapped_column(Text)
+    claim_id: Mapped[uuid.UUID | None] = mapped_column(UUID)   # v0.9.0: a credit note from a customer claim
 
 
 class SalesInvoiceLine(Timestamps, Base):

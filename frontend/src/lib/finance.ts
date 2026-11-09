@@ -32,7 +32,9 @@ export interface Profit {
   unrealized: { revenue: string; cost: string };
   vat: { output: { deal: string; base: string }; input: { deal: string; base: string }; net: { deal: string; base: string } };
   cost_of_money: { planned: Pair; actual: { deal: string; base: string }; days: number; annual_percent: string };
-  expected: { revenue: string; cost: string; profit: string } | null;
+  /** v0.9.0: the sales order's revenue (± notes) and the cost still to come; estimated parts reported apart */
+  expected: { revenue: string; cost: string; profit: string; margin_percent: string | null;
+    estimated: { goods: string; planned_costs: string } } | null;
   missing_rates: string[];
 }
 

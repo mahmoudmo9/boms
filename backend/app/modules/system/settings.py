@@ -104,6 +104,20 @@ def _optional_uuid(value: Any) -> str | None:
     return value.lower()
 
 
+def _vat_decision(value: Any) -> dict | None:
+    """v0.9.0: the owner's VAT decision for domestic invoices: unset, {"mode": "apply"} or {"mode": "zero", "reason"}."""
+    if value is None or value == "":
+        return None
+    if not isinstance(value, dict) or value.get("mode") not in ("apply", "zero"):
+        raise ValueError('expected {"mode": "apply"} or {"mode": "zero", "reason": "..."}')
+    if value["mode"] == "zero":
+        reason = value.get("reason")
+        if not isinstance(reason, str) or not reason.strip() or len(reason) > 300:
+            raise ValueError("a zero rate needs a reason (up to 300 characters)")
+        return {"mode": "zero", "reason": reason.strip()}
+    return {"mode": "apply"}
+
+
 def _text_list(value: Any) -> list[str]:
     """A list of short texts (warn keywords, dismiss reasons, checklist questions); empty entries are dropped."""
     if not isinstance(value, list) or len(value) > 200:
@@ -178,6 +192,7 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "finance.base_currency": ("IRR", _short_text),                # rial amounts of payments and costs
     "finance.payment_days": (30, _int_range(0, 365)),             # invoice due date after the issue date
     "finance.supplier_payment_days": (30, _int_range(0, 365)),    # supplier invoice due date when not typed
+    "finance.vat_default_domestic": (None, _vat_decision),        # v0.9.0: decided on the first domestic invoice
 }
 
 

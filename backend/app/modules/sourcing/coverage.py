@@ -27,6 +27,8 @@ from app.modules.system.models import Unit
 
 EXPIRING_DAYS = 7
 
+COVERED = ("selected", "sold", "delivered", "closed", "cancelled")
+
 
 def unit_index(db: Session) -> dict[str, Unit]:
     return {u.code: u for u in db.scalars(select(Unit))}
@@ -178,7 +180,8 @@ def coverage(db: Session, case_id: uuid.UUID, today: date | None = None) -> dict
                                "unit_price": offer_item.unit_price, "price_per_quantity": offer_item.price_per_quantity,
                                "unit_code": offer_item.unit_code, "unit_text": offer_item.unit_text,
                                "offer_id": offer.id, "party_id": offer.party_id}
-        done = item.status in ("selected", "cancelled") or item.no_coverage_confirmed
+        # v0.9.0: every status from selected onward (sold, delivered, closed) is covered
+        done = item.status in COVERED or item.no_coverage_confirmed
         if not done:
             missing.append({"item_id": item.id, "name": item.name, "status": item.status,
                             "valid_offers": len(valid)})

@@ -98,10 +98,39 @@ def test_migration_0014_moves_internal_reminders_to_tasks_on_phase7b_and_8_data(
             assert conn.execute(text("SELECT purpose FROM ops.execution_followup")).scalars().all() == ["po_confirm"]
             # the deleted follow-ups stay in the audit
             assert conn.execute(text("SELECT count(*) FROM core.audit WHERE table_name = 'core.followup' AND op = 'D'")).scalar() == 6
+        # v0.9.0: down / up / up keeps every reminder (counts per kind compared at each step)
+        def task_kinds():
+            with engine.connect() as conn:
+                return dict(conn.execute(text("SELECT source_kind, count(*) FROM core.task GROUP BY 1")).all())
+
+        def followup_purposes():
+            with engine.connect() as conn:
+                return dict(conn.execute(text(
+                    "SELECT purpose, count(*) FROM (SELECT purpose FROM ops.tender_followup UNION ALL "
+                    "SELECT purpose FROM ops.execution_followup) x GROUP BY 1")).all())
+
+        at_head = task_kinds()
+        command.downgrade(cfg, "0013")
+        back = followup_purposes()
+        assert back == {"date_reminder": 1, "guarantee_expiry": 1, "guarantee_release": 1, "step_reminder": 2,
+                        "invoice": 1, "warranty_end": 1, "po_confirm": 1}, back
+        with engine.connect() as conn:            # the customer's reminders are follow-ups again, statuses kept
+            rows = dict(conn.execute(text("SELECT status, count(*) FROM core.followup WHERE party_id = :p GROUP BY 1"),
+                                     {"p": customer}).all())
+        assert rows == {"open": 3, "cancelled": 1}
+        command.upgrade(cfg, "head")
+        assert task_kinds() == at_head
         command.downgrade(cfg, "0013")
         command.upgrade(cfg, "head")
-        with engine.connect() as conn:
-            assert conn.execute(text("SELECT count(*) FROM core.task")).scalar() == 0
+        assert task_kinds() == at_head
+        # a manual task has no follow-up form: the downgrade refuses with a message and changes nothing
+        with engine.begin() as conn:
+            conn.execute(text("INSERT INTO core.task (title, due_on) VALUES ('manual', current_date)"))
+        import pytest
+
+        with pytest.raises(Exception, match="Downgrade below 0014 refused"):
+            command.downgrade(cfg, "0013")
+        assert task_kinds()["manual"] == 1
     finally:
         engine.dispose()
         dbadmin.drop_database(superuser_conninfo(), name)

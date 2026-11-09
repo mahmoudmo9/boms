@@ -11,8 +11,8 @@ The fixed import deal (all amounts hand-computed below):
   on day −10 at 540,000 (324,000,000); both allocated: goods = 532,000,000.
 - Actual costs: freight 40 USD at 530,000 on day −15 (21,200,000), customs duty 32,000,000 IRR with 3,200,000 input VAT.
 - Claim against the supplier resolved with a 50 USD credit note: at the latest case rate (540,000) −27,000,000.
-Actual: purchase 505,000,000; freight 21,200,000; duty 32,000,000; cost 558,200,000; revenue 687,500,000;
-profit 129,300,000; margin 18.81 %; markup 23.16 %.
+Actual (v0.9.0: the cost of money is a cost line): purchase 505,000,000; freight 21,200,000; duty 32,000,000; cost of
+money 7,298,630; cost 565,498,630; revenue 687,500,000; profit 122,001,370; margin 17.75 %; markup 21.57 %.
 Variance: purchase +5,000,000 (+1.00 %); freight +1,200,000 (+6.00 %); duty +2,000,000 (+6.67 %).
 FX effect (sheet 500,000 against the real rates): goods 500,000,000 − 532,000,000 = −32,000,000; freight
 20,000,000 − 21,200,000 = −1,200,000; claim −25,000,000 − (−27,000,000) = +2,000,000; total −31,200,000.
@@ -33,7 +33,7 @@ from tests.test_sourcing_rfq import make_case, offer_body, supplier
 D = Decimal
 
 
-def import_deal(client):
+def import_deal(client, received: str | None = "10", delivered: str | None = None, send_po: bool = True):
     _setup_letterhead(client)
     client.patch("/api/settings", json=SELLER)
     case, items = make_case(client, [{"name": "Pump", "quantity": "10", "unit_code": "pc"}])
@@ -68,12 +68,14 @@ def import_deal(client):
     so = client.post("/api/sales-orders/from-quote", json={"quote_id": quote["id"]}).json()
     so = client.post(f"/api/sales-orders/{so['id']}/confirm", json={"no_document_reason": "test"}).json()
     po = by_currency(create_pos(client, so)["created"])["USD"]
-    assert client.post(f"/api/purchase-orders/{po['id']}/approve").status_code == 200, po
-    client.post(f"/api/purchase-orders/{po['id']}/mark-sent", json={})
-    po = client.post(f"/api/purchase-orders/{po['id']}/confirm", json={"confirmed_ready_on": day(5)}).json()
-    client.post("/api/receipts", json={"purchase_order_id": po["id"], "received_on": day(-5), "items": [
-        {"purchase_order_item_id": po["items"][0]["id"], "quantity": "10"}]})
-    deliver(client, so, on=-1)
+    if send_po:
+        assert client.post(f"/api/purchase-orders/{po['id']}/approve").status_code == 200, po
+        client.post(f"/api/purchase-orders/{po['id']}/mark-sent", json={})
+        po = client.post(f"/api/purchase-orders/{po['id']}/confirm", json={"confirmed_ready_on": day(5)}).json()
+    if send_po and received:
+        client.post("/api/receipts", json={"purchase_order_id": po["id"], "received_on": day(-5), "items": [
+            {"purchase_order_item_id": po["items"][0]["id"], "quantity": received}]})
+    deliver(client, so, {so["items"][0]["id"]: delivered} if delivered else None, on=-1)
     domestic(client, party)
     return case, party, sup, so, po
 
@@ -234,7 +236,8 @@ def test_the_fixed_import_deal_profit_is_exactly_the_hand_computed_figures(clien
     assert p["deal_currency"] == "IRR" and p["base_currency"] == "IRR" and p["status"] == "open" and p["frozen"] is False
     rows = {r["kind"]: r for r in p["rows"]}
     expect = {"purchase": (500_000_000, 505_000_000, 5_000_000, "1.00"), "freight_international": (20_000_000, 21_200_000, 1_200_000, "6.00"),
-              "customs_duty": (30_000_000, 32_000_000, 2_000_000, "6.67")}
+              "customs_duty": (30_000_000, 32_000_000, 2_000_000, "6.67"),
+              "cost_of_money": (0, 7_298_630, 7_298_630, None)}
     assert set(rows) == set(expect), rows.keys()
     for kind, (planned, actual, variance, pct) in expect.items():
         row = rows[kind]
@@ -243,11 +246,11 @@ def test_the_fixed_import_deal_profit_is_exactly_the_hand_computed_figures(clien
         assert D(row["actual"]["deal"]) == actual                                    # deal currency = IRR here
     assert rows["purchase"]["unrealized"] is True and rows["purchase"]["estimated"] is False    # the claim credit at the latest rate
     assert (D(p["revenue"]["planned"]["base"]), D(p["revenue"]["actual"]["base"])) == (687_500_000, 687_500_000)
-    assert (D(p["cost"]["planned"]["base"]), D(p["cost"]["actual"]["base"])) == (550_000_000, 558_200_000)
+    assert (D(p["cost"]["planned"]["base"]), D(p["cost"]["actual"]["base"])) == (550_000_000, 565_498_630)
     assert (D(p["profit"]["planned"]["base"]), D(p["profit"]["actual"]["base"]), D(p["profit"]["variance"]["base"])) == \
-        (137_500_000, 129_300_000, -8_200_000)
-    assert (p["margin_percent"]["planned"], p["margin_percent"]["actual"]) == ("20.00", "18.81")
-    assert (p["markup_percent"]["planned"], p["markup_percent"]["actual"]) == ("25.00", "23.16")
+        (137_500_000, 122_001_370, -15_498_630)
+    assert (p["margin_percent"]["planned"], p["margin_percent"]["actual"]) == ("20.00", "17.75")
+    assert (p["markup_percent"]["planned"], p["markup_percent"]["actual"]) == ("25.00", "21.57")
     assert D(p["fx_effect"]["base"]) == -31_200_000
     assert (D(p["vat"]["output"]["base"]), D(p["vat"]["input"]["base"]), D(p["vat"]["net"]["base"])) == \
         (68_750_000, 3_200_000, 65_550_000)
@@ -275,3 +278,44 @@ def test_unrealized_amounts_at_the_latest_rate(client):
     p = client.get(f"/api/cases/{case['id']}/profit").json()
     purchase = next(r for r in p["rows"] if r["kind"] == "purchase")
     assert purchase["estimated"] is True and D(purchase["actual"]["base"]) == 560_000_000
+
+
+def test_expected_profit_with_an_unreceived_po_and_a_credit_note(client):
+    """v0.9.0, hand-computed: 4 of 10 received and delivered and invoiced (4 × 68,750,000 = 275,000,000), a credit note
+    of 10,000,000, freight 40 USD at 530,000 (21,200,000; the latest case rate).
+    Profit so far: revenue 275,000,000 − 10,000,000 = 265,000,000; cost = received goods not yet on a supplier invoice
+    4 × 100 USD × 530,000 = 212,000,000 (estimated) + freight 21,200,000 = 233,200,000; profit 31,800,000.
+    Expected: revenue = sales order 687,500,000 − 10,000,000 = 677,500,000; cost = 233,200,000 + the open PO quantity
+    6 × 100 USD × 530,000 = 318,000,000 (estimated) + planned customs duty with no actual 30,000,000 = 581,200,000;
+    profit 96,300,000 (margin 14.21 %)."""
+    case, party, sup, so, po = import_deal(client, received="4", delivered="4")
+    inv = client.post("/api/sales-invoices", json={"sales_order_id": so["id"]}).json()
+    inv = client.post(f"/api/sales-invoices/{inv['id']}/issue").json()
+    assert D(inv["subtotal"]) == 275_000_000
+    cn = client.post(f"/api/sales-invoices/{inv['id']}/credit-note", json={"reason": "تخفیف", "lines": [
+        {"description": "discount", "quantity": "1", "unit_price": "10000000"}]}).json()
+    client.post(f"/api/sales-invoices/{cn['id']}/issue")
+    client.post(f"/api/cases/{case['id']}/actual-costs", json={"kind": "freight_international", "description": "f", "amount": "40",
+                                                                "currency": "USD", "fx_rate_to_base": "530000", "incurred_on": day(-1)})
+    p = client.get(f"/api/cases/{case['id']}/profit").json()
+    assert (D(p["revenue"]["actual"]["deal"]), D(p["cost"]["actual"]["deal"]), D(p["profit"]["actual"]["deal"])) == \
+        (265_000_000, 233_200_000, 31_800_000)
+    e = p["expected"]
+    assert (D(e["revenue"]), D(e["cost"]), D(e["profit"]), e["margin_percent"]) == (677_500_000, 581_200_000, 96_300_000, "14.21")
+    assert (D(e["estimated"]["goods"]), D(e["estimated"]["planned_costs"])) == (318_000_000, 30_000_000)
+    assert next(r for r in p["rows"] if r["kind"] == "purchase")["estimated"] is True
+
+
+def test_goods_with_no_purchase_cost_block_closing(client):
+    """A sold and delivered item whose PO was never sent (no supplier invoice, no receipt): ``goods_cost_missing``."""
+    case, party, sup, so, po = import_deal(client, send_po=False)
+    check = client.get(f"/api/cases/{case['id']}/close-checklist").json()
+    problem = next(x for x in check["problems"] if x["code"] == "goods_cost_missing")
+    assert D(problem["items"][0]["delivered"]) == 10 and D(problem["items"][0]["with_cost"]) == 0
+    r = client.post(f"/api/cases/{case['id']}/close", json={"reasons": {x["code"]: "x" for x in check["problems"]
+                                                                        if x["code"] != "goods_cost_missing"},
+                                                            "confirm_cancel_open": True})
+    assert r.status_code == 409 and "goods_cost_missing" in r.json()["error"]["details"]["unexplained"]
+    # a received PO line covers it
+    case2, party2, sup2, so2, po2 = import_deal(client)
+    assert "goods_cost_missing" not in {x["code"] for x in client.get(f"/api/cases/{case2['id']}/close-checklist").json()["problems"]}

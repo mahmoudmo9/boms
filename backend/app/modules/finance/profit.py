@@ -34,7 +34,8 @@ from app.modules.finance.models import PaymentAllocation
 from app.modules.sourcing.common import jsonable
 
 KINDS = ("purchase", "freight_international", "insurance", "bank_fees", "customs_duty", "levy", "customs_clearance",
-         "storage", "inspection", "freight_domestic", "export_clearance", "other")
+         "storage", "inspection", "freight_domestic", "export_clearance", "other", "guarantee", "cost_of_money")
+# v0.9.0: the cost of money and the guarantee fees are cost lines of their own in plan, actual and the snapshot
 HUNDRED = Decimal(100)
 CLAIM_KIND = {"against_supplier": "purchase", "against_carrier": "freight_international", "against_insurer": "insurance"}
 
@@ -139,19 +140,22 @@ def plan(db: Session, case_id, order=None) -> dict | None:
     wanted = {str(i.line_item_id) for i in items_of(db, order.id)} if order is not None else None
     by_kind = {k: ZERO for k in KINDS}
     revenue = com = guarantee = ZERO
+    items: dict = {}
     for row in comp["items"]:
         if wanted is not None and row["item_id"] not in wanted:
             continue
         for line in row["lines"]:
-            if line["kind"] in by_kind:
+            if line["kind"] in by_kind and line["kind"] not in ("guarantee", "cost_of_money"):
                 by_kind[line["kind"]] += line["amount"]
         revenue += row["total_price"] or ZERO
         com += row["cost_of_money"] or ZERO
         guarantee += row["guarantee"] or ZERO
+        items[row["item_id"]] = {"purchase": row["purchase"] or ZERO, "quantity": row["quantity"] or ZERO}
+    by_kind["cost_of_money"], by_kind["guarantee"] = com, guarantee
     fx = {(e.from_currency, e.to_currency): e.rate for e in costing.fx_of(db, sheet.id)}
     return {"sheet_id": str(sheet.id), "version": sheet.version, "currency": sheet.pricing_currency, "by_kind": by_kind,
             "revenue": revenue, "cost": sum(by_kind.values(), ZERO), "cost_of_money": com, "guarantee": guarantee,
-            "fx": fx, "annual_percent": sheet.annual_cost_of_money_percent}
+            "fx": fx, "annual_percent": sheet.annual_cost_of_money_percent, "items": items}
 
 
 # ---- actual entries -------------------------------------------------------------------------------------------------------
@@ -284,6 +288,11 @@ def compute(db: Session, case_id: uuid.UUID, *, until: date | None = None) -> di
         return base_value / r if r else ZERO
 
     rows = entries(db, case_id)
+    annual = p["annual_percent"] if plan_ok else ZERO
+    com = cost_of_money(db, case_id, annual or ZERO, until or today())
+    if com["amount"] > 0:          # the actual cost of money is a cost line (v0.9.0), in rials
+        rows.append(Entry("cost", "cost_of_money", "cost of money", com["amount"], base, Decimal(1), Decimal(1),
+                          source="cost_of_money"))
     fx_effect = ZERO
     unrealized = {"revenue": ZERO, "cost": ZERO}
     for e in rows:
@@ -369,23 +378,12 @@ def compute(db: Session, case_id: uuid.UUID, *, until: date | None = None) -> di
     def base_pair(value: Decimal) -> dict:
         return pair(value / r_deal if deal != base else value, value)
 
-    annual = p["annual_percent"] if plan_ok else ZERO
-    com = cost_of_money(db, case_id, annual or ZERO, until or today())
     from app.modules.sourcing import inquiries as sourcing
 
     closed = sourcing.get_case(db, case_id).status == "closed"
     expected = None
     if not closed:
-        so_net = (order.subtotal if order is not None else ZERO)
-        exp_rev = max(revenue["deal"], so_net)
-        exp_cost = ZERO
-        for kind in KINDS:
-            mine = next((r for r in table if r["kind"] == kind), None)
-            actual_deal = mine["actual"]["deal"] if mine else ZERO
-            planned_deal = (mine["planned"]["deal"] if mine and mine["planned"] else
-                            (plan_pair(p["by_kind"][kind])["deal"] if plan_ok and p["by_kind"][kind] else ZERO)) or ZERO
-            exp_cost += actual_deal if actual_deal else planned_deal
-        expected = {"revenue": _q(exp_rev, ddec), "cost": _q(exp_cost, ddec), "profit": _q(exp_rev - exp_cost, ddec)}
+        expected = _expected(db, order, p if plan_ok else None, table, revenue, cost, plan_pair, latest_rate, deal, base, ddec)
     return jsonable({
         "case_id": case_id, "status": "closed" if closed else "open", "deal_currency": deal, "base_currency": base,
         "plan": None if p is None else ({"error": p["error"]} if not plan_ok else
@@ -414,6 +412,33 @@ def compute(db: Session, case_id: uuid.UUID, *, until: date | None = None) -> di
     })
 
 
+def goods_cost_coverage(db: Session, sales_order_id) -> list[dict]:
+    """Per sales order item: delivered quantity and the quantity with a purchase cost (an approved supplier invoice or a
+    received PO line, whichever is more, per PO line)."""
+    from app.modules.execution import sales_orders
+    from app.modules.execution.models import PurchaseOrder, PurchaseOrderItem
+
+    from app.modules.execution.common import get_sales_order
+
+    order = get_sales_order(db, sales_order_id)
+    delivered = sales_orders.delivered_quantities(db, sales_order_id)
+    approved: dict = {}
+    for inv in purchase_invoices.invoices_of(db, case_id=order.case_id):
+        if inv.status == "approved":
+            for line in purchase_invoices.lines_of(db, inv.id):
+                if line.purchase_order_item_id:
+                    approved[line.purchase_order_item_id] = approved.get(line.purchase_order_item_id, ZERO) + line.quantity
+    out = []
+    for item in sales_orders.items_of(db, sales_order_id):
+        covered = ZERO
+        for po_item, _po in db.execute(select(PurchaseOrderItem, PurchaseOrder).join(PurchaseOrder, PurchaseOrder.id == PurchaseOrderItem.purchase_order_id)
+                                       .where(PurchaseOrderItem.sales_order_item_id == item.id,
+                                              PurchaseOrder.status.not_in(("cancelled", "superseded")))).all():
+            covered += min(po_item.quantity, max(approved.get(po_item.id, ZERO), po_item.received_quantity))
+        out.append({"item": item, "delivered": delivered.get(item.id, ZERO), "covered": covered})
+    return out
+
+
 def result(db: Session, case_id: uuid.UUID) -> dict:
     """The frozen snapshot of a closed deal, else the live computation."""
     from app.modules.finance.models import DealResult
@@ -422,4 +447,63 @@ def result(db: Session, case_id: uuid.UUID) -> dict:
     if snap is not None:
         return {**snap.data, "frozen": True, "computed_at": snap.computed_at.isoformat()}
     return {**compute(db, case_id), "frozen": False}
+
+
+def _expected(db: Session, order, p, table, revenue, cost, plan_pair, latest_rate, deal, base, ddec) -> dict | None:
+    """Expected result of an open deal (v0.9.0).
+
+    revenue = the sales order's subtotal (net of VAT) − issued credit notes + issued debit notes;
+    cost = the actual cost so far + for every sold quantity not yet covered by an approved supplier invoice or a received
+    PO line: the open PO line amount when a PO exists, else the planned purchase cost of the final cost sheet (both
+    ``estimated``) + the planned cost of every kind that has no actual yet."""
+    if order is None:
+        return None
+    from app.modules.execution.models import PurchaseOrder, PurchaseOrderItem
+    from app.modules.execution.sales_orders import items_of
+
+    def to_deal(amount: Decimal, cur: str) -> Decimal:
+        if cur == deal:
+            return amount
+        b = amount * (latest_rate(cur) or ZERO)
+        if deal == base:
+            return b
+        r = latest_rate(deal)
+        return b / r if r else ZERO
+
+    notes = ZERO
+    for inv in sales_invoices.invoices_of(db, sales_order_id=order.id):
+        if inv.status == "issued" and inv.kind != "invoice":
+            net = inv.subtotal - (inv.discount or ZERO)
+            notes += to_deal(-net if inv.kind == "credit_note" else net, inv.currency)
+    exp_rev = order.subtotal + notes
+    approved: dict = {}
+    for inv in purchase_invoices.invoices_of(db, case_id=order.case_id):
+        if inv.status == "approved":
+            for line in purchase_invoices.lines_of(db, inv.id):
+                if line.purchase_order_item_id:
+                    approved[line.purchase_order_item_id] = approved.get(line.purchase_order_item_id, ZERO) + line.quantity
+    goods = ZERO
+    for so_item in items_of(db, order.id):
+        po_rows = db.execute(select(PurchaseOrderItem, PurchaseOrder).join(PurchaseOrder, PurchaseOrder.id == PurchaseOrderItem.purchase_order_id)
+                             .where(PurchaseOrderItem.sales_order_item_id == so_item.id,
+                                    PurchaseOrder.status.not_in(("cancelled", "superseded")))).all()
+        for po_item, po in po_rows:
+            done = min(po_item.quantity, max(approved.get(po_item.id, ZERO), po_item.received_quantity))
+            goods += to_deal((po_item.quantity - done) * po_item.unit_price, po.currency)
+        uncovered = so_item.quantity - sum((r[0].quantity for r in po_rows), ZERO)   # sold but on no PO at all
+        if uncovered > 0 and p is not None:
+            planned = p["items"].get(str(so_item.line_item_id))
+            if planned and planned["quantity"]:
+                goods += (plan_pair(planned["purchase"] / planned["quantity"] * uncovered) or {}).get("deal") or ZERO
+    planned_rest = ZERO
+    if p is not None:
+        have = {r["kind"] for r in table if Decimal(str(r["actual"]["deal"])) != 0}
+        for kind in KINDS:
+            if kind != "purchase" and kind not in have and p["by_kind"][kind]:
+                planned_rest += (plan_pair(p["by_kind"][kind]) or {}).get("deal") or ZERO
+    exp_cost = cost["deal"] + goods + planned_rest
+    profit = exp_rev - exp_cost
+    return {"revenue": _q(exp_rev, ddec), "cost": _q(exp_cost, ddec), "profit": _q(profit, ddec),
+            "margin_percent": (profit / exp_rev * HUNDRED).quantize(Decimal("0.01")) if exp_rev else None,
+            "estimated": {"goods": _q(goods, ddec), "planned_costs": _q(planned_rest, ddec)}}
 

@@ -70,6 +70,16 @@ def checklist(db: Session, case_id: uuid.UUID) -> dict:
             left.append({"sales_order_id": so.id, "number": so.number, "quantity": rest})
     if left:
         add("delivered_not_invoiced", orders=left)
+    from app.modules.finance import profit as profit_mod
+
+    no_cost = []
+    for so in orders:     # v0.9.0: goods delivered with no purchase cost at all would freeze a profit that is too high
+        for row in profit_mod.goods_cost_coverage(db, so.id):
+            if row["delivered"] > row["covered"]:
+                no_cost.append({"sales_order_item_id": row["item"].id, "description": row["item"].description,
+                                "delivered": row["delivered"], "with_cost": row["covered"]})
+    if no_cost:
+        add("goods_cost_missing", items=no_cost)
     drafts, unpaid, moadian = [], [], []
     for inv in sales_invoices.invoices_of(db, case_id=case_id):
         if inv.status == "draft":

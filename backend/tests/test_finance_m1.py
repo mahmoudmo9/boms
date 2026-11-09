@@ -17,7 +17,8 @@ from tests.test_quotes import CHROMIUM, _setup_letterhead
 from tests.test_sourcing_inquiries import events
 
 SELLER = {"company.name_fa": "شرکت بازرگانی کیمیا", "company.name_en": "Kimia Trading Co.",
-          "company.national_id": "10101234567", "company.economic_code": "411111111111"}
+          "company.national_id": "10101234567", "company.economic_code": "411111111111",
+          "finance.vat_default_domestic": {"mode": "apply"}}   # v0.9.0: decided once (see test_v090_m0)
 
 
 @pytest.fixture

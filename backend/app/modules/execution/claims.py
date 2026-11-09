@@ -124,6 +124,15 @@ def update(db: Session, claim_id: uuid.UUID, changes: dict, source: str, actor: 
     return claim
 
 
+# later modules act on a resolved claim (v0.9.0: finance drafts the credit note of a customer claim): fn(db, claim, source, actor)
+_resolved_hooks: list = []
+
+
+def register_claim_resolved(fn) -> None:
+    if fn not in _resolved_hooks:
+        _resolved_hooks.append(fn)
+
+
 def set_status(db: Session, claim_id: uuid.UUID, data: dict, source: str, actor: str | None = None) -> Claim:
     claim = get_claim(db, claim_id)
     status = data["status"]
@@ -149,6 +158,12 @@ def set_status(db: Session, claim_id: uuid.UUID, data: dict, source: str, actor:
     events.record(db, "claim", claim.id, "status", jsonable({
         "old_status": old, "new_status": status, "note": data.get("note"), "resolution": claim.resolution,
         "resolution_amount": claim.resolution_amount}), source, actor=actor)
+    if status == "resolved":
+        from app.core.modules import load_hooks
+
+        load_hooks()
+        for fn in _resolved_hooks:
+            fn(db, claim, source, actor)
     return claim
 
 

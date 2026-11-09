@@ -40,10 +40,6 @@ function DisplaySettings() {
         <Segmented value={user.calendar} label={t("settings.calendar")} onChange={(v) => change({ calendar: v })}
           options={[{ value: "jalali", label: t("settings.calendars.jalali") }, { value: "gregorian", label: t("settings.calendars.gregorian") }]} />
       </Row>
-      <Row label={t("settings.digits")}>
-        <Segmented value={user.digits} label={t("settings.digits")} onChange={(v) => change({ digits: v })}
-          options={[{ value: "fa", label: t("settings.digitsFa") }, { value: "latin", label: t("settings.digitsLatin") }]} />
-      </Row>
       <Row label={t("settings.theme")}>
         <Segmented value={user.theme} label={t("settings.theme")} onChange={(v) => change({ theme: v })}
           options={[

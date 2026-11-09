@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { Bdi } from "../../components/Bdi";
 import { Icon } from "../../components/Icon";
+import { ScrollTabs } from "../../components/ScrollTabs";
 import { Button, ErrorNote, Field, Input, Loading, Modal, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
@@ -105,15 +106,9 @@ export function CaseDetailPage() {
         </>} />
       {c.inquiry_id && <SetadOrigin inquiryId={c.inquiry_id} />}
       <ErrorNote error={setStatus.error} />
-      <div className="flex gap-1 overflow-x-auto border-b border-line">
-        {TABS.map((key) => (
-          <button key={key} type="button" onClick={() => setParams({ tab: key }, { replace: true })}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap ${key === tab ? "border-accent font-medium text-accent" : "border-transparent text-muted hover:text-fg"}`}>
-            {t(`sourcing.case.tabs.${key}`)}
-            {key === "items" && ` (${f.num(c.items.filter((i) => i.status !== "cancelled").length)})`}
-          </button>
-        ))}
-      </div>
+      <ScrollTabs label={t("sourcing.case.tabsLabel")} active={tab} onSelect={(key) => setParams({ tab: key }, { replace: true })}
+        tabs={TABS.map((key) => ({ key, label: <>{t(`sourcing.case.tabs.${key}`)}
+          {key === "items" && ` (${f.num(c.items.filter((i) => i.status !== "cancelled").length)})`}</> }))} />
       {tab === "items" && (
         <div className="flex flex-col gap-4">
           <CoverageCard key={c.updated_at + c.items.map((i) => i.status).join()} caseId={c.id} onChanged={refresh} />

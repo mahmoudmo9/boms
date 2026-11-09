@@ -12,3 +12,8 @@ register_section("finance", dashboard.summary)                      # command ce
 register_case_cleanup(0, cleanup.cleanup_case)                      # before execution (1)
 register_suggestion_extra("rating", ratings.supplier_averages)      # the average next to each suggested supplier
 guard.install()                                                     # a closed deal is read-only
+
+from app.modules.execution.claims import register_claim_resolved  # noqa: E402
+from app.modules.finance import sales_invoices  # noqa: E402
+
+register_claim_resolved(sales_invoices.on_claim_resolved)          # v0.9.0: a customer claim's draft credit note

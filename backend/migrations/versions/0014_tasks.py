@@ -10,7 +10,8 @@ status, done note and links, and the follow-up is deleted (the audit trigger kee
 Counterparty follow-ups (RFQ chases, PO confirmation / readiness, claims, the guarantee release chase, manual ones)
 stay follow-ups. An event ``reminders_moved`` records the counts per kind.
 
-Downgrade drops the tasks: moved reminders are not turned back into follow-ups (restore the pre-update backup instead).
+Downgrade (v0.9.0 fix) turns every task back into its follow-up with its tender / execution link and refuses, with a
+message, when a task has no follow-up form (a manual task, or no party at all); nothing is dropped silently.
 
 Revision ID: 0014
 Revises: 0013
@@ -124,5 +125,51 @@ def move_reminders(execute) -> None:
         execute(statement)
 
 
+# v0.9.0: the downgrade gives every reminder task back as the follow-up it was (or would have been in 0.7.0 / 0.8.0
+# terms), with its tender / execution link, so a down / up cycle loses nothing. A task that has no follow-up form (a
+# manual task, or one with no party and no case party) stops the downgrade with a message instead of being dropped.
+UNREPRESENTABLE = """
+SELECT count(*) FILTER (WHERE t.source_kind = 'manual') AS manual,
+       count(*) FILTER (WHERE t.source_kind <> 'manual' AND coalesce(t.party_id, c.party_id) IS NULL) AS no_party,
+       count(*) FILTER (WHERE t.source = 'execution' AND t.case_id IS NULL) AS no_case
+FROM core.task t LEFT JOIN ops."case" c ON c.id = t.case_id
+"""
+
+RESTORE_STATEMENTS = (
+    "UPDATE core.task SET followup_id = uuidv7() WHERE followup_id IS NULL",
+    """INSERT INTO core.followup (id, party_id, action, due_on, status, done_at, done_note, created_at)
+       SELECT t.followup_id, coalesce(t.party_id, c.party_id), left(t.title, 500), t.due_on, t.status, t.done_at, t.done_note,
+              t.created_at
+       FROM core.task t LEFT JOIN ops."case" c ON c.id = t.case_id""",
+    """INSERT INTO ops.tender_followup (tender_id, followup_id, purpose, ref_id, days_before)
+       SELECT coalesce(g.tender_id, (SELECT tt.id FROM ops.tender tt WHERE tt.case_id = t.case_id ORDER BY tt.created_at LIMIT 1)),
+              t.followup_id, CASE t.source_kind WHEN 'tender_date' THEN 'date_reminder' ELSE t.source_kind END,
+              t.source_id, t.remind_days_before
+       FROM core.task t LEFT JOIN ops.guarantee g ON g.id = t.source_id AND t.source_kind = 'guarantee_expiry'
+       WHERE t.source = 'tenders'""",
+    """INSERT INTO ops.execution_followup (case_id, followup_id, purpose, ref_id, days_before)
+       SELECT t.case_id, t.followup_id,
+              CASE t.source_kind WHEN 'process_step' THEN 'step_reminder' WHEN 'invoice_issue' THEN 'invoice'
+                                 WHEN 'warranty_remind' THEN 'warranty_end' ELSE t.source_kind END,
+              t.source_id, t.remind_days_before
+       FROM core.task t WHERE t.source = 'execution'""",
+    "INSERT INTO core.event (actor, entity_type, entity_id, action, data, source) "
+    "SELECT 'migration-0014-downgrade', 'task', NULL, 'reminders_restored', "
+    "coalesce(jsonb_object_agg(source_kind, n), '{}'::jsonb), 'script' "
+    "FROM (SELECT source_kind, count(*) AS n FROM core.task GROUP BY source_kind) c",
+)
+
+
 def downgrade() -> None:
+    conn = op.get_bind()
+    from sqlalchemy import text
+
+    manual, no_party, no_case = conn.execute(text(UNREPRESENTABLE)).one()
+    if manual or no_party or no_case:
+        raise RuntimeError(
+            f"Downgrade below 0014 refused: {manual} manual task(s), {no_party} task(s) without a party and {no_case} "
+            "execution task(s) without a case have no follow-up form in 0.7.0. Finish or delete them first, or restore "
+            "the pre-update backup instead.")
+    for statement in RESTORE_STATEMENTS:
+        op.execute(statement)
     op.execute("DROP TABLE core.task")

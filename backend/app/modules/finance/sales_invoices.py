@@ -114,8 +114,20 @@ def _domestic(db: Session, customer_id, language: str) -> bool:
     return language == "fa" and (p.country_iso2 or "IR") == "IR"
 
 
+def parameter_vat_rate(db: Session, case_id, on: date) -> Decimal | None:
+    """The ``vat`` tax parameter in force on ``on`` for the deal type of the case's sheet (None when there is none)."""
+    from app.modules.costing import service as costing
+
+    sheet = costing.current_sheet(db, case_id)
+    param = costing.parameter_in_force(db, "vat", sheet.deal_type if sheet is not None else "domestic", on)
+    return param.rate_percent if param is not None else None
+
+
 def default_vat_rate(db: Session, case_id, customer_id, language: str, on: date) -> Decimal:
     if not _domestic(db, customer_id, language):
+        return ZERO
+    decision = settings.get(db, "finance.vat_default_domestic")
+    if decision and decision.get("mode") == "zero":     # v0.9.0: the owner's decision is the default
         return ZERO
     from app.modules.costing import service as costing
 
@@ -331,6 +343,7 @@ def issue(db: Session, invoice_id: uuid.UUID, data: dict, calendar: str, source:
     _check_quantities(db, inv, [{"sales_order_item_id": r.sales_order_item_id, "quantity": r.quantity} for r in rows],
                       inv.over_delivered_reason)
     inv.issue_date = data.get("issue_date") or inv.issue_date or today()
+    _vat_decision(db, inv, data, source, actor)
     if inv.due_date is None:
         inv.due_date = inv.issue_date + timedelta(days=int(settings.get(db, "finance.payment_days") or 0))
     if inv.due_date < inv.issue_date:
@@ -343,6 +356,33 @@ def issue(db: Session, invoice_id: uuid.UUID, data: dict, calendar: str, source:
         "number": inv.number, "kind": inv.kind, "issue_date": inv.issue_date, "due_date": inv.due_date, "total": inv.total,
         "currency": inv.currency, "vat_rate": inv.vat_rate, "moadian_status": inv.moadian_status}), source, actor=actor)
     return inv
+
+
+def _vat_decision(db: Session, inv: SalesInvoice, data: dict, source: str, actor: str | None) -> None:
+    """v0.9.0: the first domestic invoice asks the owner how VAT is applied (409 ``vat_decision_required`` with the
+    rate of the tax parameters in force on the issue date). "apply" uses that rate, "zero" needs a reason; the choice
+    becomes the default (``finance.vat_default_domestic``) and each invoice stays editable with a note."""
+    if inv.kind != "invoice" or not _domestic(db, inv.customer_party_id, inv.language):
+        return
+    if settings.get(db, "finance.vat_default_domestic"):
+        return
+    rate = parameter_vat_rate(db, inv.case_id, inv.issue_date)
+    choice = data.get("vat_decision")
+    if choice not in ("apply", "zero"):
+        raise Conflict("vat_decision_required", "Decide how VAT applies to domestic invoices before the first one is issued",
+                       {"rate": str(rate) if rate is not None else None, "issue_date": inv.issue_date.isoformat()})
+    if choice == "zero":
+        reason = reason_required(data.get("vat_reason"), "vat_reason_required", "A zero VAT rate needs a reason")
+        decision = {"mode": "zero", "reason": reason}
+        inv.vat_rate, inv.vat_note = ZERO, reason
+    else:
+        if rate is None:
+            raise AppError("vat_parameter_missing", "No VAT tax parameter is in force on the issue date; add it under "
+                           "Settings → Costing & tax, or choose a zero rate with a reason", status=422)
+        decision = {"mode": "apply"}
+        inv.vat_rate = rate
+    settings.update(db, {"finance.vat_default_domestic": decision}, source, actor)
+    recompute(db, inv)
 
 
 def allocated(db: Session, invoice_id: uuid.UUID) -> Decimal:
@@ -483,3 +523,43 @@ def invoicing_out(db: Session, sales_order_id: uuid.UUID) -> list[dict]:
     return jsonable([{"sales_order_item_id": r["item"].id, "description": r["item"].description, "unit": r["item"].unit,
                       "unit_price": r["item"].unit_price, "ordered": r["ordered"], "delivered": r["delivered"],
                       "invoiced": r["invoiced"], "to_invoice": r["to_invoice"]} for r in order_invoicing(db, sales_order_id)])
+
+
+def on_claim_resolved(db: Session, claim, source: str, actor: str | None) -> None:
+    """v0.9.0: a claim from the customer resolved with a discount or a credit note creates a DRAFT credit note on the
+    order's latest issued invoice in the claim's currency, linked to the claim, for the owner to review and issue.
+    Nothing is created (an event says why) when there is no such invoice or the amount is more than it can credit."""
+    if claim.direction != "from_customer" or claim.resolution not in ("discount", "credit_note") or not claim.resolution_amount:
+        return
+    from app.modules.execution.models import Delivery, SalesOrder
+
+    order_id = None
+    if claim.delivery_id:
+        delivery = db.get(Delivery, claim.delivery_id)
+        order_id = delivery.sales_order_id if delivery else None
+    if order_id is None:
+        order_id = db.scalar(select(SalesOrder.id).where(SalesOrder.case_id == claim.case_id, SalesOrder.status != "cancelled")
+                             .order_by(SalesOrder.created_at).limit(1))
+    currency = claim.resolution_amount_currency
+    base = None
+    if order_id is not None:
+        candidates = [i for i in invoices_of(db, sales_order_id=order_id)
+                      if i.kind == "invoice" and i.status == "issued" and (currency is None or i.currency == currency)]
+        base = candidates[-1] if candidates else None
+    if base is None:
+        events.record(db, "claim", claim.id, "credit_note_not_created",
+                      {"reason": "no issued invoice in the claim's currency"}, source, actor=actor)
+        return
+    creditable = base.total + sum((signed_total(n) for n in notes_of(db, base.id) if n.status == "issued"), ZERO)
+    if claim.resolution_amount > creditable:
+        events.record(db, "claim", claim.id, "credit_note_not_created",
+                      {"reason": "more than the invoice can credit", "creditable": str(creditable)}, source, actor=actor)
+        return
+    note = create_note(db, base.id, "credit_note", {
+        "reason": f"claim {claim.kind}: {claim.resolution}",
+        "lines": [{"description": f"Claim {claim.kind} ({claim.resolution})", "quantity": Decimal(1),
+                   "unit_price": claim.resolution_amount}]}, source, actor)
+    note.claim_id = claim.id
+    flush(db, "invalid_sales_invoice")
+    events.record(db, "claim", claim.id, "credit_note_drafted", jsonable({"sales_invoice_id": note.id,
+                                                                          "corrects": base.number}), source, actor=actor)

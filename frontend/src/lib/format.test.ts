@@ -55,3 +55,13 @@ describe("numbers", () => {
     expect(formatBytes(64 * 1024, "fa", "fa")).toBe("۶۴ کیلوبایت");
   });
 });
+
+describe("digits follow the UI language (v0.9.0)", () => {
+  it("Persian digits in fa, Latin digits in en whatever the user's old digits setting", async () => {
+    const { digitsFor } = await import("./prefs");
+    expect(digitsFor("en")).toBe("latin");
+    expect(digitsFor("fa")).toBe("fa");
+    expect(formatNumber("1234.5", digitsFor("en"))).toBe("1,234.5");
+    expect(formatNumber("1234.5", digitsFor("fa"))).toBe("۱٬۲۳۴٫۵");
+  });
+});

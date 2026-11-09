@@ -126,7 +126,7 @@ def sourced_rows(db: Session, case_id: uuid.UUID) -> list[dict]:
                     "incurred_on": c.paid_on, "status": "paid" if c.paid_on else "incurred", "read_only": True})
     for g in db.scalars(select(Guarantee).where(Guarantee.case_id == case_id, Guarantee.fee.is_not(None))):
         if g.fee and g.fee > 0:
-            out.append({"source": "guarantee_fee", "source_id": g.id, "kind": "bank_fees",
+            out.append({"source": "guarantee_fee", "source_id": g.id, "kind": "guarantee",   # its own profit line (v0.9.0)
                         "description": f"guarantee fee ({g.purpose})", "amount": g.fee, "currency": g.fee_currency or base,
                         "base_amount": g.fee if (g.fee_currency or base) == base else None, "incurred_on": None,
                         "status": "paid", "read_only": True})
