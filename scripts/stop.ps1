@@ -3,5 +3,6 @@
 . "$PSScriptRoot\common.ps1"
 
 Write-Step 'Stopping BOMS'
-Stop-BomsProcesses
+$alive = @(Stop-BomsProcesses)
+if ($alive.Count -gt 0) { Stop-WithError "Still running: $(Format-ProcessList $alive)" }
 Write-Ok 'Stopped'

@@ -118,6 +118,7 @@ def _coordinates(text: str) -> tuple[Decimal | None, Decimal | None]:
 # ---- datasets -------------------------------------------------------------------------------------------------------------
 
 def _locations_curated(db: Session, text: str, report: Report, release: str) -> None:
+    keep: set = set()
     for n, r in enumerate(csv.DictReader(io.StringIO(text)), start=2):
         code = (r.get("unlocode") or "").strip().upper()
         if not re.fullmatch(r"[A-Z]{2}[A-Z2-9]{3}", code):
@@ -132,10 +133,13 @@ def _locations_curated(db: Session, text: str, report: Report, release: str) -> 
                 report.unchanged += 1
             continue
         flags = {flag: ch in (r.get("functions") or "") for ch, flag in SHORT_FLAGS.items()}
-        _upsert(db, Location, {"unlocode": code}, {
+        row = _upsert(db, Location, {"unlocode": code}, {
             "country_iso2": code[:2], "code": code[2:], "name": r["name"].strip(), "name_ascii": ascii_name(r["name"]),
             "name_fa": r["name_fa"].strip() or None, "iata": (r.get("iata") or "").strip() or None, "active": True,
             "source": CURATED, "release": release, **flags}, report)
+        db.flush()
+        keep.add(row.id)
+    _deactivate(db, Location, CURATED, keep, report)      # a curated code corrected in a later release (IRCHB -> IRZBR)
 
 
 def _unlocode(db: Session, text: str, report: Report, release: str) -> None:
@@ -143,8 +147,10 @@ def _unlocode(db: Session, text: str, report: Report, release: str) -> None:
     Function, Date, IATA, Coordinates, Remarks; no header). Country header rows (no location) are skipped; ``X`` (to
     be removed) rows deactivate."""
     seen: set = set()
+    matched, mismatches = 0, []
+    curated = _curated_rows()        # from the shipped file, not the table: the same answer on every import
     for n, cols in enumerate(csv.reader(io.StringIO(text)), start=1):
-        if len(cols) < 11 or not cols[2].strip():
+        if len(cols) < 11 or not cols[2].strip() or cols[1].strip() == "Country":      # country rows, a header row
             continue
         change, country, loc = cols[0].strip(), cols[1].strip().upper(), cols[2].strip().upper()
         if not re.fullmatch(r"[A-Z]{2}", country) or not re.fullmatch(r"[A-Z2-9]{3}", loc):
@@ -160,15 +166,59 @@ def _unlocode(db: Session, text: str, report: Report, release: str) -> None:
                   **_flags_from_function(cols[7].strip())}
         if existing is not None and existing.name_fa:
             values["name_fa"] = existing.name_fa       # the curated Persian name stays
+        mine = curated.get(code)
+        if mine is not None:
+            matched += 1
+            mismatches += _curated_mismatches(code, mine, values)
+            for flag in SHORT_FLAGS.values():          # a use the curated row records (CNSHA as a port) is kept
+                values[flag] = values[flag] or mine[flag]
+            values["iata"] = values["iata"] or mine["iata"]
+            values["name_fa"] = values.get("name_fa") or mine["name_fa"]
         row = _upsert(db, Location, {"unlocode": code}, values, report)
         seen.add(code)
         db.flush()
         if row.iata:
             for airport in db.scalars(select(Airport).where(Airport.iata == row.iata, Airport.location_id.is_(None))):
                 airport.location_id = row.id
-    unmatched = [r.unlocode for r in db.scalars(select(Location).where(Location.source == CURATED)) if r.unlocode not in seen]
+    unmatched = [r.unlocode for r in db.scalars(select(Location).where(Location.source == CURATED, Location.active.is_(True)))
+                 if r.unlocode not in seen]
+    # the official release comes as several files: the counts add up, the unmatched list is what is left at the end
+    report.notes["curated_matched"] = report.notes.get("curated_matched", 0) + matched
+    if mismatches:
+        report.notes["curated_mismatches"] = (report.notes.get("curated_mismatches", []) + mismatches)[:500]
+    report.notes.pop("curated_not_in_file", None)
     if unmatched:
         report.notes["curated_not_in_file"] = unmatched[:200]     # reported, not a rejection: they stay unverified
+
+
+def _name_key(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", ascii_name(name or "").lower()).strip()
+
+
+def _curated_rows() -> dict[str, dict]:
+    """The shipped curated locations by code: name, Persian name, IATA and the function flags."""
+    out = {}
+    for r in csv.DictReader(io.StringIO(_decode(_read_bytes(DATA / SHIPPED["locations"])))):
+        code = (r.get("unlocode") or "").strip().upper()
+        out[code] = {"name": r["name"].strip(), "name_fa": r["name_fa"].strip() or None,
+                     "iata": (r.get("iata") or "").strip() or None,
+                     **{flag: ch in (r.get("functions") or "") for ch, flag in SHORT_FLAGS.items()}}
+    return out
+
+
+def _curated_mismatches(code: str, curated: dict, official: dict) -> list[dict]:
+    """Where a curated row disagrees with the official row of the same code. A name is a mismatch only when neither
+    contains the other («Hamburg» / «Hamburg Pt» agree; «Turkmenbashi» / «Termez» do not)."""
+    out = []
+    mine, theirs = _name_key(curated["name"]), _name_key(official["name_ascii"] or official["name"])
+    if mine and theirs and mine not in theirs and theirs not in mine:
+        out.append({"unlocode": code, "field": "name", "curated": curated["name"], "official": official["name"]})
+    extra = [short for short, flag in SHORT_FLAGS.items() if curated[flag] and not official[flag]]
+    if extra:
+        out.append({"unlocode": code, "field": "functions", "curated": "".join(extra), "official": official["functions"] or ""})
+    if curated["iata"] and official["iata"] and curated["iata"] != official["iata"]:
+        out.append({"unlocode": code, "field": "iata", "curated": curated["iata"], "official": official["iata"]})
+    return out
 
 
 def _airports(db: Session, text: str, report: Report, release: str) -> None:

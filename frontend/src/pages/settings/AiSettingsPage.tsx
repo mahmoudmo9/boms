@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Select } from "../../components/ui";
 import { api } from "../../lib/api";
-import { capTone, inputDescription, type CallRow, type Provider, type Route, type Usage } from "../../lib/ai";
+import { capTone, inputDescription, signInView, type CallRow, type ClaudeStatus, type Provider, type Route, type Usage } from "../../lib/ai";
 import { useFormat } from "../../lib/prefs";
 
 function CapCard() {
@@ -44,6 +44,54 @@ function CapCard() {
   );
 }
 
+/** v0.10.0 section 0.1.2: the Claude sign-in block. «ورود به Claude» opens a visible console on the PC that runs the
+ * bundled CLI's sign-in and stays open; the status check and every AI call run the CLI with no window. */
+function ClaudeSignIn({ onChanged }: { onChanged: () => void }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const status = useQuery({ queryKey: ["ai", "claude"], queryFn: () => api<ClaudeStatus>("/api/ai/claude/status", { background: true }),
+    refetchInterval: (q) => (q.state.data && !q.state.data.logged_in && q.state.data.cli ? 5000 : false) });
+  const refresh = () => { void qc.invalidateQueries({ queryKey: ["ai", "claude"] }); onChanged(); };
+  const login = useMutation({ mutationFn: () => api("/api/ai/claude/login", { method: "POST" }), onSuccess: refresh });
+  const logout = useMutation({ mutationFn: () => api("/api/ai/claude/logout", { method: "POST" }), onSuccess: refresh });
+  const s = status.data;
+  if (!s) return <Loading />;
+  const view = signInView(s);
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-line bg-surface-2 p-3 text-sm" data-testid="claude-signin" data-state={s.state}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex flex-wrap items-center gap-2">
+          <Badge tone={view.tone}>{t(`ai.settings.claude.state.${s.state}`)}</Badge>
+          {s.email && <bdi className="text-xs text-muted">{s.email}</bdi>}
+        </span>
+        <span className="flex items-center gap-2">
+          {view.canLogin && <Button variant="primary" busy={login.isPending} onClick={() => login.mutate()} data-testid="claude-login">{t("ai.settings.claude.login")}</Button>}
+          {view.canLogout && <Button busy={logout.isPending} onClick={() => logout.mutate()} data-testid="claude-logout">{t("ai.settings.claude.logout")}</Button>}
+        </span>
+      </div>
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+        <dt className="text-muted">{t("ai.settings.claude.account")}</dt><dd data-testid="claude-account"><bdi>{s.account}</bdi></dd>
+        <dt className="text-muted">{t("ai.settings.claude.storedIn")}</dt><dd className="[overflow-wrap:anywhere]"><bdi dir="ltr">{s.config_dir}</bdi></dd>
+      </dl>
+      {view.otherAccounts.length > 0 && (
+        <p className="rounded-md border border-warning bg-warning-soft p-2 text-xs" data-testid="claude-other-account">
+          {t("ai.settings.claude.otherAccount", { others: view.otherAccounts.join("، "), account: s.account })}
+        </p>
+      )}
+      {(s.state === "no_cli" || s.state === "no_sdk") && <p className="text-xs text-danger">{t("ai.settings.claude.missing")}</p>}
+      {view.showSteps && (
+        <ol className="list-decimal ps-5 text-xs leading-6 text-muted" data-testid="claude-steps">
+          {(["open", "choose", "authorise", "paste", "close"] as const).map((k) => <li key={k}>{t(`ai.settings.claude.steps.${k}`)}</li>)}
+        </ol>
+      )}
+      {view.showSteps && !s.can_open_console && <p className="text-xs text-warning">{t("ai.settings.claude.notOnThisPc")}</p>}
+      {login.isSuccess && !s.logged_in && <p className="text-xs text-accent" data-testid="claude-opened">{t("ai.settings.claude.opened")}</p>}
+      <p className="text-xs text-muted">{t("ai.settings.claude.help")}</p>
+      <ErrorNote error={login.error ?? logout.error} />
+    </div>
+  );
+}
+
 const MODEL_HINT: Record<string, string> = { claude_subscription: "claude-opus-5-5", anthropic_api: "claude-opus-5-5", openai_api: "gpt-…",
   gemini_api: "gemini-…", ollama: "qwen2.5-vl", openai_compatible: "model id" };
 
@@ -66,7 +114,7 @@ function ProviderRow({ p, onChanged }: { p: Provider; onChanged: () => void }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-sm font-medium"><bdi>{p.label}</bdi>
           <Badge tone={p.status === "ok" ? "success" : p.status === "error" ? "danger" : "neutral"}>{t(`ai.settings.status.${p.status}`)}</Badge>
-          {p.local && <Badge tone="accent">{t("ai.settings.local")}</Badge>}
+          {p.local ? <Badge tone="accent">{t("ai.settings.local")}</Badge> : <Badge>{t("ai.settings.cloud")}</Badge>}
           {p.last_latency_ms !== null && <span className="text-xs text-muted">{t("ai.settings.latency", { ms: p.last_latency_ms })}</span>}
         </span>
         <span className="flex items-center gap-2">
@@ -75,8 +123,9 @@ function ProviderRow({ p, onChanged }: { p: Provider; onChanged: () => void }) {
         </span>
       </div>
       {p.status_detail && <p className="text-xs text-muted"><bdi>{p.status_detail}</bdi></p>}
-      {p.kind === "claude_subscription" && p.cli && (
-        <p className="text-xs text-muted" data-testid="ai-cli">{p.cli.cli ? t("ai.settings.cliFound", { version: p.cli.sdk_version ?? "" }) : t("ai.settings.cliMissing")}</p>
+      {p.kind === "claude_subscription" && <ClaudeSignIn onChanged={onChanged} />}
+      {(p.kind === "ollama" || p.kind === "openai_compatible") && !p.local && (
+        <p className="text-xs text-warning" data-testid="ai-cloud-note">{t("ai.settings.cloudNote")}</p>
       )}
       <div className="flex flex-wrap items-end gap-2">
         <Field label={t("ai.settings.models")} htmlFor={`models-${p.id}`}>

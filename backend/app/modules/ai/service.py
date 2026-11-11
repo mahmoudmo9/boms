@@ -37,20 +37,39 @@ def api_key(provider: Provider) -> str | None:
 
 # ---- privacy ---------------------------------------------------------------------------------------------------------
 
-def is_local(provider: Provider) -> bool:
-    """Ollama, or an OpenAI-compatible server on this PC or the local network."""
-    if provider.kind == "ollama":
-        return True
-    if provider.kind != "openai_compatible" or not provider.base_url:
+LOCAL_NETS = tuple(ipaddress.ip_network(n) for n in (
+    "127.0.0.0/8", "::1/128",                              # loopback
+    "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",       # RFC 1918
+    "169.254.0.0/16", "fe80::/10",                         # link-local
+    "fc00::/7"))                                           # IPv6 unique local (the RFC 1918 counterpart)
+
+
+def endpoint_is_local(base_url: str | None) -> bool:
+    """True only for a loopback or private-network address. A host name other than ``localhost`` is never resolved
+    (no network use, and a name can point anywhere tomorrow), so it counts as cloud."""
+    if not base_url:
         return False
-    host = urlparse(provider.base_url).hostname or ""
-    if host in ("localhost",):
+    try:
+        host = (urlparse(base_url if "//" in base_url else "//" + base_url).hostname or "").rstrip(".").lower()
+    except ValueError:
+        return False
+    if host == "localhost" or host.endswith(".localhost"):
         return True
     try:
         ip = ipaddress.ip_address(host)
     except ValueError:
         return False
-    return ip.is_loopback or ip.is_private
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+        ip = ip.ipv4_mapped
+    return any(ip in net for net in LOCAL_NETS if net.version == ip.version)
+
+
+def is_local(provider: Provider) -> bool:
+    """Local is decided by where the provider's endpoint is, not by its kind (v0.10.0 section 0.2.1): an ``ollama``
+    or ``openai_compatible`` provider at a public address is cloud. The hosted APIs and the subscription are cloud."""
+    if provider.kind not in ("ollama", "openai_compatible"):
+        return False
+    return endpoint_is_local(provider.base_url or adapters.DEFAULT_URLS.get(provider.kind))
 
 
 def case_local_only(db: Session, case_id) -> bool:

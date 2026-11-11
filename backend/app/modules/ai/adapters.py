@@ -246,14 +246,12 @@ def set_sdk_runner(fn: Callable | None) -> None:
 
 def cli_status() -> dict:
     """Whether the Claude Code CLI the SDK drives is present (bundled with the SDK wheel, or installed separately)."""
-    try:
-        import claude_agent_sdk
-    except ImportError:
+    from app.modules.ai import claude_cli
+
+    if claude_cli.sdk_version() is None:
         return {"sdk": False, "cli": None, "steps": "install_sdk"}
-    bundled = Path(claude_agent_sdk.__file__).parent / "_bundled" / ("claude.exe" if os.name == "nt" else "claude")
-    path = str(bundled) if bundled.exists() else shutil.which("claude")
-    return {"sdk": True, "sdk_version": getattr(claude_agent_sdk, "__version__", None), "cli": path,
-            "steps": None if path else "install_cli"}
+    path = claude_cli.cli_path()
+    return {"sdk": True, "sdk_version": claude_cli.sdk_version(), "cli": path, "steps": None if path else "install_cli"}
 
 
 class ClaudeSubscription(Adapter):
@@ -288,6 +286,9 @@ def _run_sdk(*, prompt: str, system: str, model: str | None, folder: Path, schem
         from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
     except ImportError:
         raise ProviderError("not_configured", "the Claude Agent SDK is not installed") from None
+    from app.modules.ai import claude_cli
+
+    claude_cli.hide_sdk_windows()       # BOMS has no console: the CLI must not open one for each call
 
     async def deny_outside(tool_name, tool_input, _context):
         from claude_agent_sdk import PermissionResultAllow, PermissionResultDeny

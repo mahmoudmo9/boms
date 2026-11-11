@@ -4,11 +4,13 @@ import { type FormEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
+import { AttributeEditor, useProductTemplates } from "../../components/AttributeEditor";
 import { Bdi } from "../../components/Bdi";
 import { DataTable, Pagination } from "../../components/DataTable";
 import { Icon } from "../../components/Icon";
 import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, IconButton, Input, Loading, Modal, PageHeader, Select, Textarea } from "../../components/ui";
 import { api, ApiError, type Page } from "../../lib/api";
+import { attributeProblems, nounBody, nounOf, sameNoun } from "../../lib/nounmod";
 import { useFormat } from "../../lib/prefs";
 import type { Product, ProductPage as ProductPageData, ProductQuotes } from "../../lib/types";
 import { PartyName, stageLabel } from "../parties/shared";
@@ -233,6 +235,33 @@ function EditProductDialog({ product, onClose, onSaved }: { product: Product; on
   );
 }
 
+/** v0.10.0: the structured description of a product (template, attributes, canonical fa/en, override). */
+function ProductDescriptionCard({ product, onSaved }: { product: Product; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const templates = useProductTemplates();
+  const saved = nounOf(product);
+  const [value, setValue] = useState(saved);
+  const template = templates.data?.find((x) => x.id === value.template_id) ?? null;
+  const invalid = Object.keys(attributeProblems(template, value.attributes)).length > 0;
+  const save = useMutation({
+    mutationFn: () => api<Product>(`/api/products/${product.id}`, { method: "PATCH", body: nounBody(template, value) }),
+    onSuccess: (p) => { setValue(nounOf(p)); onSaved(); },
+  });
+  const dirty = !sameNoun(value, saved);
+  return (
+    <Card title={t("nounmod.title")}>
+      <div className="flex flex-col gap-3" data-testid="product-description">
+        <AttributeEditor idPrefix="pd" value={value} onChange={(v) => { setValue(v); save.reset(); }} />
+        <div className="flex items-center gap-2">
+          <Button variant="primary" disabled={!dirty || invalid} busy={save.isPending} onClick={() => save.mutate()} data-testid="product-description-save">{t("common.save")}</Button>
+          {dirty && <Button variant="ghost" onClick={() => { setValue(saved); save.reset(); }}>{t("common.cancel")}</Button>}
+        </div>
+        <ErrorNote error={save.error} />
+      </div>
+    </Card>
+  );
+}
+
 export function ProductPage() {
   const { id = "" } = useParams();
   const { t } = useTranslation();
@@ -342,6 +371,7 @@ export function ProductPage() {
           </Card>
         </div>
         <div className="flex min-w-0 flex-col gap-4">
+          <ProductDescriptionCard key={p.id} product={p} onSaved={refresh} />
           <Card title={t("sourcing.catalog.aliases")}>
             <ul className="mb-2 flex flex-wrap gap-1.5">
               {p.aliases.map((a) => (

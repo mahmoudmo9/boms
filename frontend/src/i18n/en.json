@@ -3412,8 +3412,6 @@
       "priceOut": "Output $/M",
       "savePrice": "Save price",
       "priceMissing": "No price",
-      "cliFound": "Claude Code is available (SDK {{version}}); press «Test connection» to sign in with the Pro plan.",
-      "cliMissing": "Claude Code was not found; see the steps in OPERATIONS.",
       "status": {
         "unknown": "Not tested",
         "ok": "Connected",
@@ -3448,6 +3446,33 @@
         "cost": "Cost",
         "subscription": "Subscription",
         "inputDesc": "{{files}} files, {{pages}} pages, {{characters}} characters, {{images}} images"
+      },
+      "cloud": "Cloud",
+      "cloudNote": "This address is not on this PC or the local network, so it counts as cloud: names are redacted and local-only cases are never sent to it.",
+      "claude": {
+        "login": "Sign in to Claude",
+        "logout": "Sign out",
+        "account": "Windows account BOMS runs under",
+        "storedIn": "Sign-in is stored in",
+        "state": {
+          "signed_in": "Signed in",
+          "signed_out": "Not signed in",
+          "other_account": "Signed in for another account",
+          "no_cli": "Claude Code not found",
+          "no_sdk": "Claude package not installed"
+        },
+        "otherAccount": "On this PC the Windows account “{{others}}” is signed in to Claude, but BOMS runs under “{{account}}” and cannot see that sign-in. Sign in again under this account.",
+        "missing": "The Claude Code program that is installed with BOMS was not found. Update or install BOMS again.",
+        "steps": {
+          "open": "Press “Sign in to Claude”; a black console window opens and stays open.",
+          "choose": "In that window choose “Claude account with subscription” and press Enter.",
+          "authorise": "Your browser opens; sign in with your Claude account and press “Authorize”.",
+          "paste": "If a code is shown, copy it, paste it into the black window with a right-click and press Enter.",
+          "close": "When you see “Login successful”, close the window; this page then shows “Signed in” by itself."
+        },
+        "notOnThisPc": "The sign-in window opens only on the PC that runs BOMS.",
+        "opened": "The sign-in window is open. Finish the steps in that window.",
+        "help": "“Test connection” and every AI task run without opening any window. You sign in once; it is kept for this Windows account."
       }
     },
     "review": {
@@ -3489,7 +3514,13 @@
         "rejected": "Rejected.",
         "superseded": "A newer proposal replaced this one.",
         "failed": "Failed."
-      }
+      },
+      "prevPage": "Previous page",
+      "nextPage": "Next page",
+      "pageOf": "Page {{page}} of {{pages}}",
+      "pageImage": "Page {{page}} of {{name}}",
+      "regionFound": "The source of this value is marked",
+      "regionNotFound": "The exact place was not found on this page"
     },
     "extract": {
       "title": "Extract with AI",
@@ -3614,5 +3645,26 @@
     "open": "Open folder",
     "path": "Case folder: {{path}}",
     "notWindows": "The folder opens on the PC that runs BOMS. Path: {{path}}"
+  },
+  "nounmod": {
+    "title": "Structured description",
+    "template": "Item template",
+    "templateHint": "The item's noun and its attributes; the standard description is built from them.",
+    "none": "No template",
+    "range": "{{min}} to {{max}}",
+    "longOnly": "Full description only",
+    "canonical": "Standard description",
+    "canonicalFa": "Persian description",
+    "canonicalEn": "English description",
+    "override": "Write it myself",
+    "generated": "Generated:",
+    "long": "Full description:",
+    "fixFirst": "Correct the invalid values first.",
+    "problem": {
+      "not_a_number": "Enter a number",
+      "out_of_range": "Must be between {{min}} and {{max}}",
+      "not_allowed": "Choose from the list",
+      "too_long": "200 characters at most"
+    }
   }
 }

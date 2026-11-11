@@ -155,8 +155,13 @@ def describe(row, lang: str) -> str | None:
 
 
 def template_out(t) -> dict:
+    """``attributes`` as stored, each number attribute with the symbol and Persian name of its unit for the editor."""
+    attrs = []
+    for a in t.attributes:
+        sym = UNIT_SYMBOLS.get(a.get("unit") or "")
+        attrs.append({**a, "unit_en": sym[0], "unit_fa": sym[1]} if sym else dict(a))
     return {"id": str(t.id), "key": t.key, "category_id": str(t.category_id) if t.category_id else None,
-            "noun_fa": t.noun_fa, "noun_en": t.noun_en, "attributes": t.attributes, "status": t.status}
+            "noun_fa": t.noun_fa, "noun_en": t.noun_en, "attributes": attrs, "status": t.status}
 
 
 def check_template(data: dict) -> list[dict]:
@@ -173,4 +178,4 @@ def check_template(data: dict) -> list[dict]:
             raise AppError("template_invalid", "A choice attribute lists its values", {"attribute": a["key"]}, status=422)
         if a.get("unit") and not str(a["unit"]).isalnum():
             raise AppError("template_invalid", "Units are UN/ECE codes", {"attribute": a["key"]}, status=422)
-    return attrs
+    return [{k: v for k, v in a.items() if k not in ("unit_en", "unit_fa")} for a in attrs]      # display-only keys

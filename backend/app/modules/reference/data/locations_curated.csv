@@ -3,7 +3,7 @@ IRTHR,Tehran,تهران,rda,THR
 IRBND,Bandar Abbas,بندرعباس,prda,BND
 IRBUZ,Bushehr,بوشهر,pda,BUZ
 IRBKM,Bandar Imam Khomeini,بندر امام خمینی,prd,
-IRCHB,Chabahar,چابهار,pda,ZBR
+IRZBR,Chabahar,چابهار,pda,ZBR
 IRKHO,Khorramshahr,خرمشهر,prd,
 IRABD,Abadan,آبادان,pda,ABD
 IRAWZ,Ahvaz,اهواز,rda,AWZ
@@ -77,19 +77,19 @@ ITMIL,Milano,میلان,rda,
 ITRAN,Ravenna,راونا,prd,
 ITSAL,Salerno,سالرنو,prd,
 RUNVS,Novorossiysk,نووروسیسک,prd,
-RUAST,Astrakhan,آستاراخان,prda,ASF
+RUASF,Astrakhan,آستاراخان,prda,ASF
 RULED,Saint Petersburg,سن‌پترزبورگ,prda,LED
 RUMOW,Moskva,مسکو,rda,
 RUMCX,Makhachkala,ماخاچ‌قلعه,prda,MCX
-RUOLY,Olya,اولیا,p,
+RUOYA,Olya,اولیا,p,
 RUVVO,Vladivostok,ولادی‌وستوک,prda,VVO
 OMSOH,Sohar,صحار,pd,
 OMSLL,Salalah,صلاله,pda,SLL
 OMMCT,Muscat,مسقط,pda,MCT
 OMDQM,Duqm,دقم,pd,
-KZAKT,Aktau,آکتائو,prda,SCO
+KZAAU,Aktau,آکتائو,prda,
 AZBAK,Baku,باکو,prda,GYD
-TMTMZ,Turkmenbashi,ترکمن‌باشی,prda,
+TMKRW,Turkmenbashi,ترکمن‌باشی,prda,
 IQUQR,Umm Qasr,ام‌القصر,p,
 PKKHI,Karachi,کراچی,prda,KHI
 SGSIN,Singapore,سنگاپور,prda,SIN
@@ -129,3 +129,57 @@ PLGDN,Gdansk,گدانسک,prda,GDN
 ROCND,Constanta,کنستانتا,prd,
 UAODS,Odesa,اودسا,prda,ODS
 BGVAR,Varna,وارنا,prda,VAR
+IRBAM,Amirabad,امیرآباد,p,
+IRNSH,Nowshahr,نوشهر,p,
+IRASR,Astara,آستارا,pd,
+IRASA,Asaluyeh,عسلویه,pd,
+IRSRP,Shahid Rajaee Port,بندر شهید رجایی,p,
+IRIKA,Tehran Imam Khomeini Airport,فرودگاه امام خمینی,a,
+IRDJU,Jolfa,جلفا,rd,
+IRKER,Kerman,کرمان,a,
+IRZAH,Zahedan,زاهدان,a,
+IRRAS,Rasht,رشت,a,
+CNSGH,Shanghai (city),شانگهای (شهر),prda,
+CNPVG,Shanghai Pudong Airport,فرودگاه پودونگ شانگهای,a,
+CNPEK,Beijing Capital Airport,فرودگاه پکن,a,
+CNYIU,Yiwu,ایوو,r,
+CNURM,Urumqi,ارومچی,rda,
+CNHRS,Horgos,خورگوس,rd,
+CNCDU,Chengdu,چنگدو,ra,
+PKGWD,Gwadar,گوادر,pda,
+PKLHE,Lahore,لاهور,rda,
+INHZA,Hazira,هزیرا,p,
+KRINC,Incheon,اینچئون,prd,
+KRSEL,Seoul,سئول,prda,
+JPTYO,Tokyo,توکیو,prda,
+JPUKB,Kobe,کوبه,prda,
+TWKHH,Kaohsiung,کائوسیونگ,pa,
+THBKK,Bangkok,بانکوک,prda,
+VNHPH,Haiphong,هایفونگ,prda,
+MYTPP,Tanjung Pelepas,تانجونگ پلپاس,prd,
+NLAMS,Amsterdam,آمستردام,prda,
+GBSOU,Southampton,ساوت‌همپتون,pa,
+PTLIS,Lisbon,لیسبون,prda,
+GRSKG,Thessaloniki,تسالونیکی,pa,
+AZALA,Alat,آلات,pd,
+QADOH,Doha,دوحه,pa,
+KWKWI,Kuwait,کویت,pa,
+IQBSR,Basra,بصره,p,
+IQBGW,Baghdad,بغداد,prda,
+IQEBL,Erbil,اربیل,da,
+SARUH,Riyadh,ریاض,a,
+SAJUB,Jubail,جبیل,p,
+BHKBS,Khalifa Bin Salman Port,بندر خلیفه بن سلمان,p,
+LBBEY,Beirut,بیروت,pa,
+KEMBA,Mombasa,مومباسا,pa,
+ZADUR,Durban,دوربان,prda,
+CHZRH,Zurich,زوریخ,da,
+KZALA,Almaty,آلماتی,ra,
+TMAGT,Ashgabat,عشق‌آباد,r,
+AFHEA,Herat,هرات,a,
+TJDYU,Dushanbe,دوشنبه,a,
+BDCGP,Chattogram,چیتاگونگ,pa,
+TRSSX,Samsun,سامسون,pa,
+ESMAD,Madrid,مادرید,rda,
+CAVAN,Vancouver,ونکوور,pa,
+AUSYD,Sydney,سیدنی,prda,

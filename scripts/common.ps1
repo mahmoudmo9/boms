@@ -226,19 +226,290 @@ function Test-BackendUp {
     }
 }
 
+# ---- stopping BOMS (v0.10.0 section 0.1.1) -----------------------------------------------------------------------------
+# Every process that belongs to the install is stopped, not only app.launch: the server, the worker, the Setad agent
+# and its browser, the bundled Claude CLI - anything whose executable or command line is under C:\BOMS\app, and every
+# descendant of such a process. The script that is running (and the console that started it) is never a target.
+
+function Get-ProcessSnapshot {
+    return @(Get-CimInstance Win32_Process | ForEach-Object {
+        [pscustomobject]@{ ProcessId = [int]$_.ProcessId; ParentProcessId = [int]$_.ParentProcessId; Name = $_.Name
+                           ExecutablePath = $_.ExecutablePath; CommandLine = $_.CommandLine }
+    })
+}
+
+function Test-UnderRoot([string]$Text, [string[]]$Roots) {
+    if (-not $Text) { return $false }
+    foreach ($root in $Roots) {
+        $r = $root.TrimEnd('\')
+        $at = $Text.IndexOf($r, [System.StringComparison]::OrdinalIgnoreCase)
+        while ($at -ge 0) {
+            $end = $at + $r.Length
+            # C:\BOMS\app must not match C:\BOMS\app-old: the root has to end at a separator, a quote or the end
+            if ($end -ge $Text.Length -or '\/" '.IndexOf($Text[$end]) -ge 0) { return $true }
+            $at = $Text.IndexOf($r, $end, [System.StringComparison]::OrdinalIgnoreCase)
+        }
+    }
+    return $false
+}
+
+function Select-BomsProcesses {
+    # Pure: from a process snapshot, the processes under $Roots and all their descendants, minus $SelfId and its
+    # ancestors (the running script, the .bat console around it).
+    param([object[]]$Processes, [string[]]$Roots, [int]$SelfId)
+    $byId = @{}
+    foreach ($p in $Processes) { $byId[$p.ProcessId] = $p }
+    $protected = @{}
+    $cursor = $SelfId
+    while ($cursor -and $byId.ContainsKey($cursor) -and -not $protected.ContainsKey($cursor)) {
+        $protected[$cursor] = $true
+        $cursor = $byId[$cursor].ParentProcessId
+    }
+    $picked = @{}
+    foreach ($p in $Processes) {
+        if ($protected.ContainsKey($p.ProcessId)) { continue }
+        if ((Test-UnderRoot $p.ExecutablePath $Roots) -or (Test-UnderRoot $p.CommandLine $Roots)) { $picked[$p.ProcessId] = $true }
+    }
+    do {
+        $grew = $false
+        foreach ($p in $Processes) {
+            if ($picked.ContainsKey($p.ProcessId) -or $protected.ContainsKey($p.ProcessId)) { continue }
+            if ($picked.ContainsKey($p.ParentProcessId)) { $picked[$p.ProcessId] = $true; $grew = $true }
+        }
+    } while ($grew)
+    return @($Processes | Where-Object { $picked.ContainsKey($_.ProcessId) })
+}
+
+function Get-BomsProcesses {
+    return @(Select-BomsProcesses -Processes (Get-ProcessSnapshot) -Roots @($script:AppDir) -SelfId $PID)
+}
+
+function Stop-OneProcess([int]$Id) { Stop-Process -Id $Id -Force -ErrorAction SilentlyContinue }
+
+function Format-ProcessList([object[]]$Processes) {
+    return (@($Processes | ForEach-Object { "$($_.Name) (PID $($_.ProcessId))" }) -join ', ')
+}
+
 function Stop-BomsProcesses {
+    # Stops the scheduled tasks, then every BOMS process, and waits until they have really exited.
+    # Returns the processes still alive after $TimeoutSec (an empty list is success).
+    param([int]$TimeoutSec = 30)
     foreach ($name in $script:TaskNames) {
         if (Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue) {
             Stop-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
         }
     }
-    # Any app.launch process still running (for example started by hand).
-    $procs = Get-CimInstance Win32_Process -Filter "Name = 'pythonw.exe' OR Name = 'python.exe'" |
-        Where-Object { $_.CommandLine -and $_.CommandLine -match 'app\.launch' }
-    foreach ($p in $procs) {
-        Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    while ($true) {
+        $alive = @(Get-BomsProcesses)
+        if ($alive.Count -eq 0) { return @() }
+        if ((Get-Date) -ge $deadline) { return $alive }
+        foreach ($p in $alive) { Stop-OneProcess $p.ProcessId }
+        Start-Sleep -Milliseconds 500
     }
-    Start-Sleep -Seconds 2
+}
+
+# ---- replacing the program folders safely ------------------------------------------------------------------------------
+
+$script:ProgramItems = @('backend', 'scripts', 'wheelhouse', 'docs')
+$script:UpdateMarker = 'update-in-progress.json'
+
+function Rename-Folder([string]$Path, [string]$NewPath) {
+    # The one place a folder is renamed (the tests replace it to simulate a lock).
+    [System.IO.Directory]::Move($Path, $NewPath)
+}
+
+function Test-FolderRenamable([string]$Path) {
+    # Windows refuses to rename a folder while any file in it is open or a process has it as its working folder,
+    # so renaming it away and back is the exact test of "can this folder be replaced now".
+    if (-not (Test-Path -LiteralPath $Path)) { return $true }
+    $probe = "$Path.renametest"
+    try {
+        if (Test-Path -LiteralPath $probe) { Remove-Item -LiteralPath $probe -Recurse -Force -ErrorAction Stop }
+        Rename-Folder $Path $probe
+    } catch {
+        return $false
+    }
+    for ($i = 0; $i -lt 20; $i++) {
+        try { Rename-Folder $probe $Path; return $true } catch { Start-Sleep -Milliseconds 250 }
+    }
+    throw "Could not rename $probe back to $Path. Rename it by hand before doing anything else."
+}
+
+function Wait-FoldersRenamable {
+    # Retries for up to $TimeoutSec. Returns the folders that still cannot be renamed (empty = all free).
+    param([string[]]$Paths, [int]$TimeoutSec = 30, [int]$DelayMs = 1000)
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    while ($true) {
+        $blocked = @($Paths | Where-Object { -not (Test-FolderRenamable $_) })
+        if ($blocked.Count -eq 0 -or (Get-Date) -ge $deadline) { return $blocked }
+        Start-Sleep -Milliseconds $DelayMs
+    }
+}
+
+function Get-RestartManagerLockers([string[]]$Files) {
+    # Windows Restart Manager: which processes hold these files open. Best effort - any failure gives an empty list.
+    try {
+        if (-not ('Boms.RestartManager' -as [type])) {
+            Add-Type -Namespace Boms -Name RestartManager -MemberDefinition @'
+[StructLayout(LayoutKind.Sequential)] public struct RM_UNIQUE_PROCESS { public int dwProcessId; public System.Runtime.InteropServices.ComTypes.FILETIME ProcessStartTime; }
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] public struct RM_PROCESS_INFO {
+    public RM_UNIQUE_PROCESS Process;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)] public string strAppName;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)] public string strServiceShortName;
+    public int ApplicationType; public uint AppStatus; public uint TSSessionId;
+    [MarshalAs(UnmanagedType.Bool)] public bool bRestartable; }
+[DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)] public static extern int RmStartSession(out uint pSessionHandle, int dwSessionFlags, System.Text.StringBuilder strSessionKey);
+[DllImport("rstrtmgr.dll")] public static extern int RmEndSession(uint pSessionHandle);
+[DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)] public static extern int RmRegisterResources(uint pSessionHandle, uint nFiles, string[] rgsFilenames, uint nApplications, IntPtr rgApplications, uint nServices, string[] rgsServiceNames);
+[DllImport("rstrtmgr.dll")] public static extern int RmGetList(uint dwSessionHandle, out uint pnProcInfoNeeded, ref uint pnProcInfo, [In, Out] RM_PROCESS_INFO[] rgAffectedApps, ref uint lpdwRebootReasons);
+'@
+        }
+        $handle = [uint32]0
+        $key = New-Object System.Text.StringBuilder 64
+        if ([Boms.RestartManager]::RmStartSession([ref]$handle, 0, $key) -ne 0) { return @() }
+        try {
+            if ([Boms.RestartManager]::RmRegisterResources($handle, [uint32]$Files.Count, $Files, 0, [IntPtr]::Zero, 0, $null) -ne 0) { return @() }
+            $needed = [uint32]0; $count = [uint32]0; $reasons = [uint32]0
+            [void][Boms.RestartManager]::RmGetList($handle, [ref]$needed, [ref]$count, $null, [ref]$reasons)
+            if ($needed -eq 0) { return @() }
+            $infos = New-Object 'Boms.RestartManager+RM_PROCESS_INFO[]' $needed
+            $count = $needed
+            if ([Boms.RestartManager]::RmGetList($handle, [ref]$needed, [ref]$count, $infos, [ref]$reasons) -ne 0) { return @() }
+            return @($infos | Select-Object -First $count | ForEach-Object {
+                [pscustomobject]@{ ProcessId = $_.Process.dwProcessId; Name = $_.strAppName } })
+        } finally {
+            [void][Boms.RestartManager]::RmEndSession($handle)
+        }
+    } catch {
+        return @()
+    }
+}
+
+function Find-FolderLockers([string]$Path) {
+    # Who keeps $Path busy, as far as Windows will tell: processes started from it or with it on their command line,
+    # and processes holding one of its files open. A console or Explorer window that is merely "inside" the folder
+    # cannot be listed by Windows; the message of the updater says so.
+    $found = @{}
+    try {
+        foreach ($p in (Select-BomsProcesses -Processes (Get-ProcessSnapshot) -Roots @($Path) -SelfId $PID)) {
+            $found[$p.ProcessId] = "$($p.Name) (PID $($p.ProcessId))"
+        }
+        $files = @(Get-ChildItem -LiteralPath $Path -Recurse -File -ErrorAction SilentlyContinue |
+            Select-Object -First 2000 | ForEach-Object { $_.FullName })
+        if ($files.Count -gt 0) {
+            foreach ($p in (Get-RestartManagerLockers $files)) {
+                if ($p.ProcessId -ne $PID) { $found[$p.ProcessId] = "$($p.Name) (PID $($p.ProcessId))" }
+            }
+        }
+    } catch {
+        Write-Verbose "Find-FolderLockers: $_"
+    }
+    return @($found.Values)
+}
+
+function Get-BackendVersion([string]$AppDir) {
+    # The version of the code that is really in backend\ (VERSION can be wrong after a half-finished update).
+    $file = Join-Path (Join-Path $AppDir 'backend') 'pyproject.toml'
+    if (Test-Path -LiteralPath $file) {
+        $match = [regex]::Match((Get-Content -LiteralPath $file -Raw), '(?m)^version\s*=\s*"([^"]+)"')
+        if ($match.Success) { return $match.Groups[1].Value }
+    }
+    return $null
+}
+
+function Repair-HalfUpdate {
+    # Brings a half-updated install back to one consistent state before a new update starts. Returns what was done.
+    #  - marker left by an interrupted run of this updater: every folder it had moved is put back;
+    #  - <item>\<item> (v0.9.0's updater copied the new folder INTO the old one after a failed rename): removed;
+    #  - <item>.previous without <item> (stopped between rename and copy): the previous folder is put back;
+    #  - VERSION that disagrees with the code in backend\: corrected.
+    param([string]$AppDir, [string[]]$Items = $script:ProgramItems)
+    $done = @()
+    $markerPath = Join-Path $AppDir $script:UpdateMarker
+    if (Test-Path -LiteralPath $markerPath) {
+        $marker = Get-Content -LiteralPath $markerPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        foreach ($item in @($marker.moved)) {
+            $target = Join-Path $AppDir $item
+            if (Test-Path -LiteralPath "$target.previous") {
+                if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop }
+                Rename-Folder "$target.previous" $target
+                $done += "restored $item from the interrupted update"
+            }
+        }
+        Remove-Item -LiteralPath $markerPath -Force -ErrorAction Stop
+    }
+    foreach ($item in $Items) {
+        $target = Join-Path $AppDir $item
+        $nested = Join-Path $target $item
+        if (Test-Path -LiteralPath $nested -PathType Container) {
+            Remove-Item -LiteralPath $nested -Recurse -Force -ErrorAction Stop
+            $done += "removed the stray copy $item\$item"
+        }
+        if (-not (Test-Path -LiteralPath $target) -and (Test-Path -LiteralPath "$target.previous")) {
+            Rename-Folder "$target.previous" $target
+            $done += "restored $item from $item.previous"
+        }
+    }
+    $real = Get-BackendVersion $AppDir
+    $versionFile = Join-Path $AppDir 'VERSION'
+    if ($real -and (Test-Path -LiteralPath $versionFile) -and ((Get-Content -LiteralPath $versionFile -Raw).Trim() -ne $real)) {
+        Set-Content -LiteralPath $versionFile -Value $real
+        $done += "corrected VERSION to $real (the code in backend)"
+    }
+    return $done
+}
+
+function Update-ProgramFiles {
+    # Replaces the program folders as one step: either every folder is the new one, or (on any error) every folder is
+    # the old one again and the error is thrown. A failed rename is never followed by a copy.
+    param([string]$AppDir, [string]$Source, [string]$OldVersion, [string]$NewVersion, [string[]]$Items = $script:ProgramItems)
+    $ErrorActionPreference = 'Stop'
+    $markerPath = Join-Path $AppDir $script:UpdateMarker
+    $moved = @()
+    $created = @()
+    try {
+        foreach ($item in $Items) {
+            $previous = (Join-Path $AppDir $item) + '.previous'
+            if (Test-Path -LiteralPath $previous) { Remove-Item -LiteralPath $previous -Recurse -Force -ErrorAction Stop }
+        }
+        foreach ($item in $Items) {
+            $target = Join-Path $AppDir $item
+            if (Test-Path -LiteralPath $target) {
+                Rename-Folder $target "$target.previous"
+                $moved += $item
+                $state = @{ from = $OldVersion; to = $NewVersion; moved = $moved } | ConvertTo-Json -Compress
+                [System.IO.File]::WriteAllText($markerPath, $state, (New-Object System.Text.UTF8Encoding($false)))
+            }
+            if (Test-Path -LiteralPath $target) { throw "$target still exists after it was renamed" }
+            $created += $item
+            Copy-Item -LiteralPath (Join-Path $Source $item) -Destination $target -Recurse -ErrorAction Stop
+        }
+        Copy-Item -LiteralPath (Join-Path $Source 'VERSION') -Destination (Join-Path $AppDir 'VERSION') -Force -ErrorAction Stop
+        if (Test-Path -LiteralPath $markerPath) { Remove-Item -LiteralPath $markerPath -Force -ErrorAction Stop }
+    } catch {
+        $cause = $_
+        Undo-ProgramFiles -AppDir $AppDir -Moved $moved -Created $created -OldVersion $OldVersion
+        throw $cause
+    }
+    return $moved
+}
+
+function Undo-ProgramFiles {
+    param([string]$AppDir, [string[]]$Moved, [string[]]$Created, [string]$OldVersion)
+    foreach ($item in $Created) {
+        $target = Join-Path $AppDir $item
+        if (($Moved -contains $item) -or -not (Test-Path -LiteralPath "$target.previous")) {
+            if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction SilentlyContinue }
+        }
+    }
+    foreach ($item in $Moved) {
+        $target = Join-Path $AppDir $item
+        if ((Test-Path -LiteralPath "$target.previous") -and -not (Test-Path -LiteralPath $target)) { Rename-Folder "$target.previous" $target }
+    }
+    if ($OldVersion -and $OldVersion -ne 'unknown') { Set-Content -LiteralPath (Join-Path $AppDir 'VERSION') -Value $OldVersion }
+    $markerPath = Join-Path $AppDir $script:UpdateMarker
+    if (Test-Path -LiteralPath $markerPath) { Remove-Item -LiteralPath $markerPath -Force -ErrorAction SilentlyContinue }
 }
 
 function Start-BomsProcesses {

@@ -8,7 +8,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -127,6 +127,45 @@ def patch_provider(provider_id: uuid.UUID, body: ProviderPatch, request: Request
     events.record(db, "ai_provider", p.id, "update", jsonable(changes), request_source(request), actor=user.username)
     db.commit()
     return provider_out(db, p)
+
+
+# ---- Claude sign-in (v0.10.0 section 0.1.2) -------------------------------------------------------------------------
+
+def _subscription_id(db: Session):
+    return db.scalar(select(Provider.id).where(Provider.kind == "claude_subscription").limit(1))
+
+
+@router.get("/claude/status")
+def claude_status(_: CurrentUser):
+    """The sign-in block: CLI, Windows account, where the sign-in is stored, signed in or not (no window opens)."""
+    from app.modules.ai import claude_cli
+
+    return claude_cli.status()
+
+
+@router.post("/claude/login")
+def claude_login(request: Request, user: CurrentUser, db: Db):
+    """Opens a visible console running the bundled CLI's sign-in; the owner finishes there."""
+    from app.modules.ai import claude_cli
+
+    out = claude_cli.open_login_console()
+    events.record(db, "ai_provider", _subscription_id(db), "claude_login_opened", {"account": out["account"]}, request_source(request),
+                  actor=user.username)
+    db.commit()
+    return out
+
+
+@router.post("/claude/logout")
+def claude_logout(request: Request, user: CurrentUser, db: Db):
+    from app.modules.ai import claude_cli
+
+    out = claude_cli.logout()
+    db.execute(update(Provider).where(Provider.kind == "claude_subscription")
+               .values(status="unknown", status_detail=None))
+    events.record(db, "ai_provider", _subscription_id(db), "claude_logout", {"account": out["account"]}, request_source(request),
+                  actor=user.username)
+    db.commit()
+    return out
 
 
 @router.put("/providers/{provider_id}/key")
@@ -264,6 +303,31 @@ def list_drafts(_: CurrentUser, db: Db, target_type: str | None = None, target_i
 @router.get("/drafts/{draft_id}")
 def get_draft(draft_id: uuid.UUID, _: CurrentUser, db: Db):
     return drafts.out(db, drafts.get(db, draft_id))
+
+
+@router.get("/drafts/{draft_id}/fields/{field_id}/source")
+def field_source(draft_id: uuid.UUID, field_id: uuid.UUID, _: CurrentUser, db: Db):
+    """Where the field comes from: the region on the PDF page, the sheet rows or the span of pasted text."""
+    from app.core.errors import NotFound
+    from app.modules.ai import locate
+    from app.modules.ai.models import DraftField
+
+    draft = drafts.get(db, draft_id)
+    field = db.get(DraftField, field_id)
+    if field is None or field.draft_id != draft.id:
+        raise NotFound("not_found", "Field not found")
+    return locate.locate(db, draft, field)
+
+
+@router.get("/drafts/{draft_id}/sources/{index}/pages/{page}")
+def source_page(draft_id: uuid.UUID, index: int, page: int, _: CurrentUser, db: Db):
+    """A PDF page of the draft's source as an image (the review screen draws the highlight over it)."""
+    from fastapi import Response
+
+    from app.modules.ai import locate
+
+    png = locate.page_png(db, drafts.get(db, draft_id), index, page)
+    return Response(png, media_type="image/png", headers={"Cache-Control": "private, max-age=300"})
 
 
 @router.patch("/drafts/{draft_id}/fields/{field_id}")

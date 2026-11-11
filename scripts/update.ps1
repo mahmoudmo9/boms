@@ -1,6 +1,10 @@
 # BOMS updater. Extract the new release zip, then run its update.bat.
-# Stops BOMS, takes a pre_update backup (aborts if it fails), replaces the program files,
-# installs the new Python packages offline, runs migrations and starts BOMS again.
+# 1. stops every BOMS process and waits until they have exited;
+# 2. repairs a half-finished earlier update, then checks that every program folder can be renamed
+#    (if one is in use: names the program when Windows tells, changes nothing, starts BOMS again);
+# 3. takes a pre_update backup (stops if it fails, nothing changed);
+# 4. replaces the program folders as one step (any error puts every folder back);
+# 5. installs the new Python packages offline, runs migrations and starts BOMS again.
 # Compatible with Windows PowerShell 5.1.
 
 . "$PSScriptRoot\common.ps1"
@@ -17,37 +21,66 @@ $newVersion = Get-AppVersion $source
 Write-Host "BOMS update: $oldVersion -> $newVersion" -ForegroundColor White
 Set-BomsEnvironment $config
 
+function Resume-AndStop([string]$Text) {
+    # Nothing was changed: BOMS is started again and the update ends with the reason.
+    Write-Step 'Starting BOMS again'
+    if (Start-BomsProcesses) { Write-Ok 'Running' } else { Write-Warn 'BOMS did not answer yet; run start.bat' }
+    Stop-WithError $Text
+}
+
 Write-Step 'Stopping BOMS'
-Stop-BomsProcesses
-Write-Ok 'Stopped'
+$alive = @(Stop-BomsProcesses -TimeoutSec 30)
+if ($alive.Count -gt 0) {
+    Resume-AndStop ("These BOMS processes did not stop: $(Format-ProcessList $alive). Nothing was changed. " +
+        'Restart Windows and run update.bat again.')
+}
+Write-Ok 'Stopped (server, worker, Setad agent and browser, Claude CLI)'
+
+Write-Step 'Checking the install'
+$repairs = @(Repair-HalfUpdate -AppDir $script:AppDir)
+foreach ($line in $repairs) { Write-Warn "Repaired a half-finished earlier update: $line" }
+$oldVersion = Get-AppVersion $script:AppDir
+$folders = @($script:ProgramItems | ForEach-Object { Join-Path $script:AppDir $_ })
+$blocked = @(Wait-FoldersRenamable -Paths $folders -TimeoutSec 30)
+if ($blocked.Count -gt 0) {
+    $lines = @()
+    foreach ($folder in $blocked) {
+        $who = @(Find-FolderLockers $folder)
+        if ($who.Count -gt 0) { $lines += "  $folder  <- in use by: $($who -join ', ')" }
+        else { $lines += "  $folder  <- in use (Windows does not say by what)" }
+    }
+    Write-Host ''
+    Write-Host 'These folders are in use by another program and cannot be replaced:' -ForegroundColor Yellow
+    $lines | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
+    Write-Host 'Close every File Explorer window, console window, editor or antivirus scan that is inside C:\BOMS\app,' -ForegroundColor Yellow
+    Write-Host 'then run update.bat again.' -ForegroundColor Yellow
+    Resume-AndStop "The update did not start: $($blocked.Count) folder(s) in use. Nothing was changed."
+}
+Write-Ok 'Every program folder can be replaced'
 
 Write-Step 'Pre-update backup'
 if ((Invoke-BomsCli -Arguments @('backup', '--kind', 'pre_update') -AllowFailure) -ne 0) {
-    Start-BomsProcesses | Out-Null
-    Stop-WithError 'The pre-update backup failed. Nothing was changed; BOMS was started again.'
+    Resume-AndStop 'The pre-update backup failed. Nothing was changed.'
 }
 Write-Ok 'Backup done'
 
 Write-Step 'Replacing program files'
-$moved = @()
-foreach ($item in @('backend', 'scripts', 'wheelhouse', 'docs')) {
-    $target = Join-Path $script:AppDir $item
-    $previous = "$target.previous"
-    if (Test-Path $previous) { Remove-Item -Recurse -Force $previous }
-    if (Test-Path $target) { Rename-Item $target $previous; $moved += $item }
-    Copy-Item -Recurse -Path (Join-Path $source $item) -Destination $target
+# The backup ran python from the install: make sure it has gone before the folders move.
+$alive = @(Stop-BomsProcesses -TimeoutSec 15)
+if ($alive.Count -gt 0) { Resume-AndStop "These processes did not stop: $(Format-ProcessList $alive). Nothing was changed." }
+try {
+    $moved = @(Update-ProgramFiles -AppDir $script:AppDir -Source $source -OldVersion $oldVersion -NewVersion $newVersion)
+} catch {
+    Write-Warn "Replacing the program files failed: $($_.Exception.Message)"
+    Resume-AndStop ("The program files could not be replaced; every folder was put back and version $oldVersion " +
+        'is unchanged. Close programs that use C:\BOMS\app and run update.bat again.')
 }
-Copy-Item -Force (Join-Path $source 'VERSION') (Join-Path $script:AppDir 'VERSION')
 Write-Ok 'Copied'
 
 function Undo-Update([string]$Reason) {
     Write-Warn "$Reason - restoring the previous program files"
-    foreach ($item in $moved) {
-        $target = Join-Path $script:AppDir $item
-        if (Test-Path $target) { Remove-Item -Recurse -Force $target }
-        Rename-Item "$target.previous" $target
-    }
-    Set-Content -Path (Join-Path $script:AppDir 'VERSION') -Value $oldVersion
+    Stop-BomsProcesses -TimeoutSec 15 | Out-Null
+    Undo-ProgramFiles -AppDir $script:AppDir -Moved $moved -Created $script:ProgramItems -OldVersion $oldVersion
     & $script:VenvPython -m pip install --quiet --no-index --find-links (Join-Path $script:AppDir 'wheelhouse') `
         -r (Join-Path $script:BackendDir 'requirements.lock') | Out-Host
     Start-BomsProcesses | Out-Null

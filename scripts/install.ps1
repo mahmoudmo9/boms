@@ -120,7 +120,7 @@ if (-not $repair -and -not $RestoreFrom) {
 Write-Step "Installing program files to $($script:AppDir)"
 New-Item -ItemType Directory -Force -Path $script:AppDir | Out-Null
 if ((Resolve-Path $source).Path -ne (Resolve-Path $script:AppDir).Path) {
-    Stop-BomsProcesses
+    Stop-BomsProcesses | Out-Null
     foreach ($item in @('backend', 'scripts', 'wheelhouse', 'docs')) {
         $target = Join-Path $script:AppDir $item
         if (Test-Path $target) { Remove-Item -Recurse -Force $target }
@@ -228,7 +228,7 @@ if ($browser) {
 } else {
     Write-Warn "Edge/Chrome not found. Open $url in your browser."
 }
-Stop-BomsProcesses
+Stop-BomsProcesses | Out-Null
 if (Start-BomsProcesses) { Write-Ok "BOMS is running at $url" }
 else { Write-Warn "BOMS did not answer yet. Check $($config.data_dir)\logs\backend.log" }
 

@@ -703,6 +703,11 @@ export interface Product {
   notes: string | null;
   status: "active" | "archived";
   aliases: ProductAliasRef[];
+  template_id?: string | null;   // noun-modifier description (v0.9.0; editor in v0.10.0)
+  attributes?: Record<string, string>;
+  canonical_fa?: string | null;
+  canonical_en?: string | null;
+  canonical_override?: boolean;
   last_requested?: string | null;
   offers?: number;
 }

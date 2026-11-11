@@ -3,11 +3,13 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { AttributeEditor, useProductTemplates } from "../../components/AttributeEditor";
 import { Bdi } from "../../components/Bdi";
 import { DateInput } from "../../components/DateInput";
 import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, errorMessage, Field, IconButton, Input, Modal, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
+import { attributeProblems, nounBody, nounOf, sameNoun } from "../../lib/nounmod";
 import { useFormat } from "../../lib/prefs";
 import { type ColumnMapping, type Delimiter, IMPORT_FIELDS, type ImportField, parsePasted, setColumnField, suggestMapping } from "../../lib/sourcing";
 import type { ItemWarning, LineItem, LinkedDocument, Spec } from "../../lib/types";
@@ -21,7 +23,8 @@ export interface ItemOwner {
   case_id?: string;
 }
 
-type ItemForm = Omit<LineItem, "id" | "inquiry_id" | "case_id" | "position" | "status" | "no_coverage_confirmed" | "no_coverage_reason" | "selected_offer_item_id" | "documents">;
+type ItemForm = Omit<LineItem, "id" | "inquiry_id" | "case_id" | "position" | "status" | "no_coverage_confirmed" | "no_coverage_reason" | "selected_offer_item_id" | "documents"
+  | "template_id" | "attributes" | "canonical_fa" | "canonical_en" | "canonical_override">;
 
 const EMPTY: ItemForm = {
   name: "", description: null, product_id: null, quantity: null, unit_code: null, unit_text: null, target_price: null,
@@ -91,10 +94,17 @@ export function ItemDialog({ owner, item, ownerDocuments, onClose, onSaved }: {
     ? { ...(Object.fromEntries(Object.keys(EMPTY).map((k) => [k, item[k as keyof ItemForm] ?? EMPTY[k as keyof ItemForm]])) as ItemForm), specs: item.specs ?? [] }
     : EMPTY));
   const set = (patch: Partial<ItemForm>) => setForm((f) => ({ ...f, ...patch }));
+  // v0.10.0: the structured description (template, attributes, canonical fa/en); sent only when it was changed
+  const savedNoun = nounOf(item);
+  const [noun, setNoun] = useState(savedNoun);
+  const templates = useProductTemplates();
+  const template = templates.data?.find((x) => x.id === noun.template_id) ?? null;
+  const nounInvalid = Object.keys(attributeProblems(template, noun.attributes)).length > 0;
+  const nounChanged = !sameNoun(noun, savedNoun);
   const pdfs = ownerDocuments.filter((d) => d.mime_type === "application/pdf" || d.mime_type.startsWith("text/"));
   const save = useMutation({
     mutationFn: () => {
-      const body = { ...form, specs: form.specs.filter((s) => s.key.trim()), name: form.name.trim() };
+      const body = { ...form, specs: form.specs.filter((s) => s.key.trim()), name: form.name.trim(), ...(nounChanged ? nounBody(template, noun) : {}) };
       return item
         ? api(`/api/line-items/${item.id}`, { method: "PATCH", body })
         : api("/api/line-items", { method: "POST", body: { ...owner, ...Object.fromEntries(Object.entries(body).filter(([, v]) => v !== null)) } });
@@ -109,7 +119,7 @@ export function ItemDialog({ owner, item, ownerDocuments, onClose, onSaved }: {
     <Modal open wide title={item ? t("sourcing.item.edit") : t("sourcing.item.add")} onClose={onClose}
       footer={<>
         <Button onClick={onClose}>{t("common.cancel")}</Button>
-        <Button variant="primary" type="submit" form="item-form" busy={save.isPending} disabled={!form.name.trim()}>{t("common.save")}</Button>
+        <Button variant="primary" type="submit" form="item-form" busy={save.isPending} disabled={!form.name.trim() || nounInvalid}>{t("common.save")}</Button>
       </>}>
       <div className={`grid gap-4 ${pdfs.length ? "lg:grid-cols-[minmax(0,1fr)_16rem]" : ""}`}>
         <form id="item-form" className="grid max-h-[65vh] grid-cols-1 gap-3 overflow-y-auto pe-1 sm:grid-cols-2" onSubmit={(e: FormEvent) => { e.preventDefault(); save.mutate(); }}>
@@ -139,6 +149,10 @@ export function ItemDialog({ owner, item, ownerDocuments, onClose, onSaved }: {
             </Select>
           </Field>
           <Field label={t("sourcing.item.product")} htmlFor="it-product"><ProductPicker id="it-product" value={form.product_id} onChange={(id) => set({ product_id: id })} /></Field>
+          <details className="rounded-md border border-line p-2.5 sm:col-span-2" open={Boolean(savedNoun.template_id || savedNoun.canonical_override)} data-testid="item-description">
+            <summary className="cursor-pointer text-xs font-medium text-muted">{t("nounmod.title")}</summary>
+            <div className="pt-3"><AttributeEditor idPrefix="it" value={noun} onChange={setNoun} /></div>
+          </details>
           <div className="sm:col-span-2"><Field label={t("sourcing.item.specs")}><SpecsEditor specs={form.specs} onChange={(specs) => set({ specs })} /></Field></div>
           <div className="sm:col-span-2"><Field label={t("parties.notes")} htmlFor="it-notes"><Textarea id="it-notes" dir="auto" rows={2} value={form.notes ?? ""} onChange={(e) => set({ notes: e.target.value || null })} /></Field></div>
           {item && (
