@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
-import { Badge, Bdi, Card, EmptyState, ErrorNote, Input, Loading, PageHeader, Select } from "../../design/components";
+import { Badge, Bdi, Card, EmptyState, ErrorState, Input, Loading, PageHeader, Select } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { GuaranteeRow } from "../../lib/types";
@@ -37,7 +37,7 @@ export function GuaranteesPage() {
           value={within} onChange={(e) => set("within", e.target.value.replace(/\D/g, ""))} />
       </div>
       <Card padded={false}>
-        {list.isLoading ? <Loading /> : <ErrorNote error={list.error} />}
+        {list.isLoading ? <Loading /> : list.error ? <ErrorState error={list.error} onRetry={() => void list.refetch()} /> : null}
         {list.data && (list.data.length === 0 ? <EmptyState>{t("tenders.guarantee.none")}</EmptyState> : (
           <div className="overflow-x-auto"><table className="w-full text-sm" data-testid="guarantee-list">
             <thead><tr className="border-b border-line bg-surface-2 text-xs text-muted">

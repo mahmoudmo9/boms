@@ -127,7 +127,7 @@ export function TriagePage() {
             </section>
             <section className="flex flex-col gap-2 border-line px-7 py-6 lg:border-s">
               <h3 className="text-xs tracking-wide text-accent">{t("triage.itemsList")}</h3>
-              {detail.isLoading ? <Skeleton lines={4} /> : (d?.detail?.items.rows ?? []).length === 0 ? <p className="text-sm text-muted">{t("triage.noItems")}</p> : (
+              {detail.isLoading ? <Skeleton lines={4} /> : (d?.detail?.items.rows ?? []).length === 0 ? <EmptyState compact>{t("triage.noItems")}</EmptyState> : (
                 <ul className="flex flex-col gap-1.5 text-sm">{(d?.detail?.items.rows ?? []).slice(0, 8).map((row, i) => <li key={i} className="truncate" dir="auto">{row.filter(Boolean).slice(0, 3).join(" · ")}</li>)}</ul>
               )}
             </section>

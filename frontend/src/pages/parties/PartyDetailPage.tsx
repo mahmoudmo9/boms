@@ -133,7 +133,7 @@ function Overview({ party }: { party: PartyDetail }) {
           <Field label={t("finance.party.economicCode")} htmlFor="pd-eco"><Input id="pd-eco" dir="ltr" value={form.economic_code} onChange={(e) => setForm({ ...form, economic_code: e.target.value })} /></Field>
           <div className="sm:col-span-2"><Field label={t("parties.website")} htmlFor="pd-web"><Input id="pd-web" dir="ltr" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></Field></div>
           <div className="sm:col-span-2"><Field label={t("parties.notes")} htmlFor="pd-notes"><Textarea id="pd-notes" dir="auto" rows={4} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field></div>
-          <div className="rounded-md border border-line p-3 sm:col-span-2">
+          <div className="rounded-xl border border-line p-3 sm:col-span-2">
             <Checkbox label={t("parties.dncSwitch")} checked={dnc} onChange={setDnc} />
             {dnc && <Input className="mt-2" aria-label={t("parties.dncReason")} placeholder={t("parties.dncReason")} value={dncReason} onChange={(e) => setDncReason(e.target.value)} />}
           </div>
@@ -313,7 +313,7 @@ function ContactCard({ contact, partyId }: { contact: Contact; partyId: string }
     onSuccess: refresh,
   });
   return (
-    <li className={`rounded-md border border-line p-3 ${contact.status === "archived" ? "opacity-60" : ""}`}>
+    <li className={`rounded-xl border border-line p-3 ${contact.status === "archived" ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium"><Bdi>{contact.name_fa || contact.name_en}</Bdi></span>
         {contact.name_fa && contact.name_en && <Bdi className="text-sm text-muted">{contact.name_en}</Bdi>}
@@ -449,7 +449,7 @@ function InteractionEditForm({ row, party, onDone }: { row: Interaction; party: 
   });
   const moving = !!target && target.id !== party.id;
   return (
-    <form className="mt-2 flex flex-col gap-3 rounded-md border border-line p-3" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
+    <form className="mt-2 flex flex-col gap-3 rounded-xl border border-line p-3" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
       <Field label={t("interactions.moveToParty")} htmlFor="ql-party">
         <PartyField value={target} onChange={(p) => { setTarget(p); setContactId(""); }} />
       </Field>
@@ -609,7 +609,7 @@ function Quotes({ partyId }: { partyId: string }) {
   const f = useFormat();
   const list = useQuery({ queryKey: ["quotes", "party", partyId], queryFn: () => api<QuoteRow[]>(`/api/quotes?party_id=${partyId}`) });
   if (list.isLoading) return <Loading />;
-  if (list.error || !list.data) return <ErrorNote error={list.error} />;
+  if (list.error || !list.data) return <ErrorState error={list.error} onRetry={() => void list.refetch()} />;
   return (
     <Card padded={false}>
       {list.data.length === 0 ? <EmptyState>{t("quotes.none")}</EmptyState> : (
@@ -643,7 +643,7 @@ function Orders({ partyId }: { partyId: string }) {
   const list = useQuery({ queryKey: ["party-execution", partyId], queryFn: () => api<{ sales_orders: Row[]; purchase_orders: Row[];
     claims: { id: string; case_id: string; kind: string; direction: string; status: string; opened_on: string }[] }>(`/api/parties/${partyId}/execution`) });
   if (list.isLoading) return <Loading />;
-  if (list.error || !list.data) return <ErrorNote error={list.error} />;
+  if (list.error || !list.data) return <ErrorState error={list.error} onRetry={() => void list.refetch()} />;
   const table = (rows: Row[], tab: string, ref: "customer_ref" | "supplier_ref", testId: string) => rows.length === 0 ? <EmptyState>{t("execution.party.none")}</EmptyState> : (
     <div className="overflow-x-auto" data-testid={testId}><table className="w-full text-sm"><tbody>{rows.map((r) => (
       <tr key={r.id} className="border-b border-line">

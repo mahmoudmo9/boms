@@ -5,7 +5,7 @@ import { type KeyboardEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, ErrorState, Field, Input, Loading, Modal, Select, Textarea } from "../../design/components";
 import { api } from "../../lib/api";
 import { gateChecklist, gridTarget, marginMarkupView } from "../../lib/costing";
 import { fromDateString, toDateString } from "../../lib/followups";
@@ -166,19 +166,19 @@ function LineRow({ line, index, rows, sheet, editable, params, onChanged }: {
   const warn = sheet.warnings.filter((w) => w.line_id === line.id);
   return (
     <tr className="border-b border-line align-top">
-      <td className="p-1.5 text-xs text-muted">{t(`costing.kinds.${line.kind}`)}</td>
-      <td className="p-1.5">
+      <td className="px-3 py-2 text-xs text-muted">{t(`costing.kinds.${line.kind}`)}</td>
+      <td className="px-3 py-2">
         <CommitInput dir="auto" className="min-w-40" aria-label={t("costing.lines.label")} value={line.label} disabled={!editable} onCommit={(v) => v && patch({ label: v })} />
         {item && <div className="mt-0.5 text-xs text-muted"><Bdi>{item.name}</Bdi>{line.source_offer_item_id && <> · {t("costing.lines.fromOffer")}</>}</div>}
         {warn.map((w) => <div key={w.code} className="mt-0.5 text-xs text-warning">{t(`costing.warnings.${w.code}`, { defaultValue: w.code })}</div>)}
       </td>
-      <td className="p-1.5">
+      <td className="px-3 py-2">
         <Select className="w-44 shrink-0" aria-label={t("costing.lines.basis")} value={line.basis} disabled={!editable}
           onChange={(e) => patch(e.target.value.startsWith("percent") ? { basis: e.target.value, amount: null, currency: null } : { basis: e.target.value, percent: null, tax_parameter_id: null })}>
           {BASES.map((b) => <option key={b} value={b}>{t(`costing.bases.${b}`)}</option>)}
         </Select>
       </td>
-      <td className="p-1.5">
+      <td className="px-3 py-2">
         {percent ? (
           <div className="flex flex-col gap-1">
             <CommitInput dir="ltr" inputMode="decimal" className="w-24" aria-label={t("costing.lines.percent")} value={line.percent} disabled={!editable}
@@ -199,7 +199,7 @@ function LineRow({ line, index, rows, sheet, editable, params, onChanged }: {
           </div>
         )}
       </td>
-      <td className="p-1.5">
+      <td className="px-3 py-2">
         {line.scope === "case" && line.basis === "total" ? (
           <Select className="w-40 shrink-0" aria-label={t("costing.lines.allocation")} value={line.allocation} disabled={!editable}
             onChange={(e) => patch({ allocation: e.target.value })}>
@@ -207,13 +207,13 @@ function LineRow({ line, index, rows, sheet, editable, params, onChanged }: {
           </Select>
         ) : <span className="text-xs text-muted">{line.scope === "item" ? t("costing.lines.itemLine") : t("costing.lines.perItem")}</span>}
       </td>
-      <td className="p-1.5 text-center">
+      <td className="px-3 py-2 text-center">
         <Checkbox label={<span className="sr-only">{t("costing.lines.paidBefore")}</span>} checked={line.paid_before_receipt}
           disabled={!editable || line.kind === "purchase"} onChange={(v) => patch({ paid_before_receipt: v })} />
       </td>
-      <td className="p-1.5 text-end" title={tip}>{computed ? <Money amount={computed.total} currency={sheet.pricing_currency} /> : "—"}
+      <td className="px-3 py-2 text-end" title={tip}>{computed ? <Money amount={computed.total} currency={sheet.pricing_currency} /> : "—"}
         {computed?.vat && <div className="text-xs text-muted">{t("costing.lines.vatSeparate")}</div>}</td>
-      <td className="p-1.5">{editable && <button type="button" className="text-xs text-danger hover:underline" onClick={() => m.deleteLine.mutate(line.id)}>{t("delete.button")}</button>}</td>
+      <td className="px-3 py-2">{editable && <button type="button" className="text-xs text-danger hover:underline" onClick={() => m.deleteLine.mutate(line.id)}>{t("delete.button")}</button>}</td>
     </tr>
   );
 }
@@ -257,7 +257,7 @@ function LinesCard({ sheet, editable, onChanged }: { sheet: CostSheet; editable:
       <div className="overflow-x-auto">
         <table className="w-full min-w-max text-sm">
           <thead><tr className="border-b border-line bg-surface-2 text-xs text-muted">
-            {["kind", "label", "basis", "value", "allocation", "paidBefore", "computed", ""].map((h) => <th key={h} className="p-1.5 text-start whitespace-nowrap">{h ? t(`costing.lines.columns.${h}`) : ""}</th>)}
+            {["kind", "label", "basis", "value", "allocation", "paidBefore", "computed", ""].map((h) => <th key={h} className="px-3 py-2 text-start whitespace-nowrap">{h ? t(`costing.lines.columns.${h}`) : ""}</th>)}
           </tr></thead>
           <tbody>{sheet.lines.map((line, i) => <LineRow key={line.id} line={line} index={i} rows={sheet.lines.length} sheet={sheet} editable={editable} params={applicable} onChanged={onChanged} />)}</tbody>
         </table>
@@ -345,12 +345,12 @@ function PricingCard({ sheet, editable, onChanged }: { sheet: CostSheet; editabl
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-y border-line bg-surface-2 text-xs text-muted">
-              {["item", "quantity", "landed", "unitCost", "unitPrice", "total", "margin", "markup", "minUnit"].map((h) => <th key={h} className="p-1.5 text-start whitespace-nowrap">{t(`costing.pricing.columns.${h}`)}</th>)}
+              {["item", "quantity", "landed", "unitCost", "unitPrice", "total", "margin", "markup", "minUnit"].map((h) => <th key={h} className="px-3 py-2 text-start whitespace-nowrap">{t(`costing.pricing.columns.${h}`)}</th>)}
             </tr></thead>
             <tbody>
               {c.items.map((r) => (
                 <tr key={r.item_id} className={`border-b border-line align-top ${r.below_minimum ? "bg-danger-soft" : ""}`}>
-                  <td className="p-1.5">
+                  <td className="px-3 py-2">
                     <button type="button" className="text-start hover:underline" aria-expanded={open === r.item_id} onClick={() => setOpen(open === r.item_id ? null : r.item_id)}><Bdi>{r.name}</Bdi></button>
                     {r.manual && <Badge tone="warning">{t("costing.pricing.manual")}</Badge>}
                     {open === r.item_id && (
@@ -362,20 +362,20 @@ function PricingCard({ sheet, editable, onChanged }: { sheet: CostSheet; editabl
                       </ul>
                     )}
                   </td>
-                  <td className="p-1.5 tabular-nums">{r.quantity ? f.num(r.quantity) : <span className="text-danger">{t("costing.pricing.noQuantity")}</span>}</td>
-                  <td className="p-1.5"><Money amount={r.landed_cost} currency={c.currency} /></td>
-                  <td className="p-1.5"><Money amount={r.unit_cost} currency={c.currency} /></td>
-                  <td className="p-1.5">
+                  <td className="px-3 py-2 tabular-nums">{r.quantity ? f.num(r.quantity) : <span className="text-danger">{t("costing.pricing.noQuantity")}</span>}</td>
+                  <td className="px-3 py-2"><Money amount={r.landed_cost} currency={c.currency} /></td>
+                  <td className="px-3 py-2"><Money amount={r.unit_cost} currency={c.currency} /></td>
+                  <td className="px-3 py-2">
                     {editable ? (
                       <CommitInput dir="ltr" inputMode="decimal" className="w-32" aria-label={t("costing.pricing.columns.unitPrice")} value={sheet.price_overrides[r.item_id] ?? null}
                         placeholder={r.unit_price && !r.manual ? f.num(r.unit_price) : ""}
                         onCommit={(v) => m.patchSheet.mutate({ price_overrides: { ...sheet.price_overrides, [r.item_id]: v } })} />
                     ) : <Money amount={r.unit_price} currency={c.currency} />}
                   </td>
-                  <td className="p-1.5"><Money amount={r.total_price} currency={c.currency} /></td>
-                  <td className="p-1.5 tabular-nums" data-testid="item-margin">{r.margin_percent === null ? "—" : `${f.num(r.margin_percent)} %`}</td>
-                  <td className="p-1.5 tabular-nums" data-testid="item-markup">{r.markup_percent === null ? "—" : `${f.num(r.markup_percent)} %`}</td>
-                  <td className="p-1.5">
+                  <td className="px-3 py-2"><Money amount={r.total_price} currency={c.currency} /></td>
+                  <td className="px-3 py-2 tabular-nums" data-testid="item-margin">{r.margin_percent === null ? "—" : `${f.num(r.margin_percent)} %`}</td>
+                  <td className="px-3 py-2 tabular-nums" data-testid="item-markup">{r.markup_percent === null ? "—" : `${f.num(r.markup_percent)} %`}</td>
+                  <td className="px-3 py-2">
                     <CommitInput dir="ltr" inputMode="decimal" className="w-28" aria-label={t("costing.pricing.columns.minUnit")} value={sheet.item_min_prices[r.item_id] ?? null} disabled={!editable}
                       onCommit={(v) => m.patchSheet.mutate({ item_min_prices: { ...sheet.item_min_prices, [r.item_id]: v } })} />
                   </td>
@@ -506,7 +506,7 @@ function SheetEditor({ sheetId, onChanged, onQuote, onSelect }: { sheetId: strin
   const version = useMutation({ mutationFn: () => api<CostSheet>(`/api/cost-sheets/${sheetId}/new-version`, { method: "POST" }), onSuccess: (s) => { onChanged(); onSelect(s.id); } });
   const remove = useMutation({ mutationFn: () => api(`/api/cost-sheets/${sheetId}`, { method: "DELETE" }), onSuccess: () => { onChanged(); onSelect(null); } });
   if (sheet.isLoading) return <Loading />;
-  if (sheet.error || !sheet.data) return <ErrorNote error={sheet.error} />;
+  if (sheet.error || !sheet.data) return <ErrorState error={sheet.error} onRetry={() => void sheet.refetch()} />;
   const s = sheet.data;
   const editable = s.status === "draft";
   const general = s.warnings.filter((w) => !w.line_id);

@@ -130,7 +130,7 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
             {recipients.map((r) => (
               // a draft recipient was never sent the RFQ: an offer cannot answer it (422 recipient_not_sent)
               <button key={r.id} type="button" disabled={r.status === "draft"} title={r.status === "draft" ? t("sourcing.offer.draftRecipient") : undefined}
-                className="rounded-md border border-line px-2 py-1 text-sm hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-line px-2 py-1 text-sm hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => void api<Party>(`/api/parties/${r.party_id}`).then(setParty)}>
                 <Bdi>{r.party_name_fa || r.party_name_en}</Bdi> <StatusBadge group="recipient" status={r.status} />
               </button>
@@ -171,34 +171,34 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
             <SuggestedValue current={header.payment_terms} suggestion={sp.payment_terms} onAccept={(v) => setHeader((h) => ({ ...h, payment_terms: v }))}>
               <Input id="of-pay" dir="auto" value={header.payment_terms} onChange={(e) => setHeader({ ...header, payment_terms: e.target.value })} /></SuggestedValue></Field></div>
         </div>
-        <div className="shrink-0 overflow-x-auto rounded-md border border-line">
+        <div className="shrink-0 overflow-x-auto rounded-xl border border-line">
           <table className="w-full text-sm">
             <thead><tr className="bg-surface-2 text-xs text-muted">
-              <th className="p-1.5 text-start">{t("sourcing.item.name")}</th>
-              <th className="p-1.5 text-start">{t("sourcing.offer.available")}</th>
-              <th className="p-1.5 text-start">{t("sourcing.offer.unitPrice")}</th>
-              <th className="p-1.5 text-start">{t("sourcing.offer.per")}</th>
-              <th className="p-1.5 text-start">{t("sourcing.item.unit")}</th>
-              <th className="p-1.5 text-start">{t("sourcing.offer.moq")}</th>
-              <th className="p-1.5 text-start">{t("sourcing.offer.leadTimeShort")}</th>
-              <th className="p-1.5 text-start">{t("sourcing.offer.deviation")}</th>
-              <th className="p-1.5 text-end">{t("smart.lineTotal")}</th>
+              <th className="px-3 py-2 text-start">{t("sourcing.item.name")}</th>
+              <th className="px-3 py-2 text-start">{t("sourcing.offer.available")}</th>
+              <th className="px-3 py-2 text-start">{t("sourcing.offer.unitPrice")}</th>
+              <th className="px-3 py-2 text-start">{t("sourcing.offer.per")}</th>
+              <th className="px-3 py-2 text-start">{t("sourcing.item.unit")}</th>
+              <th className="px-3 py-2 text-start">{t("sourcing.offer.moq")}</th>
+              <th className="px-3 py-2 text-start">{t("sourcing.offer.leadTimeShort")}</th>
+              <th className="px-3 py-2 text-start">{t("sourcing.offer.deviation")}</th>
+              <th className="px-3 py-2 text-end">{t("smart.lineTotal")}</th>
             </tr></thead>
             <tbody>
               {rows.map((r, i) => (
                 <tr key={r.line_item_id} className={`border-t border-line ${r.include ? "" : "opacity-50"}`}>
-                  <td className="p-1.5"><Checkbox label={<Bdi>{r.name}</Bdi>} checked={r.include} onChange={(v) => setRow(i, { include: v })} /></td>
-                  <td className="p-1.5"><Checkbox label={<span className="sr-only">{t("sourcing.offer.available")}</span>} checked={r.available} disabled={!r.include} onChange={(v) => setRow(i, { available: v })} /></td>
+                  <td className="px-3 py-2"><Checkbox label={<Bdi>{r.name}</Bdi>} checked={r.include} onChange={(v) => setRow(i, { include: v })} /></td>
+                  <td className="px-3 py-2"><Checkbox label={<span className="sr-only">{t("sourcing.offer.available")}</span>} checked={r.available} disabled={!r.include} onChange={(v) => setRow(i, { available: v })} /></td>
                   {GRID_COLUMNS.slice(0, 2).map((c) => (
-                    <td key={c} className="p-1.5"><Input data-grid={`${i}-${c}`} dir="ltr" className={c === "unit_price" ? "w-28" : "w-20"} inputMode="decimal" aria-label={t(`sourcing.offer.grid.${c}`)}
+                    <td key={c} className="px-3 py-2"><Input data-grid={`${i}-${c}`} dir="ltr" className={c === "unit_price" ? "w-28" : "w-20"} inputMode="decimal" aria-label={t(`sourcing.offer.grid.${c}`)}
                       disabled={!r.include || !r.available} value={r[c]} onKeyDown={(e) => gridKey(e, i, c)} onChange={(e) => setRow(i, { [c]: e.target.value })} /></td>
                   ))}
-                  <td className="p-1.5"><UnitField code={r.unit_code} text={r.unit_text} onChange={(u) => setRow(i, u)} /></td>
+                  <td className="px-3 py-2"><UnitField code={r.unit_code} text={r.unit_text} onChange={(u) => setRow(i, u)} /></td>
                   {GRID_COLUMNS.slice(2).map((c) => (
-                    <td key={c} className="p-1.5"><Input data-grid={`${i}-${c}`} dir={c === "spec_deviation" ? "auto" : "ltr"} className={c === "spec_deviation" ? "w-40" : "w-20"} aria-label={t(`sourcing.offer.grid.${c}`)}
+                    <td key={c} className="px-3 py-2"><Input data-grid={`${i}-${c}`} dir={c === "spec_deviation" ? "auto" : "ltr"} className={c === "spec_deviation" ? "w-40" : "w-20"} aria-label={t(`sourcing.offer.grid.${c}`)}
                       disabled={!r.include} value={r[c]} onKeyDown={(e) => gridKey(e, i, c)} onChange={(e) => setRow(i, { [c]: e.target.value })} /></td>
                   ))}
-                  <td className="p-1.5 text-end whitespace-nowrap tabular-nums" data-testid="offer-line-total">{(() => {
+                  <td className="px-3 py-2 text-end whitespace-nowrap tabular-nums" data-testid="offer-line-total">{(() => {
                     const line = r.include && r.available ? offerLineTotal(r.quantity, r.unit_price, r.price_per_quantity) : null;
                     return line === null ? "—" : <bdi dir="ltr">{f.num(line)} {header.currency ?? ""}</bdi>;
                   })()}</td>
@@ -206,9 +206,9 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
               ))}
             </tbody>
             <tfoot><tr className="border-t border-line bg-surface-2 text-sm font-medium" data-testid="offer-total">
-              <td className="p-1.5" colSpan={8}>{t("smart.documentTotal")}
+              <td className="px-3 py-2" colSpan={8}>{t("smart.documentTotal")}
                 {totals.missing > 0 && <span className="ms-2 text-xs font-normal text-muted">{t("smart.withoutQuantity", { n: f.num(totals.missing) })}</span>}</td>
-              <td className="p-1.5 text-end whitespace-nowrap tabular-nums"><bdi dir="ltr">{f.num(totals.total)} {header.currency ?? ""}</bdi></td>
+              <td className="px-3 py-2 text-end whitespace-nowrap tabular-nums"><bdi dir="ltr">{f.num(totals.total)} {header.currency ?? ""}</bdi></td>
             </tr></tfoot>
           </table>
         </div>
@@ -218,7 +218,7 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
         <Field label={t("sourcing.offer.files")} htmlFor="of-files">
           <FileDrop id="of-files" onFiles={setFiles} hint={files.length ? files.map((x) => x.name).join("، ") : undefined} testId="of-files-drop" />
         </Field>
-        <fieldset className="rounded-md border border-line p-3">
+        <fieldset className="rounded-xl border border-line p-3">
           <legend className="px-1 text-sm font-semibold">{t("quicklog.nextAction")} *</legend>
           <Checkbox label={t("quicklog.noFollowup")} checked={noFollowup} onChange={setNoFollowup} />
           {noFollowup ? <Input className="mt-2" dir="auto" aria-label={t("quicklog.noFollowupReason")} value={reason} onChange={(e) => setReason(e.target.value)} /> : (

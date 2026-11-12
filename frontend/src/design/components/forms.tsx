@@ -75,7 +75,7 @@ export function Checkbox({ label, checked, onChange, disabled, hint, id: given }
   const auto = useId();
   const id = given ?? auto;
   return (
-    <label htmlFor={id} className={`inline-flex min-h-10 items-center gap-2.5 text-sm ${disabled ? "cursor-not-allowed text-muted" : "cursor-pointer text-fg"}`}>
+    <label htmlFor={id} className={`relative inline-flex min-h-10 items-center gap-2.5 text-sm ${disabled ? "cursor-not-allowed text-muted" : "cursor-pointer text-fg"}`}>
       <input id={id} type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)}
         className="size-4.5 shrink-0 cursor-pointer accent-accent-bright disabled:cursor-not-allowed" />
       <span className="flex flex-col">{label}{hint && <span className="text-xs text-muted">{hint}</span>}</span>

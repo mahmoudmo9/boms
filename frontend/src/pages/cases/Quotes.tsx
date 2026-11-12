@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea, useToast } from "../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, ErrorState, Field, Input, Loading, Modal, Select, Textarea, useToast } from "../../design/components";
 import { api, ApiError } from "../../lib/api";
 import { gateChecklist, priceWarning } from "../../lib/costing";
 import { fromDateString, toDateString } from "../../lib/followups";
@@ -120,14 +120,14 @@ function OutcomeRow({ item, value, reasons, currency, onChange }: {
   const outcome = (value.outcome as string | null) ?? "";
   return (
     <tr className="border-b border-line align-top">
-      <td className="p-1.5"><Bdi>{item.description_override || item.name}</Bdi></td>
-      <td className="p-1.5">
+      <td className="px-3 py-2"><Bdi>{item.description_override || item.name}</Bdi></td>
+      <td className="px-3 py-2">
         <Select className="w-36 shrink-0" aria-label={t("quotes.outcome")} value={outcome} onChange={(e) => onChange({ ...value, outcome: e.target.value || null })}>
           <option value="">—</option>
           {OUTCOMES.map((o) => <option key={o} value={o}>{t(`quotes.outcomes.${o}`)}</option>)}
         </Select>
       </td>
-      <td className="p-1.5">
+      <td className="px-3 py-2">
         <Select className="w-48 shrink-0" aria-label={t("quotes.reason")} value={(value.outcome_reason as string | null) ?? ""} onChange={(e) => onChange({ ...value, outcome_reason: e.target.value || null })}>
           <option value="">{outcome === "rejected" ? t("quotes.reasonRequired") : "—"}</option>
           {reasons.map((r) => <option key={r.code} value={r.code}>{f.lang === "fa" ? r.label_fa : r.label_en}</option>)}
@@ -135,7 +135,7 @@ function OutcomeRow({ item, value, reasons, currency, onChange }: {
         <Input dir="auto" className="mt-1" aria-label={t("quotes.outcomeNote")} placeholder={t("quotes.outcomeNote")} value={(value.outcome_note as string | null) ?? ""}
           onChange={(e) => onChange({ ...value, outcome_note: e.target.value || null })} />
       </td>
-      <td className="p-1.5">
+      <td className="px-3 py-2">
         <div className="flex gap-1">
           <Input dir="ltr" inputMode="decimal" className="w-28" aria-label={t("quotes.competitorPrice")} value={(value.competitor_price as string | null) ?? ""}
             onChange={(e) => onChange({ ...value, competitor_price: e.target.value || null, competitor_currency: (value.competitor_currency as string | null) ?? currency })} />
@@ -163,7 +163,7 @@ function OutcomesDialog({ quote, onClose, onDone }: { quote: Quote; onClose: () 
       <div className="max-h-[60vh] overflow-auto">
         <table className="w-full min-w-max text-sm">
           <thead><tr className="border-b border-line text-xs text-muted">
-            {["item", "outcome", "reason", "competitor"].map((h) => <th key={h} className="p-1.5 text-start">{t(`quotes.outcomeColumns.${h}`)}</th>)}
+            {["item", "outcome", "reason", "competitor"].map((h) => <th key={h} className="px-3 py-2 text-start">{t(`quotes.outcomeColumns.${h}`)}</th>)}
           </tr></thead>
           <tbody>{quote.items.map((i) => <OutcomeRow key={i.id} item={i} value={values[i.id]} reasons={reasons.data ?? []} currency={quote.currency} onChange={(v) => setValues({ ...values, [i.id]: v })} />)}</tbody>
         </table>
@@ -214,7 +214,7 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
     onSuccess: (out) => { refresh(); toast(t("quotes.outputReady", { name: out.filename }), "success"); window.location.assign(`/api/documents/${out.document_id}/download`); },
   });
   if (quote.isLoading) return <Loading />;
-  if (quote.error || !quote.data) return <ErrorNote error={quote.error} />;
+  if (quote.error || !quote.data) return <ErrorState error={quote.error} onRetry={() => void quote.refetch()} />;
   const q = quote.data;
   const draft = q.status === "draft";
   const save = (key: string) => (v: string | null) => patch.mutate({ [key]: v });
@@ -234,7 +234,7 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
           {draft && <Button variant="ghost" onClick={() => remove.mutate()}>{t("delete.button")}</Button>}
         </>}>
         <div className="mb-3 flex flex-wrap gap-2">
-          <a className="inline-flex h-8 items-center rounded-md border border-line-strong px-3 text-sm hover:bg-surface-2" href={`/api/quotes/${q.id}/print`} target="_blank" rel="noreferrer">{t("quotes.printView")}</a>
+          <a className="inline-flex h-8 items-center rounded-xl border border-line-strong px-3 text-sm hover:bg-surface-2" href={`/api/quotes/${q.id}/print`} target="_blank" rel="noreferrer">{t("quotes.printView")}</a>
           <Button icon="download" busy={output.isPending && output.variables === "pdf"} onClick={() => output.mutate("pdf")}>PDF</Button>
           <Button icon="download" busy={output.isPending && output.variables === "docx"} onClick={() => output.mutate("docx")}>Word</Button>
           {draft && <span className="self-center text-xs text-warning">{t("quotes.draftWatermark")}</span>}
@@ -273,24 +273,24 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b border-line bg-surface-2 text-xs text-muted">
-              {["description", "quantity", "unitPrice", "total", "leadTime", "note", "outcome"].map((h) => <th key={h} className="p-1.5 text-start whitespace-nowrap">{t(`quotes.columns.${h}`)}</th>)}
+              {["description", "quantity", "unitPrice", "total", "leadTime", "note", "outcome"].map((h) => <th key={h} className="px-3 py-2 text-start whitespace-nowrap">{t(`quotes.columns.${h}`)}</th>)}
             </tr></thead>
             <tbody>
               {q.items.map((i) => (
                 <tr key={i.id} className="border-b border-line align-top">
-                  <td className="p-1.5"><BlurInput dir="auto" className="min-w-48" aria-label={t("quotes.columns.description")} value={i.description_override} placeholder={i.name} disabled={!draft}
+                  <td className="px-3 py-2"><BlurInput dir="auto" className="min-w-48" aria-label={t("quotes.columns.description")} value={i.description_override} placeholder={i.name} disabled={!draft}
                     onSave={(v) => patchItem.mutate({ id: i.id, body: { description_override: v } })} /></td>
-                  <td className="p-1.5 whitespace-nowrap"><Bdi ltr className="tabular-nums">{f.num(i.quantity)} {unitLabel(i.unit_code, i.unit_text)}</Bdi></td>
-                  <td className="p-1.5">
+                  <td className="px-3 py-2 whitespace-nowrap"><Bdi ltr className="tabular-nums">{f.num(i.quantity)} {unitLabel(i.unit_code, i.unit_text)}</Bdi></td>
+                  <td className="px-3 py-2">
                     {draft ? <PriceCell item={i} onSave={(v) => patchItem.mutate({ id: i.id, body: { unit_price: v } })} />
                       : <Money amount={i.unit_price} currency={q.currency} />}
                     {i.price_manual && <Badge tone="warning">{t("costing.pricing.manual")}</Badge>}
                   </td>
-                  <td className="p-1.5"><Money amount={i.total} currency={q.currency} /></td>
-                  <td className="p-1.5"><BlurInput dir="ltr" inputMode="numeric" className="w-20" aria-label={t("quotes.columns.leadTime")} value={i.lead_time_days === null ? null : String(i.lead_time_days)} disabled={!draft}
+                  <td className="px-3 py-2"><Money amount={i.total} currency={q.currency} /></td>
+                  <td className="px-3 py-2"><BlurInput dir="ltr" inputMode="numeric" className="w-20" aria-label={t("quotes.columns.leadTime")} value={i.lead_time_days === null ? null : String(i.lead_time_days)} disabled={!draft}
                     onSave={(v) => patchItem.mutate({ id: i.id, body: { lead_time_days: v === null ? null : Number(v) } })} /></td>
-                  <td className="p-1.5"><BlurInput dir="auto" aria-label={t("quotes.columns.note")} value={i.note} disabled={!draft} onSave={(v) => patchItem.mutate({ id: i.id, body: { note: v } })} /></td>
-                  <td className="p-1.5">{i.outcome ? <span className="flex flex-col"><StatusBadge group="outcome" status={i.outcome} />{i.outcome_reason && <span className="text-xs text-muted">{t(`quotes.reasons.${i.outcome_reason}`, { defaultValue: i.outcome_reason })}</span>}</span> : "—"}</td>
+                  <td className="px-3 py-2"><BlurInput dir="auto" aria-label={t("quotes.columns.note")} value={i.note} disabled={!draft} onSave={(v) => patchItem.mutate({ id: i.id, body: { note: v } })} /></td>
+                  <td className="px-3 py-2">{i.outcome ? <span className="flex flex-col"><StatusBadge group="outcome" status={i.outcome} />{i.outcome_reason && <span className="text-xs text-muted">{t(`quotes.reasons.${i.outcome_reason}`, { defaultValue: i.outcome_reason })}</span>}</span> : "—"}</td>
                 </tr>
               ))}
             </tbody>

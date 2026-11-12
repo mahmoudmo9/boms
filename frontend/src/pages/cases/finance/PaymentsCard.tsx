@@ -32,7 +32,7 @@ function AllocateDialog({ caseId, record, onClose }: { caseId: string; record: P
         <p className="text-muted">{t("finance.payments.unallocatedOf", { amount: f.num(record.unallocated), cur: record.amount_currency })}</p>
         {rows.length === 0 && <EmptyState>{t("finance.payments.nothingOpen")}</EmptyState>}
         {rows.map((s, i) => (
-          <div key={i} className="flex flex-wrap items-end gap-2 rounded-md border border-line px-3 py-2">
+          <div key={i} className="flex flex-wrap items-end gap-2 rounded-xl border border-line px-3 py-2">
             <span className="min-w-40" dir="auto">{s.label}</span>
             <span className="text-xs text-muted">{t("finance.balance")}: <Money amount={s.balance} currency={s.currency} />{s.due_date && ` · ${f.day(s.due_date)}`}</span>
             <Field label={`${t("finance.amount")} (${record.amount_currency})`} htmlFor={`al-${i}`}>

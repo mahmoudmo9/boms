@@ -7,11 +7,11 @@ import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import type { SettingsResponse } from "../../lib/types";
 
-function Row({ label, hint, children }: { label: ReactNode; hint?: ReactNode; children: ReactNode }) {
+function Row({ label, hint, children, htmlFor }: { label: ReactNode; hint?: ReactNode; children: ReactNode; htmlFor?: string }) {
   return (
     <div className="grid gap-2 border-b border-line py-3 last:border-b-0 sm:grid-cols-[14rem_1fr] sm:items-center">
       <div>
-        <div className="text-sm font-medium">{label}</div>
+        {htmlFor ? <label htmlFor={htmlFor} className="text-sm font-medium">{label}</label> : <div className="text-sm font-medium">{label}</div>}
         {hint && <div className="text-xs text-muted">{hint}</div>}
       </div>
       <div className="flex flex-wrap items-center gap-2">{children}</div>
@@ -64,11 +64,11 @@ function ProfileSettings() {
   return (
     <Card title={t("settings.profile")}>
       <form onSubmit={(e: FormEvent) => { e.preventDefault(); save.mutate(); }}>
-        <Row label={t("auth.username")}>
-          <Input dir="ltr" className="max-w-xs" value={username} required maxLength={64} onChange={(e) => setUsername(e.target.value)} />
+        <Row htmlFor="st-username" label={t("auth.username")}>
+          <Input id="st-username" dir="ltr" className="max-w-xs" value={username} required maxLength={64} onChange={(e) => setUsername(e.target.value)} />
         </Row>
-        <Row label={t("settings.idleLock")} hint={t("settings.idleLockHint")}>
-          <Input dir="ltr" type="number" min={1} max={1440} className="w-24" value={idle} onChange={(e) => setIdle(e.target.value)} />
+        <Row htmlFor="st-idleLock" label={t("settings.idleLock")} hint={t("settings.idleLockHint")}>
+          <Input id="st-idleLock" dir="ltr" type="number" min={1} max={1440} className="w-24" value={idle} onChange={(e) => setIdle(e.target.value)} />
           <span className="text-sm text-muted">{t("settings.minutes")}</span>
         </Row>
         <ErrorNote error={save.error} />
@@ -145,26 +145,26 @@ function SystemSettings() {
         <Row label={t("settings.dataFolder")} hint={t("settings.dataFolderHint")}>
           <Bdi ltr className="rounded bg-surface-2 px-2 py-1 font-mono text-xs">{settings.data.data_dir}</Bdi>
         </Row>
-        <Row label={t("settings.backupTime")} hint={t("settings.backupTimeHint")}>
-          <Input dir="ltr" type="time" className="w-32" required value={values["backup.time"]} onChange={(e) => set("backup.time", e.target.value)} />
+        <Row htmlFor="st-backupTime" label={t("settings.backupTime")} hint={t("settings.backupTimeHint")}>
+          <Input id="st-backupTime" dir="ltr" type="time" className="w-32" required value={values["backup.time"]} onChange={(e) => set("backup.time", e.target.value)} />
         </Row>
-        <Row label={t("settings.secondaryPath")} hint={t("settings.secondaryPathHint")}>
-          <Input dir="ltr" className="max-w-md" placeholder="E:\BOMS-Backup" value={values["backup.secondary_path"] ?? ""} onChange={(e) => set("backup.secondary_path", e.target.value || null)} />
+        <Row htmlFor="st-secondaryPath" label={t("settings.secondaryPath")} hint={t("settings.secondaryPathHint")}>
+          <Input id="st-secondaryPath" dir="ltr" className="max-w-md" placeholder="E:\BOMS-Backup" value={values["backup.secondary_path"] ?? ""} onChange={(e) => set("backup.secondary_path", e.target.value || null)} />
         </Row>
         <Row label={t("settings.archive")} hint={t("settings.archiveHint")}>
           <Checkbox label={t("settings.archiveEnabled")} checked={values["backup.archive_enabled"]} onChange={(v) => set("backup.archive_enabled", v)} />
         </Row>
         {values["backup.archive_enabled"] && (
-          <Row label={t("settings.archivePath")} hint={t("settings.archivePathHint")}>
-            <Input dir="ltr" className="max-w-md" value={values["backup.archive_path"] ?? ""} onChange={(e) => set("backup.archive_path", e.target.value || null)} />
+          <Row htmlFor="st-archivePath" label={t("settings.archivePath")} hint={t("settings.archivePathHint")}>
+            <Input id="st-archivePath" dir="ltr" className="max-w-md" value={values["backup.archive_path"] ?? ""} onChange={(e) => set("backup.archive_path", e.target.value || null)} />
           </Row>
         )}
-        <Row label={t("settings.maxUpload")}>
-          <Input dir="ltr" type="number" min={1} max={2048} className="w-24" value={values["upload.max_mb"]} onChange={(e) => set("upload.max_mb", Number(e.target.value))} />
+        <Row htmlFor="st-maxUpload" label={t("settings.maxUpload")}>
+          <Input id="st-maxUpload" dir="ltr" type="number" min={1} max={2048} className="w-24" value={values["upload.max_mb"]} onChange={(e) => set("upload.max_mb", Number(e.target.value))} />
           <span className="text-sm text-muted">MB</span>
         </Row>
-        <Row label={t("settings.staleLeadDays")} hint={t("settings.staleLeadDaysHint")}>
-          <Input dir="ltr" type="number" min={1} max={365} className="w-24" value={values["parties.stale_lead_days"]} onChange={(e) => set("parties.stale_lead_days", Number(e.target.value))} />
+        <Row htmlFor="st-staleLeadDays" label={t("settings.staleLeadDays")} hint={t("settings.staleLeadDaysHint")}>
+          <Input id="st-staleLeadDays" dir="ltr" type="number" min={1} max={365} className="w-24" value={values["parties.stale_lead_days"]} onChange={(e) => set("parties.stale_lead_days", Number(e.target.value))} />
           <span className="text-sm text-muted">{t("settings.days")}</span>
         </Row>
         <ErrorNote error={save.error} />
@@ -179,7 +179,7 @@ function SystemSettings() {
           >
             {settings.data.can_store_secrets ? (
               <form className="flex gap-2" onSubmit={(e: FormEvent) => { e.preventDefault(); savePassword.mutate(); }}>
-                <Input type="password" dir="ltr" minLength={12} required className="w-56" value={archivePassword} onChange={(e) => setArchivePassword(e.target.value)} />
+                <Input type="password" aria-label={t("settings.archivePassword")} dir="ltr" minLength={12} required className="w-56" value={archivePassword} onChange={(e) => setArchivePassword(e.target.value)} />
                 <Button type="submit" busy={savePassword.isPending}>{t("settings.storePassword")}</Button>
               </form>
             ) : (
@@ -218,12 +218,12 @@ function CompanySettings() {
   return (
     <Card title={t("settings.company")}>
       <form onSubmit={(e: FormEvent) => { e.preventDefault(); save.mutate(); }}>
-        <Row label={t("settings.companyName")}>
-          <Input dir="auto" className="max-w-md" maxLength={300} value={name} onChange={(e) => setName(e.target.value)} />
+        <Row htmlFor="st-companyName" label={t("settings.companyName")}>
+          <Input id="st-companyName" dir="auto" className="max-w-md" maxLength={300} value={name} onChange={(e) => setName(e.target.value)} />
         </Row>
         {(["fa", "en"] as const).map((lang) => (
           <Row key={lang} label={t("settings.signature", { language: t(`common.languageNames.${lang}`) })} hint={t("settings.signatureHint")}>
-            <Textarea dir={lang === "fa" ? "rtl" : "ltr"} rows={4} className="max-w-md" value={signature[lang] ?? ""}
+            <Textarea aria-label={t("settings.signature", { language: t(`common.languageNames.${lang}`) })} dir={lang === "fa" ? "rtl" : "ltr"} rows={4} className="max-w-md" value={signature[lang] ?? ""}
               onChange={(e) => setSignature({ ...signature, [lang]: e.target.value })} />
           </Row>
         ))}

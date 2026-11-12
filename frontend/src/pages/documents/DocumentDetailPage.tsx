@@ -4,7 +4,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 
-import { Badge, Bdi, Button, ButtonLink, Card, ErrorNote, Field, Icon, IconButton, Input, Loading, Select, Textarea, useToast } from "../../design/components";
+import { Badge, Bdi, Button, ButtonLink, Card, EmptyState, ErrorNote, ErrorState, Field, Icon, IconButton, Input, Loading, Select, Textarea, useToast } from "../../design/components";
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { DocumentDetail, EventItem } from "../../lib/types";
@@ -74,7 +74,7 @@ export function DocumentDetailPage() {
   });
 
   if (doc.isLoading) return <Loading />;
-  if (doc.error || !doc.data) return <ErrorNote error={doc.error} />;
+  if (doc.error || !doc.data) return <ErrorState error={doc.error} onRetry={() => void doc.refetch()} />;
   const d = doc.data;
 
   return (
@@ -141,7 +141,7 @@ export function DocumentDetailPage() {
 
           <Card title={t("documents.links")}>
             {d.links.length === 0 ? (
-              <p className="text-sm text-muted">{t("documents.noLinks")}</p>
+              <EmptyState compact>{t("documents.noLinks")}</EmptyState>
             ) : (
               <ul className="mb-3 flex flex-col gap-1">
                 {d.links.map((l) => (

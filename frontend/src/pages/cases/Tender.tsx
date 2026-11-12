@@ -5,7 +5,7 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Bdi, Button, Card, Checkbox, DatedTimeline, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, ProgressRing, Select, Textarea } from "../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DatedTimeline, DateInput, EmptyState, ErrorNote, ErrorState, Field, Input, Loading, Modal, ProgressRing, Select, Textarea } from "../../design/components";
 import { TimeLeftBadge, useNow, useTimeLeftText } from "../../components/TimeLeft";
 import { api, ApiError } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
@@ -66,7 +66,7 @@ export function TenderTab({ caseData }: { caseData: CaseDetail }) {
   const tender = useTender(caseData.id);
   const m = useTenderMutation(caseData.id);
   if (tender.isLoading) return <Loading />;
-  if (tender.error) return <ErrorNote error={tender.error} />;
+  if (tender.error) return <ErrorState error={tender.error} onRetry={() => void tender.refetch()} />;
   if (!tender.data) {
     return (
       <Card title={t("tenders.title")}>
@@ -129,10 +129,10 @@ function TenderHero({ d }: { d: TenderDetail }) {
               <span className="text-xs text-muted">{t("tenders.hero.window")}</span>
             </div>
           </>
-        ) : <p className="text-sm text-muted">{t("tenders.dates.none")}</p>}
+        ) : <EmptyState compact>{t("tenders.dates.none")}</EmptyState>}
       </article>
       <Card className="lg:col-span-8" title={t("tenders.dates.title")} subtitle={t("tenders.hero.count", { n: f.num(dates.length) })}>
-        {dates.length === 0 ? <p className="text-sm text-muted">{t("tenders.dates.none")}</p> : (
+        {dates.length === 0 ? <EmptyState compact>{t("tenders.dates.none")}</EmptyState> : (
           <DatedTimeline label={t("tenders.dates.title")} items={dates.map((x) => ({ key: x.id, title: label(x), when: f.date(x.at, true),
             state: x.id === nextId ? "current" : new Date(x.at).getTime() < now.getTime() ? "done" : "upcoming" }))} />
         )}
@@ -351,7 +351,7 @@ function AddendumDialog({ d, onClose, run }: { d: TenderDetail; onClose: () => v
           <Field label={t("tenders.addenda.answer")} htmlFor="ad-a"><Textarea id="ad-a" dir="auto" rows={2} value={String(form.answer)} onChange={(e) => setForm({ ...form, answer: e.target.value })} /></Field>
         </>}
         {(form.kind === "extension" || form.kind === "change") && d.dates.length > 0 && (
-          <fieldset className="flex flex-col gap-2 rounded-md border border-line p-2"><legend className="px-1 text-xs text-muted">{t("tenders.addenda.dateChanges")}</legend>
+          <fieldset className="flex flex-col gap-2 rounded-xl border border-line p-2"><legend className="px-1 text-xs text-muted">{t("tenders.addenda.dateChanges")}</legend>
             {d.dates.map((x) => (
               <div key={x.id} className="flex flex-wrap items-end gap-2 text-sm">
                 <span className="min-w-36">{x.kind === "other" ? x.label : t(`tenders.dateKinds.${x.kind}`)}</span>
@@ -618,7 +618,7 @@ function ProposalCard({ d, caseId }: { d: TenderDetail; caseId: string }) {
   return (
     <Card title={t("tenders.proposal.title")} actions={<Button busy={create.isPending} onClick={() => create.mutate()} data-testid="new-proposal">{p ? t("tenders.proposal.newVersion") : t("tenders.proposal.create")}</Button>}>
       <ErrorNote error={create.error} />
-      {p ? <ProposalView p={p} onChanged={refresh} /> : <p className="text-sm text-muted">{t("tenders.proposal.none")}</p>}
+      {p ? <ProposalView p={p} onChanged={refresh} /> : <EmptyState compact>{t("tenders.proposal.none")}</EmptyState>}
       {d.proposals.length > 1 && <p className="mt-2 text-xs text-muted">{t("tenders.proposal.versions", { n: f.num(d.proposals.length) })}</p>}
     </Card>
   );
@@ -653,7 +653,7 @@ function ProposalView({ p, onChanged }: { p: ProposalRow; onChanged: () => void 
         <dt className="text-muted">{t("tenders.proposal.inWords")}</dt><dd dir="rtl">{p.words}</dd>
       </dl>
       <span className="flex flex-wrap gap-1.5">
-        <a className="inline-flex h-8 items-center rounded-md border border-line-strong px-3 text-sm hover:bg-surface-2" href={`/api/tender-proposals/${p.id}/print`} target="_blank" rel="noreferrer">{t("quotes.printView")}</a>
+        <a className="inline-flex h-8 items-center rounded-xl border border-line-strong px-3 text-sm hover:bg-surface-2" href={`/api/tender-proposals/${p.id}/print`} target="_blank" rel="noreferrer">{t("quotes.printView")}</a>
         <Button icon="download" busy={output.isPending && output.variables === "pdf"} onClick={() => output.mutate("pdf")}>PDF</Button>
         <Button icon="download" busy={output.isPending && output.variables === "docx"} onClick={() => output.mutate("docx")}>Word</Button>
         {draft && <Button variant="primary" busy={approve.isPending} onClick={() => approve.mutate(false)} data-testid="approve-proposal">{t("tenders.proposal.approve")}</Button>}

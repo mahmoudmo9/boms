@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Stat, Textarea } from "../../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, ErrorState, Field, Input, Loading, Modal, Select, Stat, Textarea } from "../../../design/components";
 import { cashRows, itemProgress, SO_TONE } from "../../../lib/execution";
 import { toDateString } from "../../../lib/followups";
 import { useFormat } from "../../../lib/prefs";
@@ -19,7 +19,7 @@ export function CashCard({ cash }: { cash: CashPosition }) {
     <Card title={t("execution.cash.title")}>
       <div className="flex flex-col gap-3" data-testid="cash-position">
         {cash.plan && <p className="text-xs text-muted">{t("execution.cash.plan")}: <Money amount={cash.plan.exposure} currency={cash.plan.currency} /></p>}
-        {rows.length === 0 ? <p className="text-sm text-muted">{t("execution.cash.none")}</p> : rows.map((r) => (
+        {rows.length === 0 ? <EmptyState compact>{t("execution.cash.none")}</EmptyState> : rows.map((r) => (
           <div key={r.currency} className="grid gap-2 sm:grid-cols-3" data-currency={r.currency}>
             <Stat label={t("execution.cash.received")} value={<Money amount={r.received} currency={r.currency} />} />
             <Stat label={t("execution.cash.paid")} value={<Money amount={r.paid} currency={r.currency} />} />
@@ -179,18 +179,18 @@ function OrderCard({ so, caseId }: { so: SalesOrderRow; caseId: string }) {
         {so.no_document_reason && <p className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning">{t("execution.order.confirmedWithout")}: <span dir="auto">{so.no_document_reason}</span></p>}
         <OrderHead key={so.updated_at ?? so.status} so={so} caseId={caseId} />
         <div className="overflow-x-auto"><table className="w-full text-sm" data-testid="so-items">
-          <thead><tr className="border-b border-line text-xs text-muted">{["description", "quantity", "unitPrice", "total", "delivered"].map((h) => <th key={h} className="p-1.5 text-start whitespace-nowrap">{t(`execution.order.${h}`)}</th>)}</tr></thead>
+          <thead><tr className="border-b border-line text-xs text-muted">{["description", "quantity", "unitPrice", "total", "delivered"].map((h) => <th key={h} className="px-3 py-2 text-start whitespace-nowrap">{t(`execution.order.${h}`)}</th>)}</tr></thead>
           <tbody>{so.items.map((i) => {
             const p = itemProgress(i.quantity, i.delivered);
             return (
               <tr key={i.id} className="border-b border-line">
-                <td className="p-1.5" dir="auto">{i.description}</td>
-                <td className="p-1.5 tabular-nums">{draft ? <Input dir="ltr" className="w-24" aria-label={`${t("execution.order.quantity")} ${i.description}`} defaultValue={Number(i.quantity)}
+                <td className="px-3 py-2" dir="auto">{i.description}</td>
+                <td className="px-3 py-2 tabular-nums">{draft ? <Input dir="ltr" className="w-24" aria-label={`${t("execution.order.quantity")} ${i.description}`} defaultValue={Number(i.quantity)}
                   onBlur={(e) => Number(e.target.value) !== Number(i.quantity) && run(`/api/sales-order-items/${i.id}`, { quantity: e.target.value }, "PATCH")} /> : <>{f.num(i.quantity)} {i.unit ?? ""}</>}</td>
-                <td className="p-1.5">{draft ? <Input dir="ltr" className="w-32" aria-label={`${t("execution.order.unitPrice")} ${i.description}`} defaultValue={Number(i.unit_price)}
+                <td className="px-3 py-2">{draft ? <Input dir="ltr" className="w-32" aria-label={`${t("execution.order.unitPrice")} ${i.description}`} defaultValue={Number(i.unit_price)}
                   onBlur={(e) => Number(e.target.value) !== Number(i.unit_price) && run(`/api/sales-order-items/${i.id}`, { unit_price: e.target.value }, "PATCH")} /> : <Money amount={i.unit_price} currency={so.currency} />}</td>
-                <td className="p-1.5"><Money amount={i.total} currency={so.currency} /></td>
-                <td className="p-1.5 text-xs whitespace-nowrap"><span className={p.complete ? "text-success" : ""}>{t("execution.delivery.itemProgress", { done: f.num(p.done), total: f.num(p.total) })}</span></td>
+                <td className="px-3 py-2"><Money amount={i.total} currency={so.currency} /></td>
+                <td className="px-3 py-2 text-xs whitespace-nowrap"><span className={p.complete ? "text-success" : ""}>{t("execution.delivery.itemProgress", { done: f.num(p.done), total: f.num(p.total) })}</span></td>
               </tr>);
           })}</tbody></table></div>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
@@ -220,7 +220,7 @@ export function OrderTab({ caseData }: { caseData: CaseDetail }) {
   const { t } = useTranslation();
   const ex = useExecution(caseData.id);
   if (ex.isLoading) return <Loading />;
-  if (ex.error || !ex.data) return <ErrorNote error={ex.error} />;
+  if (ex.error || !ex.data) return <ErrorState error={ex.error} onRetry={() => void ex.refetch()} />;
   const d = ex.data;
   const orders = d.sales_orders.filter((o) => o.status !== "cancelled");
   return (

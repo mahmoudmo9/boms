@@ -49,7 +49,7 @@ function OrganizationPicker({ filters, onChange }: { filters: ListingFilters; on
   return (
     <>
       <button type="button" data-testid="org-picker" onClick={() => setOpen(true)}
-        className="h-9 max-w-40 shrink-0 truncate rounded-md border border-line-strong bg-surface px-3 text-start text-sm xl:max-w-64" title={label}>{label}</button>
+        className="h-9 max-w-40 shrink-0 truncate rounded-xl border border-line-strong bg-surface px-3 text-start text-sm xl:max-w-64" title={label}>{label}</button>
       {open && (
         <Modal open title={t("listings.organization")} onClose={() => setOpen(false)}
           footer={<><Button variant="ghost" onClick={() => onChange([])}>{t("common.clear")}</Button><Button onClick={() => setOpen(false)}>{t("common.close")}</Button></>}>
@@ -436,7 +436,7 @@ function Row({ row, n, columns, active, checked, comfortable, job, jobKind, onCh
   return (
     <tr className={`border-b border-line transition-colors duration-150 ${comfortable ? "align-top" : "h-11 align-middle"} ${active ? "bg-accent-soft " : "hover:bg-hover"}`} data-listing={row.id}
       aria-selected={active}>
-      <td className="px-3 py-1"><Checkbox label={<span className="sr-only">{row.external_no}</span>} checked={checked} onChange={() => onCheck()} /></td>
+      <td className="px-3 py-0"><Checkbox label={<span className="sr-only">{row.external_no}</span>} checked={checked} onChange={() => onCheck()} /></td>
       {columns.map((c) => <td key={c} className={`px-3 ${comfortable ? "py-2.5" : "py-1 whitespace-nowrap"}`}>{cell(c)}</td>)}
     </tr>
   );

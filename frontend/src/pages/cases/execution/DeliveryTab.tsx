@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Badge, Bdi, Button, Card, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../../design/components";
+import { Badge, Bdi, Button, Card, DateInput, EmptyState, ErrorNote, ErrorState, Field, Input, Loading, Modal, Select, Textarea } from "../../../design/components";
 import { CLAIM_TONE, itemProgress } from "../../../lib/execution";
 import { toDateString } from "../../../lib/followups";
 import { useFormat } from "../../../lib/prefs";
@@ -163,7 +163,7 @@ export function DeliveryTab({ caseData }: { caseData: CaseDetail }) {
   const m = useRun(caseData.id);
   const [adding, setAdding] = useState(false);
   if (ex.isLoading) return <Loading />;
-  if (ex.error || !ex.data) return <ErrorNote error={ex.error} />;
+  if (ex.error || !ex.data) return <ErrorState error={ex.error} onRetry={() => void ex.refetch()} />;
   const d = ex.data;
   const run: Run = (path, body, method = "POST") => m.mutateAsync({ path, body, method });
   const orders = d.sales_orders.filter((o) => ["confirmed", "in_progress", "delivered", "closed"].includes(o.status));

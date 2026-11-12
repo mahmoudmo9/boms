@@ -133,14 +133,14 @@ function TopBar({ onPalette, onMenu, onShortcuts }: { onPalette: () => void; onM
           items={(["light", "dark", "system"] as Theme[]).map((theme) => ({ key: theme, label: t(`settings.themes.${theme}`), icon: THEME_ICON[theme], checked: user.theme === theme,
             onSelect: () => void updatePrefs({ theme }) }))} />
         <button type="button" onClick={() => void updatePrefs({ language: user.language === "fa" ? "en" : "fa" })} data-testid="language"
-          lang={user.language === "fa" ? "en" : "fa"} aria-label={t("shell.switchLanguage", { language: t(`common.languageNames.${user.language === "fa" ? "en" : "fa"}`) })}
+          lang={user.language === "fa" ? "en" : "fa"} aria-label={`${user.language === "fa" ? t("common.languageShort.en") : t("common.languageShort.fa")} — ${t("shell.switchLanguage", { language: t(`common.languageNames.${user.language === "fa" ? "en" : "fa"}`) })}`}
           className="inline-flex size-10 cursor-pointer items-center justify-center rounded-md text-sm font-semibold text-muted transition-colors duration-150 hover:bg-hover hover:text-fg">
           {user.language === "fa" ? t("common.languageShort.en") : t("common.languageShort.fa")}
         </button>
         <IconButton icon="keyboard" label={t("shortcuts.title")} onClick={onShortcuts} className="max-md:hidden" />
         <IconButton icon="lock" label={t("auth.lockNow")} onClick={() => void lock()} />
         <Menu label={t("shell.user")} testId="user" trigger={(p) => (
-          <button type="button" {...p} data-testid="user" aria-label={`${t("shell.user")}: ${user.username}`}
+          <button type="button" {...p} data-testid="user" aria-label={`${user.username} — ${t("shell.user")}`}
             className="ms-1 inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg px-1.5 text-sm text-fg-2 transition-colors duration-150 hover:bg-hover">
             <span aria-hidden className="flex size-8 items-center justify-center rounded-2xl border border-accent-line bg-accent-soft text-xs font-semibold text-accent">{user.username.slice(0, 1).toUpperCase()}</span>
             <bdi className="max-sm:hidden">{user.username}</bdi>

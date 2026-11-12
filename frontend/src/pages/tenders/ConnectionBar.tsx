@@ -56,7 +56,7 @@ export function ConnectionBar({ source }: { source: ListingSource }) {
   const fetching = a?.command === "full_fetch" || a?.command === "quick_fetch";
   return (
     <div className="flex flex-col gap-2" data-testid="connection-bar">
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-surface px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2">
         <span className={`inline-block h-2.5 w-2.5 rounded-full ${a?.connected ? "bg-success" : a?.alive ? "bg-warning" : "bg-line-strong"}`} aria-hidden />
         <span className="text-sm" data-testid="agent-state">
           {a?.connected ? t("setad.connected") : a?.alive ? t("setad.agentRunning") : t("setad.notConnected")}

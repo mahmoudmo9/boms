@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { AttributeEditor, useProductTemplates } from "../../components/AttributeEditor";
-import { Badge, Bdi, Button, Card, Checkbox, DataTable, EmptyState, ErrorNote, Field, Icon, IconButton, Input, Loading, Modal, PageHeader, Pagination, Select, Textarea } from "../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DataTable, EmptyState, ErrorNote, ErrorState, Field, Icon, IconButton, Input, Loading, Modal, PageHeader, Pagination, Select, Textarea } from "../../design/components";
 import { api, ApiError, type Page } from "../../lib/api";
 import { attributeProblems, nounBody, nounOf, sameNoun } from "../../lib/nounmod";
 import { useFormat } from "../../lib/prefs";
@@ -276,7 +276,7 @@ export function ProductPage() {
   const archive = useMutation({ mutationFn: (archived: boolean) => api(`/api/products/${id}/${archived ? "unarchive" : "archive"}`, { method: "POST" }), onSuccess: refresh });
   const remove = useMutation({ mutationFn: () => api(`/api/products/${id}`, { method: "DELETE" }), onSuccess: () => { invalidate(); navigate("/sourcing/catalog"); } });
   if (product.isLoading) return <Loading />;
-  if (product.error || !product.data) return <ErrorNote error={product.error} />;
+  if (product.error || !product.data) return <ErrorState error={product.error} onRetry={() => void product.refetch()} />;
   const p = product.data;
   const groupLabel = (g: string) => (g.startsWith("kind:") ? t(`sourcing.compare.kinds.${g.slice(5)}`) : g.startsWith("unit:") ? unitLabel(g.slice(5)) : g.slice(5) || "—");
   const baseUnit: Record<string, string> = { "kind:weight": "kg", "kind:length": "m", "kind:volume": "m3", "kind:area": "m2", "kind:count": "pc", "kind:time": "s" };

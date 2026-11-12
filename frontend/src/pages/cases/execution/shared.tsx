@@ -73,7 +73,7 @@ export function OutputButtons({ base, outputs, language }: { base: string; outpu
   });
   return (
     <span className="flex flex-wrap items-center gap-1.5">
-      <a className="inline-flex h-8 items-center rounded-md border border-line-strong px-3 text-sm hover:bg-surface-2"
+      <a className="inline-flex h-8 items-center rounded-xl border border-line-strong px-3 text-sm hover:bg-surface-2"
         href={`${base}/print${language ? `?language=${language}` : ""}`} target="_blank" rel="noreferrer">{t("quotes.printView")}</a>
       <Button icon="download" busy={make.isPending && make.variables === "pdf"} onClick={() => make.mutate("pdf")}>PDF</Button>
       <Button icon="download" busy={make.isPending && make.variables === "docx"} onClick={() => make.mutate("docx")}>Word</Button>

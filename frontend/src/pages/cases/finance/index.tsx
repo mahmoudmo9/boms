@@ -2,7 +2,7 @@
  * and «بستن» with the checklist; the header facts show invoiced / paid status and profit so far. */
 import { useTranslation } from "react-i18next";
 
-import { ErrorNote, Loading } from "../../../design/components";
+import { ErrorState, Loading } from "../../../design/components";
 import { useFormat } from "../../../lib/prefs";
 import type { CaseDetail } from "../../../lib/types";
 import { useExecution } from "../execution/shared";
@@ -19,7 +19,7 @@ export function FinanceTab({ caseData }: { caseData: CaseDetail }) {
   const finance = useFinance(caseData.id);
   const execution = useExecution(caseData.id);
   if (finance.isLoading) return <Loading />;
-  if (finance.error || !finance.data) return <ErrorNote error={finance.error} />;
+  if (finance.error || !finance.data) return <ErrorState error={finance.error} onRetry={() => void finance.refetch()} />;
   const d = finance.data;
   const closed = caseData.status === "closed";   // a closed deal is read-only
   return (

@@ -42,7 +42,7 @@ function Ratings({ caseId }: { caseId: string }) {
         const saved = data.data.ratings.find((x) => x.party_id === r.party_id && x.role === r.role);
         const value = (c: string) => scores[key]?.[c] ?? (saved?.[c] != null ? String(saved[c]) : "");
         return (
-          <div key={key} className="flex flex-wrap items-end gap-2 rounded-md border border-line px-3 py-2" data-rating={r.role}>
+          <div key={key} className="flex flex-wrap items-end gap-2 rounded-xl border border-line px-3 py-2" data-rating={r.role}>
             <Badge>{t(`finance.ratings.roles.${r.role}`)}</Badge>
             {CRITERIA[r.role].map((c) => (
               <Field key={c} label={t(`finance.ratings.criteria.${c}`)} htmlFor={`rt-${key}-${c}`}>

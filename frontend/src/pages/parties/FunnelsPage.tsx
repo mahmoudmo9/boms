@@ -23,7 +23,7 @@ function Card({ card, role, stages }: { card: FunnelCard; role: FunnelRole; stag
     },
   });
   return (
-    <li className="rounded-md border border-line bg-surface p-2.5 text-sm shadow-sm">
+    <li className="rounded-xl border border-line bg-surface p-2.5 text-sm shadow-sm">
       <PartyName fa={card.name_fa} en={card.name_en} dnc={card.do_not_contact} id={card.party_id} className="max-w-full" />
       <dl className="mt-1.5 flex flex-col gap-0.5 text-xs text-muted">
         <div className="flex gap-1"><dt>{t("funnel.lastInteraction")}:</dt><dd className="tabular-nums">{card.last_interaction_at ? f.date(card.last_interaction_at) : "—"}</dd></div>
@@ -57,7 +57,7 @@ export function FunnelsPage() {
       {board.isLoading && <Loading />}
       <ErrorNote error={board.error} />
       {board.data && (
-        <div className="overflow-x-auto pb-2">
+        <div className="overflow-x-auto pb-2" tabIndex={0} role="region" aria-label={t("funnel.title.board")}>
           <div className="flex gap-3">
             {board.data.stages.map((stage) => (
               <section key={stage.code} aria-label={stageLabel(t, role, stage.code)}

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Select } from "../../design/components";
+import { Badge, Button, Card, Checkbox, ErrorNote, ErrorState, Field, Input, Loading, PageHeader, Select } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import { TASK_GROUPS, TASK_KINDS, type TasksResponse } from "../../lib/tasks";
@@ -90,7 +90,7 @@ export function TasksPage() {
           </Select>
         </Field>
       </div>
-      {list.isLoading ? <Loading /> : list.error || !list.data ? <ErrorNote error={list.error} /> : (
+      {list.isLoading ? <Loading /> : list.error || !list.data ? <ErrorState error={list.error} onRetry={() => void list.refetch()} /> : (
         <div className="flex flex-col gap-4">
           {TASK_GROUPS.map((g) => {
             const rows = list.data.groups[g] ?? [];

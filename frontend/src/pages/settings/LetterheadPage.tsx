@@ -86,7 +86,7 @@ export function LetterheadPage() {
           <p className="mt-1 text-xs text-muted">{t("letterhead.pdfHint")}</p>
         </Card>
         <Card title={t("letterhead.terms")}>
-          <p className="text-sm">{t("letterhead.termsHint")} <Link className="text-accent hover:underline" to="/sourcing/templates?kind=quote_terms">{t("letterhead.termsLink")}</Link></p>
+          <p className="text-sm">{t("letterhead.termsHint")} <Link className="text-accent underline underline-offset-2" to="/sourcing/templates?kind=quote_terms">{t("letterhead.termsLink")}</Link></p>
         </Card>
         <ErrorNote error={save.error} />
         <div><Button type="submit" variant="primary" busy={save.isPending}>{t("common.save")}</Button></div>

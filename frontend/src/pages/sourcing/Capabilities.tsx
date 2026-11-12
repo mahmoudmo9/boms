@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Bdi, Button, Card, ErrorNote, Icon, Input, Segmented, Spinner } from "../../design/components";
+import { Bdi, Button, Card, EmptyState, ErrorNote, Icon, Input, Segmented, Spinner } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Capability, RefCode } from "../../lib/types";
@@ -42,7 +42,7 @@ function CodeBrowser({ kind, taken, onPick }: { kind: "hs" | "isic"; taken: Set<
         </button>
       )}
       {!q && parent && <p className="text-sm font-medium"><CodeLabel code={parent} /></p>}
-      <ul className="max-h-64 divide-y divide-line overflow-y-auto rounded-md border border-line text-sm">
+      <ul className="max-h-64 divide-y divide-line overflow-y-auto rounded-xl border border-line text-sm">
         {codes.isFetching && <li className="p-2"><Spinner size={14} /></li>}
         {(codes.data ?? []).map((c) => (
           <li key={c.code} className="flex items-center gap-2 px-2.5 py-1.5">
@@ -79,7 +79,7 @@ export function CapabilitiesCard({ partyId }: { partyId: string }) {
   };
   return (
     <Card title={t("sourcing.capabilities.title")} actions={<Button icon={adding ? "x" : "plus"} onClick={() => setAdding(!adding)}>{adding ? t("common.close") : t("common.add")}</Button>}>
-      {rows.length === 0 && !adding && <p className="text-sm text-muted">{t("sourcing.capabilities.empty")}</p>}
+      {rows.length === 0 && !adding && <EmptyState compact>{t("sourcing.capabilities.empty")}</EmptyState>}
       <div className="flex flex-col gap-2">
         {(["hs", "isic", "tag"] as const).map((k) => rows.some((c) => c.kind === k) && (
           <div key={k} className="flex flex-wrap items-center gap-1.5">

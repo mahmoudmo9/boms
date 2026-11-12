@@ -105,7 +105,7 @@ export function ConvertDialog({ id, onClose }: { id: string; onClose: () => void
             <p className="mb-1 font-medium">{t("listings.convertItems", { n: f.num(p.items.length) })}</p>
             <ul className="flex flex-col gap-1.5">
               {p.items.map((i) => (
-                <li key={i.position} className="flex flex-wrap items-center gap-2 rounded-md border border-line px-2 py-1.5">
+                <li key={i.position} className="flex flex-wrap items-center gap-2 rounded-xl border border-line px-2 py-1.5">
                   <span className="min-w-0 flex-1" dir="auto">{i.name}</span>
                   <span className="tabular-nums text-muted">{f.num(i.quantity)} {i.unit_text}</span>
                   {i.goods_code && <span className="font-mono text-xs text-muted" dir="ltr">{i.goods_code}</span>}

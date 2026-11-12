@@ -127,7 +127,7 @@ export function DesignPage() {
           {["bg", "surface", "surface-2", "surface-3", "sunken", "hover", "line", "line-strong", "control", "title", "fg", "fg-2", "muted", "faint", "accent", "accent-bright", "accent-soft", "accent-line",
             "success", "success-soft", "warning", "warning-soft", "danger", "danger-soft", "info", "info-soft", "chart-1", "chart-2", "chart-3", "chart-4", "chart-5", "chart-6"].map((name) => (
             <div key={name} className="flex items-center gap-2 text-xs">
-              <span className="size-7 shrink-0 rounded-md border border-line-strong" style={{ background: `var(--${name})` }} />
+              <span className="size-7 shrink-0 rounded-xl border border-line-strong" style={{ background: `var(--${name})` }} />
               <span className="flex min-w-0 flex-col"><bdi dir="ltr" className="truncate font-mono text-fg">{name}</bdi></span>
             </div>
           ))}
@@ -149,7 +149,7 @@ export function DesignPage() {
         <Line>{(["neutral", "success", "warning", "danger", "accent", "info"] as const).map((tone) => <Badge key={tone} tone={tone}>{tone}</Badge>)}</Line>
         <Line><Status tone="success">پرداخت شد</Status><Status tone="warning">در انتظار</Status><Status tone="danger">معوق</Status><Status tone="info">پیش‌نویس</Status></Line>
         <Line><Chip selected onClick={() => undefined}>کلیدواژه‌های من</Chip><Chip onClick={() => undefined}>ستاره‌دار</Chip><Chip onRemove={() => undefined} removeLabel="حذف">پمپ ۶</Chip></Line>
-        <div className="grid grid-cols-8 gap-2 sm:grid-cols-12" data-testid="icons">{ICON_NAMES.map((n) => <span key={n} title={n} className="flex size-9 items-center justify-center rounded-md border border-line text-fg-2"><Icon name={n} /></span>)}</div>
+        <div className="grid grid-cols-8 gap-2 sm:grid-cols-12" data-testid="icons">{ICON_NAMES.map((n) => <span key={n} title={n} className="flex size-9 items-center justify-center rounded-xl border border-line text-fg-2"><Icon name={n} /></span>)}</div>
       </Specimen>
 
       <Specimen title="Forms"><Forms /></Specimen>

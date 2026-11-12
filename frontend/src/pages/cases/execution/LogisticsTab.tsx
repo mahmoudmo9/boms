@@ -1,6 +1,6 @@
 /** Case tab «لجستیک» (v0.7.0): the process checklist(s) with references, dates, documents and reminders; shipments with
  * their events and documents and the delay warnings; inspections. */
-import { Badge, Bdi, Button, Card, CodeChip, DateInput, EmptyState, ErrorNote, Field, Icon, Input, Loading, LookupField, Modal, RouteLine, Select, Stat, ValidatedInput } from "../../../design/components";
+import { Badge, Bdi, Button, Card, CodeChip, DateInput, EmptyState, ErrorNote, ErrorState, Field, Icon, Input, Loading, LookupField, Modal, RouteLine, Select, Stat, ValidatedInput } from "../../../design/components";
 import type { LookupItem } from "../../../lib/smart";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -27,7 +27,7 @@ export function ProcessStepper({ process }: { process: ProcessRow }) {
   return (
     <ol className="flex flex-wrap gap-1" data-testid="process-stepper">
       {stepGroups(process.steps).map((g) => (
-        <li key={g.group} className="flex flex-wrap items-center gap-1 rounded-md border border-line px-1.5 py-1" data-group={g.group}>
+        <li key={g.group} className="flex flex-wrap items-center gap-1 rounded-xl border border-line px-1.5 py-1" data-group={g.group}>
           <span className="text-xs text-muted">{t(`execution.process.groups.${g.group}`, { defaultValue: g.group || "—" })} {f.num(g.done)}/{f.num(g.steps.length)}</span>
           {g.steps.map((s) => {
             const state = stepState(s, today);
@@ -298,7 +298,7 @@ export function LogisticsTab({ caseData }: { caseData: CaseDetail }) {
   const [adding, setAdding] = useState(false);
   const [dealType, setDealType] = useState("import");
   if (ex.isLoading) return <Loading />;
-  if (ex.error || !ex.data) return <ErrorNote error={ex.error} />;
+  if (ex.error || !ex.data) return <ErrorState error={ex.error} onRetry={() => void ex.refetch()} />;
   const d = ex.data;
   const run: Run = (path, body, method = "POST") => m.mutateAsync({ path, body, method });
   const poWarnings = d.warnings.filter((w) => w.kind === "ready_passed");

@@ -96,7 +96,7 @@ export function TendersSettingsPage() {
       <Card title={t("tenders.settings.templates")} actions={<Button icon="plus" onClick={() => setEditing("new")}>{t("tenders.settings.newTemplate")}</Button>}>
         <ul className="flex flex-col gap-2">
           {(templates.data ?? []).map((tpl) => (
-            <li key={tpl.id} className="rounded-md border border-line p-2">
+            <li key={tpl.id} className="rounded-xl border border-line p-2">
               {editing === tpl.id ? <TemplateEditor template={tpl} onSaved={refreshTemplates} /> : (
                 <span className="flex flex-wrap items-center gap-2 text-sm"><b dir="auto">{tpl.name}</b>{tpl.is_default && <span className="text-xs text-success">{t("tenders.settings.default")}</span>}
                   <span className="text-xs text-muted">{t("tenders.settings.lines", { n: tpl.lines.length })}</span>

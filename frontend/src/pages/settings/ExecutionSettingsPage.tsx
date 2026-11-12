@@ -38,7 +38,7 @@ function TemplateEditor({ template, onSaved }: { template: ProcessTemplateRow; o
         <Checkbox label={t("execution.settings.default")} checked={isDefault} onChange={setDefault} />
       </div>
       <ul className="flex flex-col gap-1.5">{steps.map((s, i) => (
-        <li key={s.key} className="flex flex-wrap items-center gap-1.5 rounded-md border border-line p-1.5" data-testid="template-step">
+        <li key={s.key} className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line p-1.5" data-testid="template-step">
           <Input dir="ltr" className="w-32" aria-label={t("execution.settings.group")} value={s.group ?? ""} onChange={(e) => set(i, { group: e.target.value || null })} />
           <Input dir="rtl" className="min-w-56 flex-1" aria-label={t("execution.settings.labelFa")} value={s.label_fa} onChange={(e) => set(i, { label_fa: e.target.value })} />
           <Input dir="ltr" className="min-w-48 flex-1" aria-label={t("execution.settings.labelEn")} value={s.label_en} onChange={(e) => set(i, { label_en: e.target.value })} />
@@ -101,7 +101,7 @@ export function ExecutionSettingsPage() {
         <Button className="mt-2" variant="primary" disabled={!valid} busy={save.isPending} onClick={() => save.mutate()} data-testid="execution-settings-save">{t("common.save")}</Button>
       </Card>
       <Card title={t("execution.settings.poTerms")}>
-        <p className="text-sm">{t("execution.settings.poTermsHint")} <Link className="text-accent hover:underline" to="/sourcing/templates?kind=po_terms">{t("execution.settings.poTermsLink")}</Link></p>
+        <p className="text-sm">{t("execution.settings.poTermsHint")} <Link className="text-accent underline underline-offset-2" to="/sourcing/templates?kind=po_terms">{t("execution.settings.poTermsLink")}</Link></p>
       </Card>
       <Card title={t("execution.settings.templates")} actions={<span className="flex gap-1.5">
         <Select aria-label={t("execution.settings.dealType")} className="w-auto" value={newType} onChange={(e) => setNewType(e.target.value)}>
@@ -109,7 +109,7 @@ export function ExecutionSettingsPage() {
         <Button icon="plus" busy={create.isPending} onClick={() => create.mutate()}>{t("execution.settings.newTemplate")}</Button></span>}>
         {templates.isLoading && <Loading />}
         <ul className="flex flex-col gap-2" data-testid="process-templates">{(templates.data ?? []).map((tpl) => (
-          <li key={tpl.id} className="rounded-md border border-line p-2">
+          <li key={tpl.id} className="rounded-xl border border-line p-2">
             {editing === tpl.id ? <TemplateEditor template={tpl} onSaved={() => { void templates.refetch(); setEditing(null); }} /> : (
               <span className="flex flex-wrap items-center gap-2 text-sm"><b dir="auto">{tpl.name}</b><span className="text-xs text-muted">{t(`execution.dealTypes.${tpl.deal_type}`)}</span>
                 {tpl.is_default && <span className="text-xs text-success">{t("execution.settings.default")}</span>}

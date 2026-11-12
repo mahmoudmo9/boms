@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
-import { Badge, Button, Card, Checkbox, ErrorNote, Field, Icon, Input, Loading, Modal, PageHeader, Segmented, Select, Textarea } from "../../design/components";
+import { Badge, Button, Card, Checkbox, ErrorNote, ErrorState, Field, Icon, Input, Loading, Modal, PageHeader, Segmented, Select, Textarea } from "../../design/components";
 import { TimeLeftBadge } from "../../components/TimeLeft";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
@@ -52,7 +52,7 @@ function DecisionPanel({ inquiry, onSaved }: { inquiry: InquiryDetail; onSaved: 
         </Field>
         <Field label={t("sourcing.decision.reason")} htmlFor="dc-reason"><Input id="dc-reason" dir="auto" value={form.reason} maxLength={2000} onChange={(e) => set({ reason: e.target.value })} /></Field>
         {CHECKS.map((c) => (
-          <div key={c} className="rounded-md border border-line p-2.5">
+          <div key={c} className="rounded-xl border border-line p-2.5">
             <div className="mb-1.5 flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium">{t(`sourcing.decision.checks.${c}`)}</span>
               <span className="ms-auto">
@@ -141,7 +141,7 @@ export function InquiryDetailPage() {
   });
   const remove = useMutation({ mutationFn: () => api(`/api/inquiries/${id}`, { method: "DELETE" }), onSuccess: () => { invalidate(); navigate("/sourcing"); } });
   if (inquiry.isLoading) return <Loading />;
-  if (inquiry.error || !inquiry.data) return <ErrorNote error={inquiry.error} />;
+  if (inquiry.error || !inquiry.data) return <ErrorState error={inquiry.error} onRetry={() => void inquiry.refetch()} />;
   const inq = inquiry.data;
   const open = !["converted", "rejected"].includes(inq.status);
   return (

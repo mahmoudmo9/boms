@@ -182,7 +182,7 @@ export function FollowupDialog({ mode, followup, onClose }: {
           </Field>
         )}
         {mode === "done" && (
-          <div className="rounded-md border border-line p-3">
+          <div className="rounded-xl border border-line p-3">
             <p className="mb-2 text-xs font-medium text-muted">{t("followups.nextOptional")}</p>
             <div className="flex flex-col gap-2">
               <Input dir="auto" placeholder={t("followups.actionPlaceholder")} value={nextAction} onChange={(e) => setNextAction(e.target.value)} />

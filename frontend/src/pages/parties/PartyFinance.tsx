@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Bdi, Card, EmptyState, ErrorNote, Loading, Stat } from "../../design/components";
+import { Badge, Bdi, Card, EmptyState, ErrorState, Loading, Stat } from "../../design/components";
 import { api } from "../../lib/api";
 import { PAYMENT_TONE } from "../../lib/finance";
 import { useFormat } from "../../lib/prefs";
@@ -28,7 +28,7 @@ export function PartyFinance({ partyId }: { partyId: string }) {
   const f = useFormat();
   const q = useQuery({ queryKey: ["party-finance", partyId], queryFn: () => api<PartyFinanceData>(`/api/parties/${partyId}/finance`) });
   if (q.isLoading) return <Loading />;
-  if (!q.data) return <ErrorNote error={q.error} />;
+  if (!q.data) return <ErrorState error={q.error} onRetry={() => void q.refetch()} />;
   const d = q.data;
   const list = (rows: InvoiceRow[]) => rows.length === 0 ? <EmptyState>{t("finance.none")}</EmptyState> : (
     <ul className="max-h-72 divide-y divide-line overflow-y-auto">{rows.map((r) => (

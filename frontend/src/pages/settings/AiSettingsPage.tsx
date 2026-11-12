@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, Input, Loading, PageGrid, PageHeader, ProgressRing, Select, Stat, Status } from "../../design/components";
+import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, ErrorState, Field, Input, Loading, PageGrid, PageHeader, ProgressRing, Select, Stat, Status } from "../../design/components";
 import { api } from "../../lib/api";
 import { capTone, inputDescription, signInView, type CallRow, type ClaudeStatus, type Provider, type Route, type Usage } from "../../lib/ai";
 import { useFormat } from "../../lib/prefs";
@@ -116,7 +116,7 @@ function ProviderRow({ p, onChanged }: { p: Provider; onChanged: () => void }) {
   });
   const modelList = models.split(/[,\s]+/).filter(Boolean);
   return (
-    <li className={`flex flex-col gap-3 rounded-2xl border bg-surface p-4 shadow-sm ${p.enabled ? "border-line" : "border-dashed border-line opacity-80"}`} data-testid="ai-provider" data-kind={p.kind}>
+    <li className={`flex flex-col gap-3 rounded-2xl border bg-surface p-4 shadow-sm ${p.enabled ? "border-line" : "border-dashed border-line-strong"}`} data-testid="ai-provider" data-kind={p.kind}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex flex-wrap items-center gap-2"><bdi className="text-base font-semibold text-title">{p.label}</bdi>
           <Status tone={p.status === "ok" ? "success" : p.status === "error" ? "danger" : "neutral"}>{t(`ai.settings.status.${p.status}`)}</Status>
@@ -259,7 +259,7 @@ export function AiSettingsPage() {
       <PageGrid side={<CapCard />}>
         <section className="flex flex-col gap-3" aria-labelledby="ai-providers-h">
           <h2 id="ai-providers-h" className="text-lg font-semibold text-title">{t("ai.settings.providers")}</h2>
-          {providers.isLoading ? <Loading /> : providers.error ? <ErrorNote error={providers.error} /> : (
+          {providers.isLoading ? <Loading /> : providers.error ? <ErrorState error={providers.error} onRetry={() => void providers.refetch()} /> : (
             <ul className="grid grid-cols-1 gap-4 2xl:grid-cols-2">{(providers.data ?? []).map((p) => <ProviderRow key={p.id} p={p} onChanged={refresh} />)}</ul>
           )}
         </section>

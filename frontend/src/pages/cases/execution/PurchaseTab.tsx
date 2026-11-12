@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, ErrorState, Field, Input, Loading, Modal, Select, Textarea } from "../../../design/components";
 import { ApiError } from "../../../lib/api";
 import { manualPoSteps, PO_TONE } from "../../../lib/execution";
 import { toDateString } from "../../../lib/followups";
@@ -131,7 +131,7 @@ function ReceiptsList({ rows, po, caseId }: { rows: ReceiptRow[]; po: PurchaseOr
   if (!rows.length) return null;
   return (
     <ul className="flex flex-col gap-1.5 text-sm" data-testid="receipts">{rows.map((r) => (
-      <li key={r.id} className="rounded-md border border-line px-3 py-2">
+      <li key={r.id} className="rounded-xl border border-line px-3 py-2">
         <span className="flex flex-wrap items-center gap-2"><b>{t("execution.receipts.title")}</b><span className="tabular-nums">{f.day(r.received_on)}</span>
           {r.claim_suggestion && <OpenClaimButton suggestion={r.claim_suggestion} caseId={caseId} />}</span>
         <ul className="text-xs">{r.items.map((i) => <li key={i.id}><span dir="auto">{desc[i.purchase_order_item_id]}</span>: <span className="tabular-nums">{f.num(i.quantity)}</span>
@@ -183,15 +183,15 @@ function PoCard({ po, caseId, receipts }: { po: PurchaseOrderRow; caseId: string
         </div>
         {po.supplier_ref && <p className="text-sm">{t("execution.purchase.supplierRef")}: <Bdi ltr>{po.supplier_ref}</Bdi>{po.confirmed_ready_on && <> · {t("execution.purchase.confirmedReady")}: <span className="tabular-nums">{f.day(po.confirmed_ready_on)}</span></>}</p>}
         <div className="overflow-x-auto"><table className="w-full text-sm" data-testid="po-items">
-          <thead><tr className="border-b border-line text-xs text-muted">{["description", "quantity", "unitPrice", "total", "received"].map((h) => <th key={h} className="p-1.5 text-start whitespace-nowrap">{t(`execution.order.${h}`)}</th>)}</tr></thead>
+          <thead><tr className="border-b border-line text-xs text-muted">{["description", "quantity", "unitPrice", "total", "received"].map((h) => <th key={h} className="px-3 py-2 text-start whitespace-nowrap">{t(`execution.order.${h}`)}</th>)}</tr></thead>
           <tbody>{po.items.map((i) => (
             <tr key={i.id} className="border-b border-line">
-              <td className="p-1.5" dir="auto">{i.description}</td>
-              <td className="p-1.5 tabular-nums">{f.num(i.quantity)} {i.unit ?? ""}</td>
-              <td className="p-1.5">{draft ? <Input dir="ltr" className="w-32" aria-label={`${t("execution.order.unitPrice")} ${i.description}`} defaultValue={Number(i.unit_price)}
+              <td className="px-3 py-2" dir="auto">{i.description}</td>
+              <td className="px-3 py-2 tabular-nums">{f.num(i.quantity)} {i.unit ?? ""}</td>
+              <td className="px-3 py-2">{draft ? <Input dir="ltr" className="w-32" aria-label={`${t("execution.order.unitPrice")} ${i.description}`} defaultValue={Number(i.unit_price)}
                 onBlur={(e) => Number(e.target.value) !== Number(i.unit_price) && run(`/api/purchase-order-items/${i.id}`, { unit_price: e.target.value }, "PATCH")} /> : <Money amount={i.unit_price} currency={po.currency} />}</td>
-              <td className="p-1.5"><Money amount={i.total} currency={po.currency} /></td>
-              <td className="p-1.5 tabular-nums text-xs">{f.num(i.received_quantity)} / {f.num(i.quantity)}</td>
+              <td className="px-3 py-2"><Money amount={i.total} currency={po.currency} /></td>
+              <td className="px-3 py-2 tabular-nums text-xs">{f.num(i.received_quantity)} / {f.num(i.quantity)}</td>
             </tr>))}</tbody></table></div>
         <p className="text-sm">{t("execution.order.total")}: <b><Money amount={po.total} currency={po.currency} /></b></p>
         <Field label={t("execution.purchase.terms")} htmlFor={`po-terms-${po.id}`}><Textarea id={`po-terms-${po.id}`} dir="auto" rows={4} disabled={!draft} value={terms}
@@ -227,7 +227,7 @@ export function PurchaseTab({ caseData }: { caseData: CaseDetail }) {
   const m = useRun(caseData.id);
   const [unresolved, setUnresolved] = useState<{ sales_order_item_id: string; description: string }[]>([]);
   if (ex.isLoading) return <Loading />;
-  if (ex.error || !ex.data) return <ErrorNote error={ex.error} />;
+  if (ex.error || !ex.data) return <ErrorState error={ex.error} onRetry={() => void ex.refetch()} />;
   const d = ex.data;
   const orders = d.sales_orders.filter((o) => ["confirmed", "in_progress", "delivered"].includes(o.status));
   return (

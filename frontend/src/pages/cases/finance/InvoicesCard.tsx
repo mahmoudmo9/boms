@@ -152,7 +152,7 @@ function InvoiceItem({ caseId, invoice, readOnly }: { caseId: string; invoice: S
         {invoice.status === "issued" && invoice.kind === "invoice" && <span className="text-xs text-muted">{t("finance.balance")}: <Money amount={invoice.balance_due} currency={invoice.currency} /></span>}
       </button>
       {open && (
-        <div className="flex flex-col gap-2 rounded-md border border-line p-3">
+        <div className="flex flex-col gap-2 rounded-xl border border-line p-3">
           <table className="w-full text-xs"><tbody>{invoice.lines.map((l) => (
             <tr key={l.id}><td dir="auto">{l.description}</td><td className="text-end tabular-nums">{f.num(l.quantity)} {l.unit ?? ""}</td>
               <td className="text-end tabular-nums">{f.num(l.unit_price)}</td><td className="text-end tabular-nums">{f.num(l.total)}</td></tr>))}</tbody></table>

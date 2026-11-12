@@ -2,7 +2,7 @@
  * in rials; the FX effect, VAT summary, unrealized amounts and the cost of money as information lines. */
 import { useTranslation } from "react-i18next";
 
-import { Badge, Card, KpiTile, ProfitBridge, Stat } from "../../../design/components";
+import { Badge, Card, EmptyState, KpiTile, ProfitBridge, Stat } from "../../../design/components";
 import { profitBridge, profitLines, signed, varianceTone, type Profit } from "../../../lib/finance";
 import { useFormat } from "../../../lib/prefs";
 
@@ -75,7 +75,7 @@ export function ProfitBridgeCard({ profit }: { profit: Profit }) {
       <Card title={t("finance.bridge.title")} subtitle={t("finance.bridge.subtitle", { cur })} testId="bridge-card">
         {bridge ? (
           <ProfitBridge label={t("finance.bridge.title")} steps={bridge.steps} estimated={bridge.estimated} format={(n) => f.num(Math.round(n), 0)} />
-        ) : <p className="text-sm text-muted">{t("finance.profit.noPlan")}</p>}
+        ) : <EmptyState compact>{t("finance.profit.noPlan")}</EmptyState>}
       </Card>
     </section>
   );

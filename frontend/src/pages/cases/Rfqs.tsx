@@ -50,7 +50,7 @@ function SupplierPicker({ itemIds, chosen, onAdd }: { itemIds: string[]; chosen:
   return (
     <div className="flex flex-col gap-2">
       {(suggestions.data ?? []).length > 0 && (
-        <div className="rounded-md border border-line">
+        <div className="rounded-xl border border-line">
           <p className="border-b border-line bg-surface-2 px-2.5 py-1 text-xs text-muted">{t("sourcing.rfq.suggestions")}</p>
           <ul className="divide-y divide-line">
             {suggestions.data!.map((s) => row(s, `${t(`sourcing.rfq.match.${s.match}`)} ${(s.codes ?? []).join(", ")}`))}
@@ -58,7 +58,7 @@ function SupplierPicker({ itemIds, chosen, onAdd }: { itemIds: string[]; chosen:
         </div>
       )}
       <Input type="search" placeholder={t("sourcing.rfq.searchSuppliers")} value={q} onChange={(e) => setQ(e.target.value)} />
-      <ul className="max-h-48 divide-y divide-line overflow-y-auto rounded-md border border-line">
+      <ul className="max-h-48 divide-y divide-line overflow-y-auto rounded-xl border border-line">
         {list.isFetching && <li className="p-2"><Spinner size={14} /></li>}
         {(list.data ?? []).map((s) => row(s))}
         {list.data && list.data.length === 0 && <li className="p-2 text-sm text-muted">{t("sourcing.rfq.noSuppliers")}</li>}
@@ -98,7 +98,7 @@ export function RfqBuilder({ caseData, rfqCount, onClose, onCreated }: { caseDat
           </Field>
         </div>
         <Field label={t("sourcing.rfq.items")}>
-          <ul className="flex flex-col gap-1 rounded-md border border-line p-2">
+          <ul className="flex flex-col gap-1 rounded-xl border border-line p-2">
             {open.map((i) => (
               <li key={i.id} className="flex items-center gap-2 text-sm">
                 <Checkbox label={<Bdi>{i.name}</Bdi>} checked={itemIds.includes(i.id)} onChange={(v) => setItemIds(v ? [...itemIds, i.id] : itemIds.filter((x) => x !== i.id))} />
@@ -204,7 +204,7 @@ function RecipientRow({ recipient, rfq, onChanged }: { recipient: RfqRecipient; 
   const bodyId = `rcp-${recipient.id}`;
   const waiting = ["sent", "no_response"].includes(recipient.status);
   return (
-    <li className="rounded-md border border-line" data-recipient={recipient.id}>
+    <li className="rounded-xl border border-line" data-recipient={recipient.id}>
       <div className="flex flex-wrap items-center gap-2 px-2.5 py-1.5">
         <button type="button" aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen(!open)}
           className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 rounded text-start text-sm focus-visible:outline-2 focus-visible:outline-accent">
@@ -247,7 +247,7 @@ function RecipientRow({ recipient, rfq, onChanged }: { recipient: RfqRecipient; 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <Button icon="list" onClick={() => void copy(text)}>{t("sourcing.rfq.copyText")}</Button>
             {recipient.channel === "email" && <Button onClick={() => void copy(subject)}>{t("sourcing.rfq.copySubject")}</Button>}
-            {recipient.mailto && !dirty && <a href={recipient.mailto} className="inline-flex h-8 items-center rounded-md border border-line-strong px-3 text-sm hover:bg-surface-2">{t("sourcing.rfq.openMail")} <Bdi ltr className="ms-1 text-xs text-muted">{recipient.email}</Bdi></a>}
+            {recipient.mailto && !dirty && <a href={recipient.mailto} className="inline-flex h-8 items-center rounded-xl border border-line-strong px-3 text-sm hover:bg-surface-2">{t("sourcing.rfq.openMail")} <Bdi ltr className="ms-1 text-xs text-muted">{recipient.email}</Bdi></a>}
             {recipient.channel === "email" && !recipient.mailto && <span className="text-xs text-muted">{t("sourcing.rfq.noEmail")}</span>}
             {draft && dirty && <Button busy={save.isPending} onClick={() => save.mutate({ subject, message_text: text })}>{t("common.save")}</Button>}
             {draft && <Button variant="ghost" onClick={() => save.mutate({ rerender: true })}>{t("sourcing.rfq.rerender")}</Button>}
@@ -271,7 +271,7 @@ function AddRecipient({ rfq, onAdded }: { rfq: Rfq; onAdded: () => void }) {
   });
   if (!open) return <Button icon="plus" onClick={() => setOpen(true)}>{t("sourcing.rfq.addRecipient")}</Button>;
   return (
-    <div className="rounded-md border border-line p-2">
+    <div className="rounded-xl border border-line p-2">
       <SupplierPicker itemIds={rfq.items.map((i) => i.line_item_id)}
         chosen={rfq.recipients.map((r) => ({ party_id: r.party_id, name_fa: r.party_name_fa, name_en: r.party_name_en, channel: r.channel, language: r.language, stage: null }))}
         onAdd={(s) => add.mutate(s)} />
@@ -297,7 +297,7 @@ function MoreMenu({ label, children }: { label: string; children: (close: () => 
       <button type="button" aria-haspopup="menu" aria-expanded={open} aria-label={label} title={label} onClick={() => setOpen(!open)}
         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg">⋯</button>
       {open && (
-        <div role="menu" className="absolute end-0 z-20 mt-1 flex min-w-40 flex-col rounded-md border border-line bg-surface py-1 shadow-lg">
+        <div role="menu" className="absolute end-0 z-20 mt-1 flex min-w-40 flex-col rounded-xl border border-line bg-surface py-1 shadow-lg">
           {children(() => setOpen(false))}
         </div>
       )}

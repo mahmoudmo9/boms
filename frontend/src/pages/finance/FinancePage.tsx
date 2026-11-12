@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
-import { Badge, Bdi, Button, ButtonLink, Card, DateInput, EmptyState, ErrorNote, Field, Loading, Menu, PageHeader, Select, Tabs } from "../../design/components";
+import { Badge, Bdi, Button, ButtonLink, Card, DateInput, EmptyState, ErrorState, Field, Loading, Menu, PageHeader, Select, Tabs } from "../../design/components";
 import { api } from "../../lib/api";
 import { AGING_BUCKETS, MOADIAN_TONE, PAYMENT_TONE } from "../../lib/finance";
 import { toDateString } from "../../lib/followups";
@@ -44,7 +44,7 @@ function Receivables() {
   const f = useFormat();
   const name = useName();
   const q = useQuery({ queryKey: ["fin", "receivables"], queryFn: () => api<{ invoices: Row[]; by_party: Row[]; advances: Row[] }>("/api/finance/receivables") });
-  if (!q.data) return q.error ? <ErrorNote error={q.error} /> : <Loading />;
+  if (!q.data) return q.error ? <ErrorState error={q.error} onRetry={() => void q.refetch()} /> : <Loading />;
   return (
     <div className="flex flex-col gap-4">
       <Card padded={false} title={t("finance.ws.byCustomer")}>
@@ -70,7 +70,7 @@ function Payables() {
   const f = useFormat();
   const name = useName();
   const q = useQuery({ queryKey: ["fin", "payables"], queryFn: () => api<{ items: Row[]; counts: Record<string, number> }>("/api/finance/payables") });
-  if (!q.data) return q.error ? <ErrorNote error={q.error} /> : <Loading />;
+  if (!q.data) return q.error ? <ErrorState error={q.error} onRetry={() => void q.refetch()} /> : <Loading />;
   return (
     <Card padded={false} title={<span className="flex flex-wrap gap-2">{t("finance.ws.tabs.payables")}{(["overdue", "due_7", "due_30", "later"] as const).map((w) =>
       <Badge key={w} tone={w === "overdue" && q.data.counts[w] ? "danger" : "neutral"}>{t(`finance.ws.windows.${w}`)} {f.num(q.data.counts[w] ?? 0)}</Badge>)}</span>}>
@@ -184,12 +184,14 @@ export function FinancePage() {
       </div>
       <Tabs label={t("nav.finance")} active={tab} onSelect={(key) => setParams({ tab: key }, { replace: true })} panelId="fin-tab"
         tabs={TABS.map((key) => ({ key, label: t(`finance.ws.tabs.${key}`), testId: `fin-tab-${key}` }))} />
-      {tab === "receivables" && <Receivables />}
-      {tab === "payables" && <Payables />}
-      {tab === "invoices" && <Invoices {...range} />}
-      {tab === "payments" && <Payments {...range} />}
-      {tab === "deals" && <Deals {...range} />}
-      {tab === "vat" && <Vat {...range} />}
+      <div id="fin-tab" role="tabpanel" aria-label={t(`finance.ws.tabs.${tab}`)} className="flex flex-col gap-4">
+        {tab === "receivables" && <Receivables />}
+        {tab === "payables" && <Payables />}
+        {tab === "invoices" && <Invoices {...range} />}
+        {tab === "payments" && <Payments {...range} />}
+        {tab === "deals" && <Deals {...range} />}
+        {tab === "vat" && <Vat {...range} />}
+      </div>
     </div>
   );
 }

@@ -73,9 +73,14 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
     step = 'filter';
     await page.locator('[data-testid=listing-search]').fill('پمپ');
     await page.waitForTimeout(800); await page.waitForLoadState('networkidle');
-    await page.locator('[data-testid=listing-table] tbody tr button').first().click();
+    // the first listing that can still be starred (earlier runs of the convert check may have converted some)
     const panel = page.locator('[data-testid=listing-panel]');
-    await panel.waitFor();
+    const rows = page.locator('[data-testid=listing-table] tbody tr');
+    for (let i = 0; i < Math.min(await rows.count(), 15); i++) {
+      await rows.nth(i).locator('button').first().click();
+      await panel.waitFor();
+      if (await panel.getByRole('button', { name: `★ ${t('listings.star')}` }).count()) break;
+    }
     const id = new URL(page.url()).searchParams.get('listing');
     await panel.getByRole('button', { name: `★ ${t('listings.star')}` }).click();
     await panel.getByText(t('listings.status.starred')).first().waitFor();
@@ -172,7 +177,10 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
     for (const fmt of ['PDF', 'Word']) {
       step = `output ${fmt}`;
       const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 90000 }), page.getByRole('button', { name: fmt, exact: true }).click()]);
-      const name = dl.suggestedFilename();
+      // headless Chromium names any non-ASCII file «download»; read the RFC 5987 name the server sends instead
+      const cd = (await page.request.get(dl.url())).headers()['content-disposition'] ?? '';
+      const star = /filename\*=utf-8''([^;]+)/i.exec(cd);
+      const name = star ? decodeURIComponent(star[1]) : dl.suggestedFilename();
       check(`${fmt} file name has the Setad number`, name.includes(inq.external_no) && !name.includes('DRAFT'), name);
       await dl.saveAs(`${OUT}/${name}`);
       r[`${fmt}_file`] = name;

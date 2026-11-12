@@ -56,7 +56,7 @@ function SourcingSection({ s }: { s: SourcingSummary }) {
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-lg font-medium text-title">{t("cc.sourcing.title")}</h2>
-        <span className="rounded-md border border-line px-3 py-1 text-sm">
+        <span className="rounded-xl border border-line px-3 py-1 text-sm">
           {t("cc.sourcing.coverage")}: <b className="tabular-nums">{s.coverage_status_percent === null ? "—" : `${f.num(s.coverage_status_percent, 1)}%`}</b>
           <span className="ms-1 text-xs text-muted tabular-nums">({f.num(s.open_items_with_status)}/{f.num(s.open_items)})</span>
         </span>
@@ -93,7 +93,7 @@ function SourcingSection({ s }: { s: SourcingSummary }) {
         <>
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-lg font-medium text-title">{t("cc.sales.title")}</h2>
-            <span className="rounded-md border border-line px-3 py-1 text-sm" data-testid="won-lost">
+            <span className="rounded-xl border border-line px-3 py-1 text-sm" data-testid="won-lost">
               {t("cc.sales.won30")}: <b className="tabular-nums text-success">{f.num(s.quotes_won_30_days ?? 0)}</b>
               <span className="mx-2 text-muted">·</span>
               {t("cc.sales.lost30")}: <b className="tabular-nums text-danger">{f.num(s.quotes_lost_30_days ?? 0)}</b>
@@ -365,7 +365,7 @@ export function CommandCenterPage() {
             <div className="flex flex-wrap gap-2">
               {Object.entries(d.funnel_counts[role] ?? {}).map(([stage, n]) => (
                 <Link key={stage} to={`/parties?role=${role}&stage=${stage}`}
-                  className="flex min-w-24 flex-col rounded-md border border-line px-3 py-2 hover:border-accent">
+                  className="flex min-w-24 flex-col rounded-xl border border-line px-3 py-2 hover:border-accent">
                   <span className="text-xs text-muted">{stageLabel(t, role, stage)}</span>
                   <span className="text-lg font-semibold tabular-nums">{f.num(n)}</span>
                 </Link>

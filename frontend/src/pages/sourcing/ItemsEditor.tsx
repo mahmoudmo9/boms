@@ -70,7 +70,7 @@ function DocumentTextPanel({ documents, onLine }: { documents: LinkedDocument[];
         {documents.map((d) => <option key={d.link_id} value={d.document_id}>{d.title}</option>)}
       </Select>
       <p className="text-xs text-muted">{t("sourcing.item.copyLineHint")}</p>
-      <ol className="max-h-80 overflow-y-auto rounded-md border border-line text-sm">
+      <ol className="max-h-80 overflow-y-auto rounded-xl border border-line text-sm">
         {lines.length === 0 && <li className="p-2 text-muted">{text.isFetching ? "…" : t("sourcing.item.noText")}</li>}
         {lines.map((line, i) => (
           <li key={i}><button type="button" dir="auto" className="w-full px-2 py-1 text-start hover:bg-accent-soft" onClick={() => onLine(line)}>{line}</button></li>
@@ -157,7 +157,7 @@ export function ItemDialog({ owner, item, ownerDocuments, onClose, onSaved }: {
             </Select>
           </Field>
           <Field label={t("sourcing.item.product")} htmlFor="it-product"><ProductField id="it-product" value={form.product_id} onChange={(id) => set({ product_id: id })} /></Field>
-          <details className="rounded-md border border-line p-2.5 sm:col-span-2" open={Boolean(savedNoun.template_id || savedNoun.canonical_override)} data-testid="item-description">
+          <details className="rounded-xl border border-line p-2.5 sm:col-span-2" open={Boolean(savedNoun.template_id || savedNoun.canonical_override)} data-testid="item-description">
             <summary className="cursor-pointer text-xs font-medium text-muted">{t("nounmod.title")}</summary>
             <div className="pt-3"><AttributeEditor idPrefix="it" value={noun} onChange={setNoun} /></div>
           </details>
@@ -247,7 +247,7 @@ export function ImportDialog({ owner, onClose, onSaved }: { owner: ItemOwner; on
               </Select>
               <Button disabled={!text.trim()} onClick={() => acceptRows(parsePasted(text, delimiter))}>{t("sourcing.import.next")}</Button>
               <span className="text-sm text-muted">{t("sourcing.import.or")}</span>
-              <label className="inline-flex h-8 cursor-pointer items-center rounded-md border border-line-strong px-3 text-sm hover:bg-surface-2">
+              <label className="inline-flex h-8 cursor-pointer items-center rounded-xl border border-line-strong px-3 text-sm hover:bg-surface-2">
                 {t("sourcing.import.upload")}
                 <input type="file" hidden accept=".xlsx,.csv,.txt" onChange={(e) => { const file = e.target.files?.[0]; if (file) void upload(file); e.target.value = ""; }} />
               </label>
@@ -260,12 +260,12 @@ export function ImportDialog({ owner, onClose, onSaved }: { owner: ItemOwner; on
               <Checkbox label={t("sourcing.import.skipHeader")} checked={skipHeader} onChange={(v) => { setSkipHeader(v); setPreview(null); }} />
               <button type="button" className="ms-auto text-xs text-accent hover:underline" onClick={() => { setRows(null); setPreview(null); }}>{t("sourcing.import.back")}</button>
             </div>
-            <div className="shrink-0 overflow-x-auto rounded-md border border-line">
+            <div className="shrink-0 overflow-x-auto rounded-xl border border-line">
               <table className="w-full text-sm">
                 <thead className="bg-surface-2">
                   <tr>
                     {Array.from({ length: width }, (_, c) => (
-                      <th key={c} className="p-1.5 text-start align-top">
+                      <th key={c} className="px-3 py-2 text-start align-top">
                         <Select className="w-36" aria-label={t("sourcing.import.columnField", { n: c + 1 })} value={fieldOf(c)?.field ?? ""}
                           onChange={(e) => { setMapping(setColumnField(mapping, c, e.target.value as ImportField | "", rows[0][c])); setPreview(null); }}>
                           <option value="">{t("sourcing.import.ignore")}</option>
@@ -292,7 +292,7 @@ export function ImportDialog({ owner, onClose, onSaved }: { owner: ItemOwner; on
           </>
         )}
         {preview && (
-          <div className="shrink-0 rounded-md border border-line">
+          <div className="shrink-0 rounded-xl border border-line">
             <p className="border-b border-line bg-surface-2 px-3 py-1.5 text-xs text-muted">{t("sourcing.import.previewHint")}</p>
             <ul className="divide-y divide-line">
               {preview.map((r, i) => (

@@ -85,7 +85,7 @@ export function AttributeEditor({ value, onChange, idPrefix }: { value: NounValu
         </div>
       )}
       {(template || value.canonical_override) && (
-        <div className="flex flex-col gap-2 rounded-md border border-line bg-surface-2 p-2.5" data-testid="attr-canonical" aria-live="polite">
+        <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface-2 p-2.5" data-testid="attr-canonical" aria-live="polite">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-medium text-muted">{t("nounmod.canonical")}</span>
             <Checkbox label={t("nounmod.override")} checked={value.canonical_override}
