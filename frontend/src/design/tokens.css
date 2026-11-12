@@ -1,0 +1,358 @@
+/* BOMS design tokens (v0.10.0). The one source of truth for colour, type, spacing, radius, shadow, motion, layers
+ * and breakpoints. Two themes define the same names:
+ *
+ *   light «جوهر و برنج»   :root            warm paper, ink text, brass accent
+ *   dark  «نیمه‌شب و طلا»  :root.dark       deep navy, ivory text, soft gold accent
+ *
+ * The values come from docs/design-reference (Pro series for dark, Main/Case/Listings/Finance for light). Where a
+ * mockup pair failed WCAG AA the token was adjusted; every such change is marked «AA:» here and listed in the report.
+ * tokens.test.ts computes the contrast of every text/surface and status pair in both themes.
+ *
+ * Nothing outside this file may hold a colour literal, a pixel font size or an arbitrary spacing value
+ * (scripts/check-design.mjs fails the build). Components read tokens through the Tailwind names in @theme below. */
+
+@font-face {
+  font-family: "Noto Naskh Arabic";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url("./fonts/noto-naskh-arabic-arabic-500-normal.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+@font-face {
+  font-family: "Noto Naskh Arabic";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url("./fonts/noto-naskh-arabic-arabic-600-normal.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+@font-face {
+  font-family: "Noto Naskh Arabic";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("./fonts/noto-naskh-arabic-arabic-700-normal.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+
+/* ---- light «جوهر و برنج» ------------------------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  /* surfaces by elevation */
+  --bg: #f4f2ed;
+  --bg-glow-1: transparent;
+  --bg-glow-2: transparent;
+  --surface: #ffffff;
+  --surface-2: #f2efe8;
+  --surface-3: #ffffff;
+  --sunken: #fbfaf7;
+  --hover: #efece4;
+  --overlay: rgba(18, 24, 38, 0.45);
+
+  /* the navigation rail is ink in both themes */
+  --rail: #121826;
+  --rail-active: #1c2436;
+  --rail-line: #232b3d;
+  --rail-title: #f4f2ed;
+  --rail-fg: #c9ceda;
+  --rail-muted: #8790a3;
+  --rail-accent: #c9a46a;
+
+  /* text */
+  --title: #121826;
+  --fg: #1e2a44;
+  --fg-2: #3b4152;
+  --muted: #5b6070; /* AA: the mockups also use #6B7080, 4.2-4.4:1 on the paper surfaces */
+  --faint: #9aa0ae; /* decoration only (dividers, disabled marks), never text */
+
+  /* borders */
+  --line: #e4e0d6;
+  --line-strong: #d9d4c7;
+  --control: #7d8496; /* AA: boundary of inputs and checkboxes, 3:1 (the mockups' #D9D4C7 is 1.3-1.5:1) */
+
+  /* accent: brass */
+  --accent: #7a5c2e; /* AA: accent as text and icons; the mockups' #8A6A3A is 4.2-4.5:1 on paper */
+  --accent-hover: #5f4722;
+  --accent-bright: #c9a46a; /* fills, marks, chart strokes: not for text */
+  --accent-soft: #f6f1e6;
+  --accent-line: #e7d3b0;
+  --accent-fg: #121826;
+  --accent-fill-from: #d9b97f;
+  --accent-fill-to: #bd9a5f; /* AA: the mockups' gradient ends at #8A6A3A, 3.6:1 under ink text */
+  --focus: #7a5c2e;
+
+  /* semantic */
+  --success: #2f6b4f;
+  --success-soft: #e3efe8;
+  --success-line: #b9d6c6;
+  --warning: #8a5a12;
+  --warning-soft: #f8f0df;
+  --warning-line: #e7d3b0;
+  --danger: #a23b2e;
+  --danger-soft: #f8e9e5;
+  --danger-line: #e8c2ba;
+  --info: #2e4a7a;
+  --info-soft: #e9edf5;
+  --info-line: #c3cde0;
+
+  /* chart series */
+  --chart-1: #8a6a3a;
+  --chart-2: #2f6b4f;
+  --chart-3: #2e4a7a;
+  --chart-4: #a23b2e;
+  --chart-5: #6a4c7d;
+  --chart-6: #3d7480;
+  --chart-in: #2f6b4f;
+  --chart-out: #a23b2e;
+  --chart-line: #121826;
+  --chart-grid: #e4e0d6;
+  --chart-track: #ebe7dd;
+
+  /* shadows */
+  --shadow-1: 0 1px 2px rgba(20, 23, 31, 0.08);
+  --shadow-2: 0 8px 24px rgba(20, 23, 31, 0.1);
+  --shadow-3: 0 30px 70px rgba(20, 23, 31, 0.22);
+  --shadow-accent: 0 10px 24px rgba(201, 164, 106, 0.3);
+  --ring-accent: 0 0 0 4px rgba(201, 164, 106, 0.22);
+  --card-accent-from: #fdf9f0;
+  --card-accent-to: #ffffff;
+}
+
+/* ---- dark «نیمه‌شب و طلا» -------------------------------------------------------------------------------------------- */
+:root.dark {
+  color-scheme: dark;
+
+  --bg: #0b0f1a;
+  --bg-glow-1: rgba(201, 164, 106, 0.12);
+  --bg-glow-2: rgba(80, 110, 170, 0.1);
+  --surface: #121827;
+  --surface-2: #151c2d;
+  --surface-3: #1c2436;
+  --sunken: #0d1220;
+  --hover: #1a2132;
+  --overlay: rgba(4, 6, 12, 0.66);
+
+  --rail: #0d1220;
+  --rail-active: #1c2436;
+  --rail-line: #1d2433;
+  --rail-title: #f4efe3;
+  --rail-fg: #b9bfcd;
+  --rail-muted: #8c93a6;
+  --rail-accent: #d9be8c;
+
+  --title: #f4efe3;
+  --fg: #e9e4d8;
+  --fg-2: #b9bfcd;
+  --muted: #8c93a6;
+  --faint: #6e7588;
+
+  --line: #232836; /* rgba(255,255,255,.07) of the mockups, flattened on the card surface */
+  --line-strong: #333845; /* rgba(255,255,255,.14) flattened */
+  --control: #7a8196; /* AA: boundary of inputs, 4:1 (the mockups' rgba(255,255,255,.14) is 1.5:1) */
+
+  --accent: #d9be8c;
+  --accent-hover: #f1ddb5;
+  --accent-bright: #e7cc97;
+  --accent-soft: #2a2b31; /* rgba(217,190,140,.16) flattened on the card surface, slightly deeper */
+  --accent-line: #5a5140; /* rgba(217,190,140,.35) flattened */
+  --accent-fg: #0b0f1a;
+  --accent-fill-from: #e7cc97;
+  --accent-fill-to: #a9824a;
+  --focus: #e7cc97;
+
+  --success: #9fc7ae;
+  --success-soft: #1e2a2f;
+  --success-line: #3d5650;
+  --warning: #e7cc97;
+  --warning-soft: #2c2a2c;
+  --warning-line: #5a5140;
+  --danger: #f2c3b9;
+  --danger-soft: #2f262d;
+  --danger-line: #6b4f52;
+  --info: #a9c1e8;
+  --info-soft: #1f2a3f;
+  --info-line: #3f5072;
+
+  --chart-1: #e7cc97;
+  --chart-2: #9fc7ae;
+  --chart-3: #a9c1e8;
+  --chart-4: #f2c3b9;
+  --chart-5: #c8b3e0;
+  --chart-6: #9fd0d6;
+  --chart-in: #9fc7ae;
+  --chart-out: #f2c3b9;
+  --chart-line: #e7cc97;
+  --chart-grid: #232836;
+  --chart-track: #232836;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 14px 34px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 40px 90px rgba(0, 0, 0, 0.55);
+  --shadow-accent: 0 14px 30px rgba(201, 164, 106, 0.25);
+  --ring-accent: 0 0 0 5px rgba(217, 190, 140, 0.18);
+  --card-accent-from: #2b2a2c; /* linear-gradient(150deg, rgba(217,190,140,.16), rgba(217,190,140,.03)) flattened */
+  --card-accent-to: #171c29;
+}
+
+/* ---- the same in every theme ----------------------------------------------------------------------------------------- */
+:root {
+  /* motion: only to explain change; switched off by prefers-reduced-motion (base.css) */
+  --duration-fast: 150ms;
+  --duration: 200ms;
+  --duration-slow: 250ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* layers */
+  --z-sticky: 10;
+  --z-rail: 20;
+  --z-drawer: 30;
+  --z-modal: 40;
+  --z-popover: 50;
+  --z-toast: 60;
+  --z-palette: 70;
+
+  /* layout */
+  --rail-width: 15.5rem;
+  --rail-width-collapsed: 4.25rem;
+  --topbar-height: 3.75rem;
+  --target: 2.5rem; /* the smallest pointer target, 40 px */
+}
+
+/* ---- Tailwind names (the mirror of the tokens) ------------------------------------------------------------------------- */
+@theme inline {
+  /* colours: the default palette is removed, so only token colours exist as utilities */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-sunken: var(--sunken);
+  --color-hover: var(--hover);
+  --color-overlay: var(--overlay);
+  --color-rail: var(--rail);
+  --color-rail-active: var(--rail-active);
+  --color-rail-line: var(--rail-line);
+  --color-rail-title: var(--rail-title);
+  --color-rail-fg: var(--rail-fg);
+  --color-rail-muted: var(--rail-muted);
+  --color-rail-accent: var(--rail-accent);
+  --color-title: var(--title);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-control: var(--control);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-fill-from: var(--accent-fill-from);
+  --color-accent-fill-to: var(--accent-fill-to);
+  --color-focus: var(--focus);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-line: var(--success-line);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-line: var(--warning-line);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-line: var(--info-line);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-in: var(--chart-in);
+  --color-chart-out: var(--chart-out);
+  --color-chart-line: var(--chart-line);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-track: var(--chart-track);
+  --color-card-accent-from: var(--card-accent-from);
+  --color-card-accent-to: var(--card-accent-to);
+
+  /* typography. Vazirmatn carries the Arabic-script subset; Latin text falls through to the system UI face.
+   * Display headings use Noto Naskh Arabic for Persian and the UI face for Latin. Codes use the system fixed face. */
+  --font-sans: "Vazirmatn", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: "Noto Naskh Arabic", "Vazirmatn", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+
+  /* the fixed type scale (rem of a 16 px root): 11, 12, 13, 14, 15, 16, 18, 22, 26, 32, 40 */
+  --text-*: initial;
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.375rem;
+  --text-md: 0.9375rem;
+  --text-md--line-height: 1.5rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.125rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.375rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.625rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl: 2rem;
+  --text-4xl--line-height: 2.75rem;
+  --text-5xl: 2.5rem;
+  --text-5xl--line-height: 3.25rem;
+
+  --font-weight-*: initial;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* spacing: one step is 4 px; utilities take whole steps (p-3, gap-4.5), never arbitrary values */
+  --spacing: 0.25rem;
+
+  /* radii: 6 chip corners, 10 controls, 12 inner cards, 16 panels, 20 cards, 24 hero cards */
+  --radius-*: initial;
+  --radius-xs: 0.1875rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.5rem;
+
+  --shadow-*: initial;
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-2);
+  --shadow-xl: var(--shadow-3);
+  --shadow-2xl: var(--shadow-3);
+  --shadow-accent: var(--shadow-accent);
+  --shadow-ring: var(--ring-accent);
+
+  --ease-out: var(--ease-out);
+  --ease-in-out: var(--ease-in-out);
+
+  /* breakpoints: desktop first, correct from 1024 to 2560 px */
+  --breakpoint-*: initial;
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;
+  --breakpoint-3xl: 120rem;
+}

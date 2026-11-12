@@ -181,7 +181,7 @@ export function FinancePage() {
         <span className="flex flex-wrap items-center gap-1.5" data-testid="exports">
           {EXPORTS.map((e) => <a key={e} className="inline-flex h-8 items-center rounded-md border border-line-strong px-2.5 text-sm hover:bg-surface-2"
             href={`/api/finance/exports/${e}.csv${qs ? `?${qs}` : ""}`} download>{t(`finance.ws.exports.${e}`)}</a>)}
-          <a className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-sm text-accent-fg hover:bg-accent-hover" data-testid="export-all"
+          <a className="inline-flex h-8 items-center rounded-md bg-accent-bright px-3 text-sm text-accent-fg hover:brightness-105" data-testid="export-all"
             href={`/api/finance/exports/all.zip${qs ? `?${qs}` : ""}`} download>{t("finance.ws.exportAll")}</a>
         </span>
       </div>

@@ -1,76 +1,15 @@
 @import "tailwindcss";
+@import "@fontsource/vazirmatn/arabic-300.css";
 @import "@fontsource/vazirmatn/arabic-400.css";
 @import "@fontsource/vazirmatn/arabic-500.css";
+@import "@fontsource/vazirmatn/arabic-600.css";
 @import "@fontsource/vazirmatn/arabic-700.css";
+@import "./design/tokens.css";
 
+/* The theme is the `dark` class on <html> (set before first paint by /theme-init.js, then by lib/prefs). */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Design tokens. Components use only these (bg-bg, bg-surface, border-line, text-fg, text-muted, accent...). */
-:root {
-  --bg: #f3f4f6;
-  --surface: #ffffff;
-  --surface-2: #f9fafb;
-  --line: #e5e7eb;
-  --line-strong: #d1d5db;
-  --fg: #111827;
-  --muted: #6b7280;
-  --accent: #1d4ed8;
-  --accent-hover: #1e40af;
-  --accent-soft: #e0e7ff;
-  --accent-fg: #ffffff;
-  --danger: #b91c1c;
-  --danger-soft: #fee2e2;
-  --success: #15803d;
-  --success-soft: #dcfce7;
-  --warning: #b45309;
-  --warning-soft: #fef3c7;
-  color-scheme: light;
-}
-
-.dark {
-  --bg: #0f1115;
-  --surface: #171a21;
-  --surface-2: #1d212a;
-  --line: #2a2f3a;
-  --line-strong: #3a4150;
-  --fg: #e5e7eb;
-  --muted: #9ca3af;
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
-  --accent-soft: #1e2a4a;
-  --accent-fg: #ffffff;
-  --danger: #f87171;
-  --danger-soft: #3b1618;
-  --success: #4ade80;
-  --success-soft: #11291b;
-  --warning: #fbbf24;
-  --warning-soft: #33260b;
-  color-scheme: dark;
-}
-
-@theme inline {
-  --color-bg: var(--bg);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-line: var(--line);
-  --color-line-strong: var(--line-strong);
-  --color-fg: var(--fg);
-  --color-muted: var(--muted);
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-soft: var(--accent-soft);
-  --color-accent-fg: var(--accent-fg);
-  --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
-  --color-success: var(--success);
-  --color-success-soft: var(--success-soft);
-  --color-warning: var(--warning);
-  --color-warning-soft: var(--warning-soft);
-  /* Vazirmatn carries only the Arabic-script subset, so Latin text falls through to the system font. */
-  --font-sans: "Vazirmatn", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
-}
-
+/* Base rules of the design system. Everything here reads tokens; components live in src/design/components. */
 html,
 body,
 #root {
@@ -78,17 +17,73 @@ body,
 }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(56rem 31rem at 90% -10%, var(--bg-glow-1), transparent 60%),
+    radial-gradient(44rem 31rem at 0% 100%, var(--bg-glow-2), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--fg);
-  font-size: 14px;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+  font-feature-settings: "tnum";
   -webkit-font-smoothing: antialiased;
 }
 
-table {
+/* Numbers align wherever they are compared. */
+table,
+.tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
+/* One visible focus ring on every interactive element, in both themes. */
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent-line);
+  color: var(--title);
+}
+
+/* Thin scrollbars inside panels and tables that scroll in their own box. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+/* Motion explains change and nothing else; a user who asks for less motion gets none. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes ds-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ds-rise-in {
+  from { opacity: 0; transform: translateY(0.375rem); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ds-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+@keyframes ds-spin {
+  to { transform: rotate(360deg); }
+}
+
+@theme inline {
+  --animate-fade-in: ds-fade-in var(--duration) var(--ease-out);
+  --animate-rise-in: ds-rise-in var(--duration-slow) var(--ease-out);
+  --animate-shimmer: ds-shimmer 1.6s linear infinite;
+  --animate-spin: ds-spin 0.8s linear infinite;
 }

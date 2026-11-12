@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "vitest run",
-    "lint": "node scripts/check-logical.mjs"
+    "lint": "node scripts/check-design.mjs"
   },
   "dependencies": {
     "@fontsource/vazirmatn": "5.2.8",

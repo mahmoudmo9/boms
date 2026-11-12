@@ -24,6 +24,7 @@ export function applyLanguage(lang: Language) {
 export function applyTheme(theme: Theme) {
   const media = window.matchMedia("(prefers-color-scheme: dark)");
   const set = (dark: boolean) => document.documentElement.classList.toggle("dark", dark);
+  document.documentElement.dataset.theme = theme;
   if (mediaListener) media.removeEventListener("change", mediaListener);
   mediaListener = null;
   if (theme === "system") {

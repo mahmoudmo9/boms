@@ -47,7 +47,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
                 <Icon name={ws.icon} size={17} />
                 <span className="flex-1 truncate">{t(`nav.${ws.key}`)}</span>
                 {ws.phase && (
-                  <span className="text-[11px] text-muted">
+                  <span className="text-2xs text-muted">
                     {t("nav.phaseShort", { phase: f.digits === "fa" ? toFaDigits(ws.phase) : ws.phase })}
                   </span>
                 )}
@@ -94,7 +94,7 @@ function QuickLogButton() {
       type="button"
       onClick={() => quickLog.open()}
       title={`${t("quicklog.button")} (Ctrl+Shift+L)`}
-      className="me-1 inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-2.5 text-sm font-medium text-accent-fg hover:bg-accent-hover"
+      className="me-1 inline-flex h-8 items-center gap-1.5 rounded-md bg-accent-bright px-2.5 text-sm font-medium text-accent-fg hover:brightness-105"
     >
       <Icon name="plus" size={15} />
       <span className="hidden md:inline">{t("quicklog.button")}</span>
@@ -128,7 +128,7 @@ export function AppShell() {
     <QuickLogProvider>
     <div className="flex h-full">
       <Sidebar open={navOpen} onNavigate={() => setNavOpen(false)} />
-      {navOpen && <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setNavOpen(false)} />}
+      {navOpen && <div className="fixed inset-0 z-30 bg-overlay lg:hidden" onClick={() => setNavOpen(false)} />}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-3">
           <IconButton icon="menu" label={t("nav.menu")} className="lg:hidden" onClick={() => setNavOpen(true)} />

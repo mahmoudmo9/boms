@@ -691,7 +691,7 @@ export function TenderStepper({ stage, hint, onPick }: { stage: TenderStage; hin
       {stepper(stage, hint).map((s) => (
         <li key={s.stage} data-state={s.state} data-hinted={s.hinted || undefined}>
           <button type="button" aria-current={s.state === "current" ? "step" : undefined} onClick={() => onPick?.(s.stage)}
-            className={`rounded-full border px-2.5 py-1 text-xs ${s.state === "current" ? "border-accent bg-accent text-accent-fg" : s.state === "done" ? "border-success text-success" : "border-line text-muted hover:bg-surface-2"} ${s.hinted ? "ring-2 ring-warning" : ""}`}
+            className={`rounded-full border px-2.5 py-1 text-xs ${s.state === "current" ? "border-accent bg-accent-bright text-accent-fg" : s.state === "done" ? "border-success text-success" : "border-line text-muted hover:bg-surface-2"} ${s.hinted ? "ring-2 ring-warning" : ""}`}
             title={s.hinted ? t("tenders.stageHint") : undefined}>{t(`tenders.stages.${s.stage}`)}</button>
         </li>
       ))}

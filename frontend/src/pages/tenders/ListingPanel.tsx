@@ -83,7 +83,7 @@ function FieldList({ rows }: { rows: { key: string; label: ReactNode; hint?: str
     <dl className="grid min-w-0 grid-cols-[minmax(6rem,10rem)_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
       {rows.map((r) => [
         <dt key={`${r.key}-l`} className="min-w-0 text-muted" dir="auto">{r.label}
-          {r.hint && <span className="block truncate font-mono text-[10px] text-muted/70" dir="ltr" title={r.hint}>{r.hint}</span>}</dt>,
+          {r.hint && <span className="block truncate font-mono text-2xs text-muted/70" dir="ltr" title={r.hint}>{r.hint}</span>}</dt>,
         <dd key={`${r.key}-v`} className="min-w-0 [overflow-wrap:anywhere]">{r.value}</dd>,
       ])}
     </dl>

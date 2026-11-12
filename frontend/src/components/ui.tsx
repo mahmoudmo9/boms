@@ -16,7 +16,7 @@ import { Icon } from "./Icon";
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-accent text-accent-fg hover:bg-accent-hover border-transparent",
+  primary: "bg-linear-to-br from-accent-fill-from to-accent-fill-to text-accent-fg hover:brightness-105 border-transparent font-semibold",
   secondary: "bg-surface text-fg border-line-strong hover:bg-surface-2",
   ghost: "bg-transparent text-fg border-transparent hover:bg-surface-2",
   danger: "bg-surface text-danger border-line-strong hover:bg-danger-soft",
@@ -168,7 +168,7 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
           role="radio"
           aria-checked={o.value === value}
           onClick={() => onChange(o.value)}
-          className={`h-7 rounded px-3 text-sm ${o.value === value ? "bg-accent text-accent-fg" : "text-fg hover:bg-surface-2"}`}
+          className={`h-7 rounded px-3 text-sm ${o.value === value ? "bg-accent-bright text-accent-fg" : "text-fg hover:bg-surface-2"}`}
         >
           {o.label}
         </button>
@@ -263,13 +263,13 @@ export function Modal({ open, title, onClose, children, footer, wide }: {
   }, [open]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-[10vh]" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-overlay p-4 pt-20" onMouseDown={onClose}>
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         onMouseDown={(e) => e.stopPropagation()}
-        className={`w-full ${wide ? "max-w-2xl" : "max-w-md"} mb-[5vh] rounded-lg border border-line bg-surface shadow-xl`}
+        className={`w-full ${wide ? "max-w-2xl" : "max-w-md"} mb-12 rounded-lg border border-line bg-surface shadow-xl`}
       >
         <header className="flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold">{title}</h2>

@@ -71,7 +71,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   let index = -1;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[12vh]" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-overlay p-4 pt-24" onMouseDown={onClose}>
       <div
         role="dialog"
         aria-modal="true"

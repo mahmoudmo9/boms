@@ -417,7 +417,7 @@ function Row({ row, n, columns, active, checked, comfortable, job, jobKind, onCh
         <button type="button" className={`block max-w-[22rem] text-start font-medium hover:underline ${clip}`} onClick={onOpen} dir="auto" title={row.title}>
           {row.is_new && !columns.includes("row") && <span className="me-1 inline-block h-2 w-2 rounded-full bg-accent" aria-label={t("listings.new")} />}{row.title}</button>
         {row.warn.length > 0 && <span className="shrink-0 text-xs text-danger" title={row.warn.join("، ")}>⚠{comfortable && <> <Bdi>{row.warn.join("، ")}</Bdi></>}</span>}
-        {job && <span className="shrink-0 rounded bg-accent-soft px-1.5 text-[11px] text-accent" data-testid="row-job">
+        {job && <span className="shrink-0 rounded bg-accent-soft px-1.5 text-2xs text-accent" data-testid="row-job">
           {job.state === "queued" ? t(`listings.job.${jobKind}QueuedShort`) : job.total ? t(`listings.job.${jobKind}RunningShort`, { n: f.num(job.done ?? 0), total: f.num(job.total) }) : t(`listings.job.${jobKind}StartedShort`)}</span>}</span>;
       case "organization": return <span className={`block max-w-[12rem] text-xs ${clip}`} dir="auto" title={row.organization}>{row.organization}</span>;
       case "province": return <span className={`block max-w-[9rem] text-xs ${clip}`} title={`${row.province}${row.city ? ` · ${row.city}` : ""}`}>{row.province}{row.city ? ` · ${row.city}` : ""}</span>;
