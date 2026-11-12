@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
-import { Card, ErrorNote, Loading } from "../../components/ui";
+import { Card, ErrorNote, Loading } from "../../design/components";
 import { api } from "../../lib/api";
 import type { TaskRow } from "../../lib/tasks";
 import { TaskList } from "./TaskList";

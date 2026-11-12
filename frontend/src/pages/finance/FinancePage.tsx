@@ -5,9 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { DateInput } from "../../components/DateInput";
-import { Badge, Card, EmptyState, ErrorNote, Field, Loading, PageHeader, Select } from "../../components/ui";
+import { Badge, Bdi, Card, DateInput, EmptyState, ErrorNote, Field, Loading, PageHeader, Select } from "../../design/components";
 import { api } from "../../lib/api";
 import { AGING_BUCKETS, MOADIAN_TONE, PAYMENT_TONE } from "../../lib/finance";
 import { toDateString } from "../../lib/followups";

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button, Card, ErrorNote, Field, Input, Loading, PageHeader, Select } from "../../components/ui";
+import { Button, Card, ErrorNote, Field, Input, Loading, PageHeader, Select } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 

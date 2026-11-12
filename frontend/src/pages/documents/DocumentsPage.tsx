@@ -4,10 +4,7 @@ import { type DragEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { DataTable, Pagination, type SortState } from "../../components/DataTable";
-import { Icon } from "../../components/Icon";
-import { Badge, Button, Card, ErrorNote, errorMessage, Input, PageHeader, Select, Spinner } from "../../components/ui";
+import { Badge, Bdi, Button, Card, DataTable, errorMessage, ErrorNote, Icon, Input, PageHeader, Pagination, Select, type SortState, Spinner } from "../../design/components";
 import { api, ApiError, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { DocumentDetail, DocumentItem } from "../../lib/types";

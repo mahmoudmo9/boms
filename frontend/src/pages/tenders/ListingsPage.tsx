@@ -5,10 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
+import { Badge, Bdi, Button, Checkbox, EmptyState, ErrorNote, Input, Modal, Select, useToast } from "../../design/components";
 import { TimeLeftBadge } from "../../components/TimeLeft";
-import { useToast } from "../../components/toast";
-import { Badge, Button, Checkbox, EmptyState, ErrorNote, Input, Modal, Select } from "../../components/ui";
 import { api, apiBlob } from "../../lib/api";
 import {
   activeFilterCount, bulkBody, clearFilters, COLUMNS, type Column, DEFAULT_FILTERS, documentsState,

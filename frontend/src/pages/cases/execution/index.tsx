@@ -1,8 +1,7 @@
 /** Execution (v0.7.0): the four case tabs and the case header facts. */
 import { useTranslation } from "react-i18next";
 
-import { Bdi } from "../../../components/Bdi";
-import { Badge } from "../../../components/ui";
+import { Badge, Bdi } from "../../../design/components";
 import { SO_TONE } from "../../../lib/execution";
 import { useFormat } from "../../../lib/prefs";
 import { Money } from "../../sourcing/shared";

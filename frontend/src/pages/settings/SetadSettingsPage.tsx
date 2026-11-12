@@ -4,8 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button, Card, ErrorNote, Field, Input, Modal, PageHeader, Textarea } from "../../components/ui";
-import { useToast } from "../../components/toast";
+import { Button, Card, ErrorNote, Field, Input, Modal, PageHeader, Textarea, useToast } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { SettingsResponse } from "../../lib/types";

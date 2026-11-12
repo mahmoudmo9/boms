@@ -4,8 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { Badge, Card, EmptyState, ErrorNote, Loading, Stat } from "../../components/ui";
+import { Badge, Bdi, Card, EmptyState, ErrorNote, Loading, Stat } from "../../design/components";
 import { api } from "../../lib/api";
 import { PAYMENT_TONE } from "../../lib/finance";
 import { useFormat } from "../../lib/prefs";

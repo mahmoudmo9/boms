@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { api } from "../lib/api";
 import { draftPoll, fromText, groupFields, rectStyle, reviewSummary, shownValue, sourceFocus, splitSpan, toText, type Draft, type DraftField, type FieldSource } from "../lib/ai";
-import { Badge, Button, ErrorNote, Input, Modal, Spinner } from "./ui";
+import { Badge, Button, ErrorNote, Input, Modal, Spinner } from "../design/components";
 
 const TONE = { high: "success", medium: "warning", low: "danger" } as const;
 

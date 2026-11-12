@@ -4,8 +4,7 @@ import { NavLink, Outlet, useLocation } from "react-router";
 
 import { CommandPalette } from "../components/CommandPalette";
 import { QuickLogProvider, useQuickLog } from "../pages/parties/QuickLog";
-import { Icon } from "../components/Icon";
-import { IconButton } from "../components/ui";
+import { Icon, IconButton } from "../design/components";
 import { useAuth } from "../lib/auth";
 import { toFaDigits } from "../lib/format";
 import { WORKSPACES } from "../lib/nav";

@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { DateInput } from "../../../components/DateInput";
-import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, Modal, Select } from "../../../components/ui";
+import { Badge, Button, Card, DateInput, EmptyState, ErrorNote, Field, Input, Modal, Select } from "../../../design/components";
 import { COST_KINDS, type CostRow } from "../../../lib/finance";
 import { toDateString } from "../../../lib/followups";
 import { useFormat } from "../../../lib/prefs";

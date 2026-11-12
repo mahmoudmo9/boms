@@ -3,9 +3,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
-import { Icon } from "../../components/Icon";
+import { Badge, Button, Card, Checkbox, ErrorNote, Field, Icon, Input, Loading, Modal, PageHeader, Segmented, Select, Textarea } from "../../design/components";
 import { TimeLeftBadge } from "../../components/TimeLeft";
-import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Loading, Modal, PageHeader, Segmented, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Check, CaseDetail, Decision, InquiryDetail } from "../../lib/types";

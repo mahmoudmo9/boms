@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import { Icon } from "../components/Icon";
+import { Icon } from "../design/components";
 import { toFaDigits } from "../lib/format";
 import type { Workspace } from "../lib/nav";
 import { useFormat } from "../lib/prefs";

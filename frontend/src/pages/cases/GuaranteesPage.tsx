@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { Badge, Card, EmptyState, ErrorNote, Input, Loading, PageHeader, Select } from "../../components/ui";
+import { Badge, Bdi, Card, EmptyState, ErrorNote, Input, Loading, PageHeader, Select } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { GuaranteeRow } from "../../lib/types";

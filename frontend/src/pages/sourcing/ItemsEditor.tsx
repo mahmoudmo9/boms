@@ -4,9 +4,7 @@ import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AttributeEditor, useProductTemplates } from "../../components/AttributeEditor";
-import { Bdi } from "../../components/Bdi";
-import { DateInput } from "../../components/DateInput";
-import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, errorMessage, Field, IconButton, Input, Modal, Select, Textarea } from "../../components/ui";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, errorMessage, ErrorNote, Field, IconButton, Input, LookupField, Modal, Select, Textarea } from "../../design/components";
 import { api } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { attributeProblems, nounBody, nounOf, sameNoun } from "../../lib/nounmod";
@@ -15,7 +13,6 @@ import { type ColumnMapping, type Delimiter, IMPORT_FIELDS, type ImportField, pa
 import type { ItemWarning, LineItem, LinkedDocument, Spec } from "../../lib/types";
 import { CountrySelect } from "../parties/PartiesPage";
 import { ExtractButton } from "../../components/AiActions";
-import { LookupField } from "../../components/smart";
 import { AttachedDocuments, CurrencySelect, IncotermSelect, ProductPicker, StatusBadge, UnitInput, useSpecKeys, useUnitLabel } from "./shared";
 
 export interface ItemOwner {

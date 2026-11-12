@@ -2,7 +2,7 @@
  * and «بستن» with the checklist; the header facts show invoiced / paid status and profit so far. */
 import { useTranslation } from "react-i18next";
 
-import { ErrorNote, Loading } from "../../../components/ui";
+import { ErrorNote, Loading } from "../../../design/components";
 import { useFormat } from "../../../lib/prefs";
 import type { CaseDetail } from "../../../lib/types";
 import { useExecution } from "../execution/shared";

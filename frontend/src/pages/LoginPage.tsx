@@ -2,9 +2,7 @@
 import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Bdi } from "../components/Bdi";
-import { Icon } from "../components/Icon";
-import { Button, ErrorNote, Field, Input } from "../components/ui";
+import { Bdi, Button, ErrorNote, Field, Icon, Input } from "../design/components";
 import { ApiError } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { applyLanguage } from "../lib/prefs";

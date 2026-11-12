@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../lib/api";
-import { Button, Checkbox } from "./ui";
+import { Button, Checkbox } from "../design/components";
 
 type Opened = { path: string; exists: boolean; opened: boolean };
 

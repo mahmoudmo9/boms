@@ -4,10 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { DateInput } from "../../components/DateInput";
-import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../components/ui";
-import { useToast } from "../../components/toast";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea, useToast } from "../../design/components";
 import { api, ApiError } from "../../lib/api";
 import { gateChecklist, priceWarning } from "../../lib/costing";
 import { fromDateString, toDateString } from "../../lib/followups";

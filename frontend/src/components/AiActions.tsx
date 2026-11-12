@@ -12,8 +12,7 @@ import { api } from "../lib/api";
 import type { Draft, Usage } from "../lib/ai";
 import type { LookupItem } from "../lib/smart";
 import { DraftReview } from "./DraftReview";
-import { LookupField } from "./smart";
-import { Button, Checkbox, ErrorNote, Field, Modal, Select, Textarea } from "./ui";
+import { Button, Checkbox, ErrorNote, Field, LookupField, Modal, Select, Textarea } from "../design/components";
 
 export function useAiConfigured(): boolean {
   const usage = useQuery({ queryKey: ["ai", "usage"], queryFn: () => api<Usage>("/api/ai/usage", { background: true }), staleTime: 30_000 });

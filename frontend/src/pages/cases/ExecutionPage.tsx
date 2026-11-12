@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
-import { ErrorNote, Loading, PageHeader } from "../../components/ui";
+import { ErrorNote, Loading, PageHeader } from "../../design/components";
 import { api } from "../../lib/api";
 import type { CommandCenter } from "../../lib/types";
 import { ExecutionSection } from "../parties/CommandCenterPage";

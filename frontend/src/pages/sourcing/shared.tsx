@@ -4,9 +4,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { Icon } from "../../components/Icon";
-import { Badge, Button, Card, EmptyState, ErrorNote, Field, IconButton, Input, Select, Spinner } from "../../components/ui";
+import { Badge, Bdi, Button, Card, EmptyState, ErrorNote, Field, Icon, IconButton, Input, Select, Spinner } from "../../design/components";
 import { api, ApiError, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import { personName } from "../../lib/sourcing";

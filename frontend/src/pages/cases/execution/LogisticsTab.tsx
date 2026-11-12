@@ -1,15 +1,12 @@
 /** Case tab «لجستیک» (v0.7.0): the process checklist(s) with references, dates, documents and reminders; shipments with
  * their events and documents and the delay warnings; inspections. */
-import { CodeChip, LookupField, ValidatedInput } from "../../../components/smart";
+import { Badge, Bdi, Button, Card, CodeChip, DateInput, EmptyState, ErrorNote, Field, Input, Loading, LookupField, Modal, Select, ValidatedInput } from "../../../design/components";
 import type { LookupItem } from "../../../lib/smart";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Bdi } from "../../../components/Bdi";
-import { DateInput } from "../../../components/DateInput";
 import { TimeLeftBadge } from "../../../components/TimeLeft";
-import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select } from "../../../components/ui";
 import { ApiError, api } from "../../../lib/api";
 import { parseContainers, STEP_TONE, stepGroups, stepState } from "../../../lib/execution";
 import { toDateString } from "../../../lib/followups";

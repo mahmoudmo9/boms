@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Select } from "../../../components/ui";
+import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Select } from "../../../design/components";
 import { api } from "../../../lib/api";
 import { unexplained, type Checklist } from "../../../lib/finance";
 import { ReasonDialog } from "../execution/shared";

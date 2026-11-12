@@ -3,9 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Bdi } from "../../components/Bdi";
-import { Icon } from "../../components/Icon";
-import { Button, Card, ErrorNote, Input, Segmented, Spinner } from "../../components/ui";
+import { Bdi, Button, Card, ErrorNote, Icon, Input, Segmented, Spinner } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Capability, RefCode } from "../../lib/types";

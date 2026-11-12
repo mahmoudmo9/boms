@@ -4,11 +4,7 @@ import { createContext, type DragEvent, type ReactNode, useCallback, useContext,
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { DateInput } from "../../components/DateInput";
-import { Icon } from "../../components/Icon";
-import { Badge, Button, Checkbox, ErrorNote, errorMessage, Field, Input, Modal, Select, Spinner, Textarea } from "../../components/ui";
-import { useToast } from "../../components/toast";
+import { Badge, Bdi, Button, Checkbox, DateInput, errorMessage, ErrorNote, Field, Icon, Input, Modal, Select, Spinner, Textarea, useToast } from "../../design/components";
 import { api, ApiError, type Page } from "../../lib/api";
 import { canSaveQuickLog } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";

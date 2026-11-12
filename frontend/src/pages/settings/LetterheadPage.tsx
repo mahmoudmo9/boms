@@ -4,8 +4,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Button, Card, ErrorNote, Field, Input, PageHeader, Textarea } from "../../components/ui";
-import { useToast } from "../../components/toast";
+import { Button, Card, ErrorNote, Field, Input, PageHeader, Textarea, useToast } from "../../design/components";
 import { api, ApiError } from "../../lib/api";
 import type { DocumentDetail, SettingsResponse } from "../../lib/types";
 

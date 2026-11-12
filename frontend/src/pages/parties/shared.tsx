@@ -4,10 +4,7 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { DateInput } from "../../components/DateInput";
-import { Badge, Button, ErrorNote, errorMessage, Field, Input, Modal, Select, Textarea } from "../../components/ui";
-import { useToast } from "../../components/toast";
+import { Badge, Bdi, Button, DateInput, errorMessage, ErrorNote, Field, Input, Modal, Select, Textarea, useToast } from "../../design/components";
 import { api, ApiError } from "../../lib/api";
 import { fromDateString, type QuickDue, quickDueDate, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";

@@ -4,8 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { CodeChip } from "../../components/smart";
-import { Badge, Button, Card, ErrorNote, Input, Loading, PageHeader } from "../../components/ui";
+import { Badge, Button, Card, CodeChip, ErrorNote, Input, Loading, PageHeader } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { SettingsResponse } from "../../lib/types";

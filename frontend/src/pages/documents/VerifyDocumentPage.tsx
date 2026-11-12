@@ -5,8 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { CodeChip } from "../../components/smart";
-import { Badge, Button, Card, ErrorNote, Field, Input, PageHeader, Textarea } from "../../components/ui";
+import { Badge, Button, Card, CodeChip, ErrorNote, Field, Input, PageHeader, Textarea } from "../../design/components";
 import { api } from "../../lib/api";
 
 type Result = { valid: boolean; reason?: string; kind?: string | null; code?: string; version?: number; issue_date?: string; status?: string;

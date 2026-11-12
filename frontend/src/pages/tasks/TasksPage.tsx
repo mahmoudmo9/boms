@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Select } from "../../components/ui";
+import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Select } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import { TASK_GROUPS, TASK_KINDS, type TasksResponse } from "../../lib/tasks";

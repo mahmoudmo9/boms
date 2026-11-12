@@ -3,12 +3,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { Icon } from "../../components/Icon";
-import { ScrollTabs } from "../../components/ScrollTabs";
-import { Button, ErrorNote, Field, Input, Loading, Modal, PageHeader, Select, Textarea } from "../../components/ui";
+import { Bdi, Button, CodeChip, ErrorNote, Field, Icon, Input, Loading, Modal, PageHeader, ScrollTabs, Select, Textarea } from "../../design/components";
 import { CaseFolderButton, CaseLocalOnly } from "../../components/CaseTools";
-import { CodeChip } from "../../components/smart";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { CaseCosting, CaseDetail, CaseQuotes } from "../../lib/types";

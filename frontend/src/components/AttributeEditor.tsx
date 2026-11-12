@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 
 import { api } from "../lib/api";
 import { attributeProblems, carryAttributes, cleanAttributes, type NounValue, type ProductTemplate, type TemplateAttribute } from "../lib/nounmod";
-import { Checkbox, Field, Input, Select } from "./ui";
+import { Checkbox, Field, Input, Select } from "../design/components";
 
 type Preview = { canonical_fa: string; canonical_en: string; long_fa: string; long_en: string };
 

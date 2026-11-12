@@ -3,9 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Bdi } from "../../../components/Bdi";
-import { DateInput } from "../../../components/DateInput";
-import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Stat, Textarea } from "../../../components/ui";
+import { Badge, Bdi, Button, Card, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Stat, Textarea } from "../../../design/components";
 import { cashRows, itemProgress, SO_TONE } from "../../../lib/execution";
 import { toDateString } from "../../../lib/followups";
 import { useFormat } from "../../../lib/prefs";

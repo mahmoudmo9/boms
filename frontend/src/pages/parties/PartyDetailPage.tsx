@@ -1,16 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CodeChip, ValidatedInput } from "../../components/smart";
+import { Badge, Bdi, Button, Card, Checkbox, CodeChip, DateInput, EmptyState, errorMessage, ErrorNote, Field, Icon, IconButton, Input, Loading, Modal, Segmented, Select, Textarea, useToast, ValidatedInput } from "../../design/components";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { PartyFinance } from "./PartyFinance";
-import { Bdi } from "../../components/Bdi";
-import { DateInput } from "../../components/DateInput";
-import { Icon } from "../../components/Icon";
 import { PhoneInput, usePhoneRegions } from "../../components/PhoneInput";
-import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, errorMessage, Field, IconButton, Input, Loading, Modal, Segmented, Select, Textarea } from "../../components/ui";
-import { useToast } from "../../components/toast";
 import { api, ApiError, type Page } from "../../lib/api";
 import { defaultPhoneRegion, isPhoneType } from "../../lib/phone";
 import { useFormat } from "../../lib/prefs";

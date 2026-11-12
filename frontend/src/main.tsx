@@ -7,7 +7,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 
 import { App } from "./App";
-import { ToastProvider } from "./components/toast";
+import { ToastProvider } from "./design/components";
 import { ApiError } from "./lib/api";
 import { AuthProvider } from "./lib/auth";
 import { applyLanguage, applyTheme, storedTheme } from "./lib/prefs";

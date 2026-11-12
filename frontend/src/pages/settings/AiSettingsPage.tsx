@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Select } from "../../components/ui";
+import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Select } from "../../design/components";
 import { api } from "../../lib/api";
 import { capTone, inputDescription, signInView, type CallRow, type ClaudeStatus, type Provider, type Route, type Usage } from "../../lib/ai";
 import { useFormat } from "../../lib/prefs";

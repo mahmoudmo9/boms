@@ -7,9 +7,7 @@ import { useNavigate } from "react-router";
 import { api } from "../lib/api";
 import { useFormat } from "../lib/prefs";
 import type { SearchGroup, SearchHit } from "../lib/types";
-import { Bdi } from "./Bdi";
-import { Icon } from "./Icon";
-import { Spinner } from "./ui";
+import { Bdi, Icon, Spinner } from "../design/components";
 
 function useDebounced<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);

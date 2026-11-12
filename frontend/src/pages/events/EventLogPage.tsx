@@ -2,10 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Bdi } from "../../components/Bdi";
-import { DateInput } from "../../components/DateInput";
-import { Pagination } from "../../components/DataTable";
-import { Badge, Button, Card, EmptyState, ErrorNote, Field, PageHeader, Select, Spinner } from "../../components/ui";
+import { Badge, Bdi, Button, Card, DateInput, EmptyState, ErrorNote, Field, PageHeader, Pagination, Select, Spinner } from "../../design/components";
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { EventItem } from "../../lib/types";

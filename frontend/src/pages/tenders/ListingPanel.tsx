@@ -6,9 +6,8 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
+import { Badge, Bdi, Button, Checkbox, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../design/components";
 import { TimeLeftBadge } from "../../components/TimeLeft";
-import { Badge, Button, Checkbox, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { groupTechnical, listingJobState, siteDate, type TechRow, technicalLabel, valueLabel } from "../../lib/setadFields";
 import { stripRemainingRemark } from "../../lib/timeLeft";

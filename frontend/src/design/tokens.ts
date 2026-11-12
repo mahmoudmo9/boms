@@ -6,11 +6,10 @@ export type Rgb = [number, number, number];
 
 /** The custom properties of one rule block (`:root {…}` or `:root.dark {…}`) of the token file. */
 export function readTheme(css: string, theme: Theme): Record<string, string> {
-  const selector = theme === "dark" ? ":root.dark" : ":root";
   const out: Record<string, string> = {};
-  const blocks = css.matchAll(/(^|\n)(:root(?:\.dark)?)\s*\{([^}]*)\}/g);
+  const blocks = css.matchAll(/(^|\n)(:root(?:\.dark)?)(?:,\s*\.theme-(?:light|dark))?\s*\{([^}]*)\}/g);
   for (const [, , sel, body] of blocks) {
-    if (sel !== selector) continue;
+    if ((sel === ":root.dark") !== (theme === "dark")) continue;
     for (const [, name, value] of body.matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)) out[name] = value.trim();
   }
   return out;

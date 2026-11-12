@@ -2,9 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Bdi } from "../../components/Bdi";
-import { Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Segmented, Textarea } from "../../components/ui";
-import { useToast } from "../../components/toast";
+import { Bdi, Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Segmented, Textarea, useToast } from "../../design/components";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import type { SettingsResponse } from "../../lib/types";

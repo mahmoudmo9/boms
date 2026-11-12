@@ -4,8 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Select } from "../../components/ui";
-import { useToast } from "../../components/toast";
+import { Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHeader, Select, useToast } from "../../design/components";
 import { api } from "../../lib/api";
 import { parseReminderDays } from "../../lib/tenders";
 import type { EnvelopeTemplateRow, ResultReasonRow, SettingsResponse } from "../../lib/types";

@@ -4,9 +4,8 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
+import { Badge, Bdi, Button, Card, EmptyState, ErrorNote, Loading, PageHeader } from "../../design/components";
 import { TimeLeftBadge } from "../../components/TimeLeft";
-import { Badge, Button, Card, EmptyState, ErrorNote, Loading, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { CommandCenter, ExecutionSummary, FollowupRow, SetadSummary, SourcingSummary, TendersSummary } from "../../lib/types";

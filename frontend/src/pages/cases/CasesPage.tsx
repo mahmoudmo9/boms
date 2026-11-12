@@ -4,8 +4,7 @@ import { type FormEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
-import { DataTable, Pagination } from "../../components/DataTable";
-import { Button, Card, ErrorNote, Field, Input, Modal, PageHeader, Select } from "../../components/ui";
+import { Button, Card, DataTable, ErrorNote, Field, Input, Modal, PageHeader, Pagination, Select } from "../../design/components";
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Case, CaseDetail, Party } from "../../lib/types";

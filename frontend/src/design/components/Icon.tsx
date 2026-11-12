@@ -1,4 +1,5 @@
-/** Small inline stroke icons (no icon font, no CDN). Directional icons flip in RTL. */
+/** Small inline stroke icons (no icon font, no CDN), drawn on a 24 px grid with the stroke of the text colour.
+ * Directional icons flip in RTL. Decorative by default (aria-hidden); pass `title` when the icon carries meaning alone. */
 const PATHS: Record<string, string> = {
   gauge: "M12 14l3-3M4 18a8 8 0 1 1 16 0",
   globe: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18",
@@ -32,22 +33,64 @@ const PATHS: Record<string, string> = {
   edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z",
   eye: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
   menu: "M3 6h18M3 12h18M3 18h18",
+  sparkle: "M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7z",
+  star: "M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z",
+  clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2",
+  calendar: "M4 6h16v15H4zM4 10h16M8 3v4M16 3v4",
+  copy: "M9 9h11v11H9zM5 15H4V4h11v1",
+  external: "M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5",
+  filter: "M3 5h18l-7 8v6l-4-2v-4z",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+  chevronDown: "M6 9l6 6 6-6",
+  chevronUp: "M18 15l-6-6-6 6",
+  info: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 8h.01",
+  checkCircle: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8.5 12.5l2.5 2.5 4.5-5",
+  xCircle: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9l6 6M15 9l-6 6",
+  minus: "M5 12h14",
+  trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6",
+  bank: "M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 21h18",
+  ship: "M3 17l2 3h14l2-3-9-3zM5 15V9h14v6M9 9V5h6v4M12 14v6",
+  plane: "M21 4L3 11l6 3 3 6zM9 14l5-5",
+  box: "M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8",
+  tag: "M3 12V4h8l10 10-8 8zM7.5 8h.01",
+  key: "M15 9a4 4 0 1 1-3.9 5H8v3H5v3H2v-3l7.1-7.1A4 4 0 0 1 15 9zM16 8h.01",
+  shield: "M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6zM9 12l2 2 4-4",
+  zap: "M13 2L4 14h7l-1 8 9-12h-7z",
+  panel: "M3 4h18v16H3zM15 4v16",
+  arrowEnd: "M5 12h14M13 6l6 6-6 6",
+  arrowStart: "M19 12H5M11 6l-6 6 6 6",
+  bell: "M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4",
+  cloud: "M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9.5 4.5 4.5 0 0 1 17.5 18z",
+  cpu: "M7 7h10v10H7zM10 10h4v4h-4zM9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4",
+  receipt: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6",
+  scale: "M12 4v16M5 20h14M5 8h14M5 8l-3 7a3 3 0 0 0 6 0zM19 8l-3 7a3 3 0 0 0 6 0z",
+  inbox: "M3 13l3-8h12l3 8v6H3zM3 13h5l1 3h6l1-3h5",
+  command: "M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z",
+  keyboard: "M3 7h18v10H3zM7 11h.01M11 11h.01M15 11h.01M8 14h8",
+  sidebar: "M3 4h18v16H3zM9 4v16",
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
+  flag: "M5 21V4M5 4h11l-2 4 2 4H5",
+  grid: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
 };
 
-const DIRECTIONAL = new Set(["chevron", "chevronStart", "logout"]);
+const DIRECTIONAL = new Set(["chevron", "chevronStart", "logout", "arrowEnd", "arrowStart", "external", "sidebar", "panel"]);
 
-export function Icon({ name, size = 18, className = "" }: { name: string; size?: number; className?: string }) {
+export const ICON_NAMES = Object.keys(PATHS);
+
+export function Icon({ name, size = 18, className = "", title, filled = false }: { name: string; size?: number; className?: string; title?: string; filled?: boolean }) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
-      strokeWidth={1.8}
+      strokeWidth={1.6}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden="true"
+      role={title ? "img" : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
       className={`shrink-0 ${DIRECTIONAL.has(name) ? "rtl:-scale-x-100" : ""} ${className}`}
     >
       <path d={PATHS[name] ?? PATHS.file} />

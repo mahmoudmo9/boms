@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { flagEmoji, phoneInputChange, type PhoneRegion } from "../lib/phone";
 import { useFormat } from "../lib/prefs";
-import { Input, Select } from "./ui";
+import { Input, Select } from "../design/components";
 
 export function usePhoneRegions() {
   return useQuery({ queryKey: ["parties", "phone-regions"], queryFn: () => api<PhoneRegion[]>("/api/parties/phone-regions"), staleTime: Infinity });

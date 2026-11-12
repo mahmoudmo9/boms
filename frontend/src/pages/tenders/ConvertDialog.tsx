@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { Button, Checkbox, ErrorNote, Field, Loading, Modal, Select } from "../../components/ui";
+import { Button, Checkbox, ErrorNote, Field, Loading, Modal, Select } from "../../design/components";
 import { api, ApiError } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 

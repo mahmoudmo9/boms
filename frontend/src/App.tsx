@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Navigate, Route, Routes } from "react-router";
 
-import { Loading } from "./components/ui";
+import { Loading } from "./design/components";
 import { useAuth } from "./lib/auth";
 import { WORKSPACES } from "./lib/nav";
 import { BaseDataPage } from "./pages/basedata/BaseDataPage";
@@ -34,10 +34,16 @@ import { InquiriesPage } from "./pages/sourcing/InquiriesPage";
 import { InquiryDetailPage } from "./pages/sourcing/InquiryDetailPage";
 import { TemplatesPage } from "./pages/sourcing/TemplatesPage";
 import { SystemPage } from "./pages/system/SystemPage";
+import { DesignPage, devMode } from "./pages/system/DesignPage";
 import { ListingsPage } from "./pages/tenders/ListingsPage";
 import { TasksPage } from "./pages/tasks/TasksPage";
 import { FinancePage } from "./pages/finance/FinancePage";
 import { AppShell } from "./shell/AppShell";
+
+/** `/design` exists only in developer mode (Settings → System); the switch is read when the route renders. */
+function DesignRoute() {
+  return devMode() ? <DesignPage /> : <NotFoundPage />;
+}
 
 export function App() {
   const { status } = useAuth();
@@ -77,6 +83,7 @@ export function App() {
         <Route path="settings/basedata/:kind" element={<BaseDataPage />} />
         <Route path="settings/events" element={<EventLogPage />} />
         <Route path="settings/system" element={<SystemPage />} />
+        <Route path="design" element={<DesignRoute />} />
         <Route path="settings/costing" element={<CostingSettingsPage />} />
         <Route path="settings/letterhead" element={<LetterheadPage />} />
         <Route path="settings/setad" element={<SetadSettingsPage />} />

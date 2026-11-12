@@ -4,9 +4,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
-import { DataTable, Pagination } from "../../components/DataTable";
-import { DateInput } from "../../components/DateInput";
-import { Button, Card, ErrorNote, Field, Input, Modal, PageHeader, Select, Textarea } from "../../components/ui";
+import { Button, Card, DataTable, DateInput, ErrorNote, Field, Input, Modal, PageHeader, Pagination, Select, Textarea } from "../../design/components";
 import { api, type Page } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";

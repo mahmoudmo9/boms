@@ -3,8 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, Input, Modal, PageHeader, Segmented, Select, Textarea } from "../../components/ui";
+import { Badge, Bdi, Button, Card, Checkbox, EmptyState, ErrorNote, Field, Input, Modal, PageHeader, Segmented, Select, Textarea } from "../../design/components";
 import { api } from "../../lib/api";
 import { PLACEHOLDERS_BY_KIND, placeholdersIn, type TemplateKind, unknownPlaceholdersOf } from "../../lib/sourcing";
 import type { MessageTemplate } from "../../lib/types";

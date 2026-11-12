@@ -4,10 +4,7 @@ import { type FormEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, useParams, useSearchParams } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { DataTable, Pagination } from "../../components/DataTable";
-import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Modal, PageHeader, Segmented, Select } from "../../components/ui";
-import { useToast } from "../../components/toast";
+import { Badge, Bdi, Button, Card, Checkbox, DataTable, ErrorNote, Field, Input, Modal, PageHeader, Pagination, Segmented, Select, useToast } from "../../design/components";
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Country, Currency, Unit } from "../../lib/types";

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Badge, Button, ErrorNote, Modal } from "../../components/ui";
+import { Badge, Button, ErrorNote, Modal } from "../../design/components";
 import { api } from "../../lib/api";
 import type { ListingSource } from "../../lib/listings";
 import { useFormat } from "../../lib/prefs";

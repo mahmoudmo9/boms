@@ -3666,5 +3666,128 @@
       "not_allowed": "Choose from the list",
       "too_long": "200 characters at most"
     }
+  },
+  "ds": {
+    "date": {
+      "open": "Open the calendar",
+      "choose": "Choose a date",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "today": "Today",
+      "months": {
+        "jalali": {
+          "0": "Farvardin",
+          "1": "Ordibehesht",
+          "2": "Khordad",
+          "3": "Tir",
+          "4": "Mordad",
+          "5": "Shahrivar",
+          "6": "Mehr",
+          "7": "Aban",
+          "8": "Azar",
+          "9": "Dey",
+          "10": "Bahman",
+          "11": "Esfand"
+        },
+        "gregorian": {
+          "0": "January",
+          "1": "February",
+          "2": "March",
+          "3": "April",
+          "4": "May",
+          "5": "June",
+          "6": "July",
+          "7": "August",
+          "8": "September",
+          "9": "October",
+          "10": "November",
+          "11": "December"
+        }
+      },
+      "weekdays": {
+        "short": {
+          "0": "Su",
+          "1": "Mo",
+          "2": "Tu",
+          "3": "We",
+          "4": "Th",
+          "5": "Fr",
+          "6": "Sa"
+        },
+        "long": {
+          "0": "Sunday",
+          "1": "Monday",
+          "2": "Tuesday",
+          "3": "Wednesday",
+          "4": "Thursday",
+          "5": "Friday",
+          "6": "Saturday"
+        }
+      }
+    },
+    "money": {
+      "amount": "Amount",
+      "currency": "Currency"
+    },
+    "quantity": {
+      "amount": "Quantity",
+      "unit": "Unit"
+    },
+    "fileDrop": {
+      "label": "Drop files here or click to choose"
+    },
+    "error": {
+      "title": "This part did not load",
+      "retry": "Try again"
+    },
+    "confirm": {
+      "type": "To confirm, type “{{word}}”"
+    },
+    "table": {
+      "selectAll": "Select every row",
+      "selectRow": "Select row",
+      "pages": "Table pages",
+      "dense": "Compact"
+    },
+    "timeline": {
+      "now": "now",
+      "expected": "Expected"
+    },
+    "stepper": {
+      "done": "Done"
+    },
+    "kpi": {
+      "estimated": "estimated"
+    },
+    "chart": {
+      "fromTo": "from {{from}} to {{to}}",
+      "step": "Step",
+      "amount": "Amount",
+      "cashIn": "In",
+      "cashOut": "Out",
+      "balance": "Balance",
+      "lowest": "Lowest balance"
+    },
+    "route": {
+      "last": "Last recorded event",
+      "done": "Passed",
+      "upcoming": "Ahead",
+      "place": "Place",
+      "code": "Code",
+      "when": "Date",
+      "state": "State"
+    },
+    "breadcrumb": "Page path",
+    "moreActions": "More actions"
+  },
+  "design": {
+    "title": "Design system",
+    "subtitle": "Every component in every state, the two themes side by side. Later versions build from this page.",
+    "devOnly": "Developer mode only",
+    "contrast": "Token contrast table",
+    "contrastHint": "WCAG 2.1 AA: text 4.5, control boundaries and chart marks 3",
+    "devMode": "Developer mode",
+    "devModeHint": "Shows the link to the design system page. In this browser only.",
+    "open": "Open the design system"
   }
 }

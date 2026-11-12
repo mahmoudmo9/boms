@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { timeLeft, timeLeftMessage } from "../lib/timeLeft";
 import { useFormat } from "../lib/prefs";
-import { Badge } from "./ui";
+import { Badge } from "../design/components";
 
 let listeners = new Set<(d: Date) => void>();
 let timer: ReturnType<typeof setInterval> | null = null;

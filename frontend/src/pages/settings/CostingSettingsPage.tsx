@@ -3,8 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, Input, Modal, PageHeader, Select } from "../../components/ui";
-import { DateInput } from "../../components/DateInput";
+import { Badge, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Input, Modal, PageHeader, Select } from "../../design/components";
 import { api } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";

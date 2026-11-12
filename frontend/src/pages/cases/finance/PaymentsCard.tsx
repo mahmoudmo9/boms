@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, Modal } from "../../../components/ui";
+import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, Modal } from "../../../design/components";
 import { api } from "../../../lib/api";
 import type { PaymentRecordRow, Suggestion } from "../../../lib/finance";
 import { useFormat } from "../../../lib/prefs";

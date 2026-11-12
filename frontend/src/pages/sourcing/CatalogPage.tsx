@@ -5,10 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { AttributeEditor, useProductTemplates } from "../../components/AttributeEditor";
-import { Bdi } from "../../components/Bdi";
-import { DataTable, Pagination } from "../../components/DataTable";
-import { Icon } from "../../components/Icon";
-import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, IconButton, Input, Loading, Modal, PageHeader, Select, Textarea } from "../../components/ui";
+import { Badge, Bdi, Button, Card, Checkbox, DataTable, EmptyState, ErrorNote, Field, Icon, IconButton, Input, Loading, Modal, PageHeader, Pagination, Select, Textarea } from "../../design/components";
 import { api, ApiError, type Page } from "../../lib/api";
 import { attributeProblems, nounBody, nounOf, sameNoun } from "../../lib/nounmod";
 import { useFormat } from "../../lib/prefs";

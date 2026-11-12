@@ -3,10 +3,10 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
-import { Bdi } from "../../components/Bdi";
-import { DataTable, Pagination } from "../../components/DataTable";
-import { Badge, Button, Card, ErrorNote, PageHeader, Stat } from "../../components/ui";
-import { useToast } from "../../components/toast";
+import { Link } from "react-router";
+
+import { Badge, Bdi, Button, buttonClass, Card, DataTable, ErrorNote, PageHeader, Pagination, Stat, Switch, useToast } from "../../design/components";
+import { devMode, setDevMode } from "./DesignPage";
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { BackupRun, Health, Job } from "../../lib/types";
@@ -205,6 +205,21 @@ export function SystemPage() {
         <DataTable columns={jobColumns} data={jobs.data?.items ?? []} rowKey={(r) => r.id} />
         <Pagination page={jobPage} pageSize={10} total={jobs.data?.total ?? 0} onPage={setJobPage} />
       </Card>
+      <DeveloperCard />
     </div>
+  );
+}
+
+/** v0.10.0: developer mode (this browser only) shows the link to the design-system catalogue. */
+function DeveloperCard() {
+  const { t } = useTranslation();
+  const [on, setOn] = useState(devMode());
+  return (
+    <Card title={t("design.devMode")}>
+      <div className="flex flex-wrap items-center justify-between gap-3" data-testid="dev-mode">
+        <Switch label={t("design.devModeHint")} checked={on} onChange={(v) => { setDevMode(v); setOn(v); }} />
+        {on && <Link to="/design" className={buttonClass("secondary", "sm")} data-testid="open-design">{t("design.open")}</Link>}
+      </div>
+    </Card>
   );
 }

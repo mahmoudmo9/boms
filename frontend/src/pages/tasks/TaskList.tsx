@@ -5,10 +5,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
+import { Badge, Bdi, Button, EmptyState, ErrorNote, Field, Modal, Textarea, useToast } from "../../design/components";
 import { TimeLeftBadge } from "../../components/TimeLeft";
-import { useToast } from "../../components/toast";
-import { Badge, Button, EmptyState, ErrorNote, Field, Modal, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import { remindsOf, taskLink, type TaskRow } from "../../lib/tasks";

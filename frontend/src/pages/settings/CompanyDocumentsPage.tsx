@@ -5,8 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
-import { DateInput } from "../../components/DateInput";
-import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, Loading, Modal, PageHeader, Select } from "../../components/ui";
+import { Badge, Button, Card, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, PageHeader, Select } from "../../design/components";
 import { api, ApiError } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";

@@ -5,9 +5,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { DataTable, Pagination, type SortState } from "../../components/DataTable";
-import { Badge, Button, Card, Checkbox, ErrorNote, Field, Input, Modal, PageHeader, Select, Textarea } from "../../components/ui";
+import { Badge, Bdi, Button, Card, Checkbox, DataTable, ErrorNote, Field, Input, Modal, PageHeader, Pagination, Select, type SortState, Textarea } from "../../design/components";
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Country, Party, PartyDetail, PossibleDuplicate } from "../../lib/types";

@@ -4,10 +4,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { Icon } from "../../components/Icon";
-import { Badge, Button, ButtonLink, Card, ErrorNote, Field, IconButton, Input, Loading, Select, Textarea } from "../../components/ui";
-import { useToast } from "../../components/toast";
+import { Badge, Bdi, Button, ButtonLink, Card, ErrorNote, Field, Icon, IconButton, Input, Loading, Select, Textarea, useToast } from "../../design/components";
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { DocumentDetail, EventItem } from "../../lib/types";

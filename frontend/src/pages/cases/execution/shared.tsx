@@ -5,8 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { DateInput } from "../../../components/DateInput";
-import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, Modal, Select } from "../../../components/ui";
+import { Badge, Button, Card, DateInput, EmptyState, ErrorNote, Field, Input, Modal, Select } from "../../../design/components";
 import { api, ApiError } from "../../../lib/api";
 import { MILESTONE_TONE } from "../../../lib/execution";
 import { fromDateString, toDateString } from "../../../lib/followups";

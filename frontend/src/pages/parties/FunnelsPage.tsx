@@ -2,8 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { ErrorNote, Loading, PageHeader, Segmented, Select } from "../../components/ui";
-import { useToast } from "../../components/toast";
+import { ErrorNote, Loading, PageHeader, Segmented, Select, useToast } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { FunnelBoard, FunnelCard } from "../../lib/types";

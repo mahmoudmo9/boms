@@ -5,10 +5,7 @@ import { type KeyboardEvent, Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Bdi } from "../../components/Bdi";
-import { DateInput } from "../../components/DateInput";
-import { Icon } from "../../components/Icon";
-import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, Field, Input, Modal, Select, Textarea } from "../../components/ui";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Icon, Input, Modal, Select, Textarea } from "../../design/components";
 import { api, ApiError } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
