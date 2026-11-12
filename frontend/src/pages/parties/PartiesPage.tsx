@@ -8,33 +8,14 @@ import { useNavigate, useSearchParams } from "react-router";
 import { Badge, Bdi, Button, Card, Checkbox, DataTable, ErrorNote, Field, Input, Modal, PageHeader, Pagination, Select, type SortState, Textarea } from "../../design/components";
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
-import type { Country, Party, PartyDetail, PossibleDuplicate } from "../../lib/types";
+import type { Party, PartyDetail, PossibleDuplicate } from "../../lib/types";
 import { useQuickLog } from "./QuickLog";
 import { PartyName, ROLES, stageLabel, useStages } from "./shared";
+import { CountryField } from "../../components/fields";
 
 const PAGE_SIZE = 50;
 
-export function useCountries() {
-  return useQuery({
-    queryKey: ["basedata", "countries", "all-active"],
-    queryFn: () => api<Page<Country>>("/api/basedata/countries", { query: { active: true, page_size: 500 } }),
-    staleTime: 5 * 60_000,
-  });
-}
-
-export function CountrySelect({ value, onChange, id, allowEmpty = true, emptyLabel }: { value: string; onChange: (v: string) => void; id?: string; allowEmpty?: boolean; emptyLabel?: string }) {
-  const { t } = useTranslation();
-  const f = useFormat();
-  const countries = useCountries();
-  return (
-    <Select id={id} value={value} onChange={(e) => onChange(e.target.value)} aria-label={t("parties.country")}>
-      {allowEmpty && <option value="">{emptyLabel ?? t("common.all")}</option>}
-      {(countries.data?.items ?? []).map((c) => (
-        <option key={c.iso2} value={c.iso2}>{f.lang === "fa" ? c.name_fa : c.name_en}</option>
-      ))}
-    </Select>
-  );
-}
+export { useCountries } from "../../lib/basedata";
 
 /** "Handles HS 3907 / ISIC C20 / tag X" (capability tags of the sourcing module). */
 function CapabilityFilter({ value, onChange }: { value: string; onChange: (v: string | null) => void }) {
@@ -130,7 +111,7 @@ function NewPartyDialog({ onClose }: { onClose: () => void }) {
             <option value="person">{t("parties.kinds.person")}</option>
           </Select>
         </Field>
-        <Field label={t("parties.country")} htmlFor="np-country"><CountrySelect id="np-country" value={form.country_iso2} onChange={(v) => set("country_iso2", v)} /></Field>
+        <Field label={t("parties.country")} htmlFor="np-country"><CountryField id="np-country" value={form.country_iso2} onChange={(v) => set("country_iso2", v)} /></Field>
         <Field label={t("parties.website")} htmlFor="np-web"><Input id="np-web" dir="ltr" value={form.website} onChange={(e) => set("website", e.target.value)} /></Field>
         <Field label={t("parties.roles.label")}>
           <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -220,7 +201,7 @@ export function PartiesPage() {
             <option value="">{t("parties.allStages")}</option>
             {(stages.data ?? []).filter((s) => s.role === role).map((s) => <option key={s.code} value={s.code}>{stageLabel(t, role, s.code)}</option>)}
           </Select>
-          <div className="w-48"><CountrySelect value={country} onChange={(v) => set({ country: v })} /></div>
+          <div className="w-48"><CountryField value={country} onChange={(v) => set({ country: v })} /></div>
           <CapabilityFilter value={capability} onChange={(v) => set({ capability: v })} />
           <Select className="w-36" aria-label={t("parties.status")} value={status} onChange={(e) => set({ status: e.target.value })}>
             <option value="active">{t("parties.statuses.active")}</option>

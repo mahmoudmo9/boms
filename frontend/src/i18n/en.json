@@ -976,7 +976,8 @@
     "saveHint": "Choose a party and set a next action (or say why none is needed).",
     "saved": "Interaction saved",
     "shortcut": "Shortcut:",
-    "timesLocal": "Times are in this PC's time zone."
+    "timesLocal": "Times are in this PC's time zone.",
+    "createPartyNamed": "New party: {{name}}"
   },
   "delete": {
     "button": "Delete",
@@ -1923,7 +1924,16 @@
     "pdfHint": "Empty: Edge or Chrome is found automatically. Set a path only if PDF fails.",
     "terms": "Quote terms",
     "termsHint": "Payment, delivery and validity text comes from the quote terms templates.",
-    "termsLink": "Edit quote terms templates"
+    "termsLink": "Edit quote terms templates",
+    "bank": {
+      "subtitle": "Quotes and invoices print exactly the lines of the preview.",
+      "bank_name": "Bank and branch",
+      "account_holder": "Account holder",
+      "iban": "IBAN",
+      "bic": "BIC / SWIFT",
+      "other": "Other lines",
+      "preview": "Print preview ({{lang}})"
+    }
   },
   "listings": {
     "subtitle": "Purchase calls and tenders from Setad: screen, star, convert to an inquiry.",
@@ -3475,7 +3485,11 @@
       "length": "Wrong length",
       "checksum": "Check digit does not match",
       "invalid": "Not valid"
-    }
+    },
+    "lastPurchase": "Last purchase: {{price}} from {{supplier}}",
+    "lineTotal": "Line total",
+    "documentTotal": "Total",
+    "withoutQuantity": "{{n}} lines without a quantity are not counted"
   },
   "ai": {
     "tasks": {

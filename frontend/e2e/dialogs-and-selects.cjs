@@ -241,7 +241,9 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
     }
     await page.goto(`${BASE}/cases/${kase.id}?tab=offers`);
     await page.getByRole('button', { name: t('sourcing.offer.record'), exact: true }).click();
-    await page.getByRole('dialog').locator('button', { hasText: `Alpha Valves ${tag}` }).first().click();
+    // v0.10.0: the supplier is a smart field (combobox): type the name and pick the option
+    await page.getByRole('dialog').locator('#ql-party').fill(`Alpha Valves ${tag}`);
+    await page.getByRole('dialog').getByRole('option', { name: new RegExp(`Alpha Valves ${tag}`) }).first().click();
     await page.waitForTimeout(300);
     await checkSelects(`${lang} offer form`);
     await page.getByRole('dialog').getByRole('button', { name: t('common.cancel'), exact: true }).click();

@@ -5,15 +5,17 @@ import { type KeyboardEvent, Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Icon, Input, Modal, Select, Textarea } from "../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Icon, Input, Modal, Select, SuggestedValue, Textarea } from "../../design/components";
 import { api, ApiError } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
-import { flattenComparison, personName, validityTone } from "../../lib/sourcing";
+import { useSuggestions } from "../../lib/suggest";
+import { flattenComparison, offerLineTotal, offerTotal, validityTone } from "../../lib/sourcing";
 import type { CaseDetail, ComparisonItem, Contact, Coverage, DocumentDetail, Offer, Party, Rfq } from "../../lib/types";
-import { PartyPicker } from "../parties/QuickLog";
+
 import { DueDatePicker, PartyName } from "../parties/shared";
-import { ContactName, CurrencySelect, IncotermSelect, Money, OFFER_CHANNELS, StatusBadge, UnitInput, useInvalidateSourcing, useUnitLabel } from "../sourcing/shared";
+import { ContactName, Money, OFFER_CHANNELS, StatusBadge, useInvalidateSourcing, useUnitLabel } from "../sourcing/shared";
+import { ContactField, CurrencyField, IncotermField, PartyField, UnitField } from "../../components/fields";
 
 // v0.9.0: every status from selected onward counts as covered
 const COVERED = ["selected", "sold", "delivered", "closed", "cancelled"];
@@ -21,6 +23,7 @@ const COVERED = ["selected", "sold", "delivered", "closed", "cancelled"];
 interface Row {
   line_item_id: string;
   name: string;
+  quantity: string | null;     // v0.10.0: shown as the line total, never sent
   include: boolean;
   available: boolean;
   unit_price: string;
@@ -43,17 +46,18 @@ function gridKey(e: KeyboardEvent<HTMLInputElement>, row: number, column: string
 }
 
 export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { caseData: CaseDetail; onClose: () => void; onSaved: () => void; initialPartyId?: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const f = useFormat();
   const rfqs = useQuery({ queryKey: ["rfqs", caseData.id], queryFn: () => api<Rfq[]>("/api/rfqs", { query: { case_id: caseData.id } }) });
   const existing = useQuery({ queryKey: ["offers", caseData.id], queryFn: () => api<Offer[]>("/api/offers", { query: { case_id: caseData.id } }) });
   const [party, setParty] = useState<Party | null>(null);
+  const sp = useSuggestions("party", party?.id, { role: "supplier" });   // v0.10.0: from this supplier's history
   const [header, setHeader] = useState({
     channel: "email", currency: "USD" as string | null, incoterm: null as string | null, incoterm_place: "", valid_until: null as string | null,
     payment_terms: "", lead_time_days: "", compliance_notes: "", raw_text: "", received_at: null as string | null,
   });
   const [rows, setRows] = useState<Row[]>(() => caseData.items.filter((i) => i.status !== "cancelled").map((i) => ({
-    line_item_id: i.id, name: i.name, include: true, available: true, unit_price: "", price_per_quantity: "1",
+    line_item_id: i.id, name: i.name, quantity: i.quantity, include: true, available: true, unit_price: "", price_per_quantity: "1",
     unit_code: i.unit_code, unit_text: i.unit_text, moq: "", lead_time_days: "", spec_deviation: "",
   })));
   const [supersedes, setSupersedes] = useState("");
@@ -104,6 +108,7 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
     },
     onSuccess: () => { onSaved(); onClose(); },
   });
+  const totals = offerTotal(rows);
   const valid = party && header.currency && rows.some((r) => r.include) && rows.every((r) => !r.include || !r.available || r.unit_price)
     && (noFollowup ? reason.trim() : action.trim() && due);
 
@@ -112,13 +117,12 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
       footer={<><Button onClick={onClose}>{t("common.cancel")}</Button>
         <Button variant="primary" busy={save.isPending} disabled={!valid} onClick={() => save.mutate()}>{t("common.save")}</Button></>}>
       <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pe-1">
-        <Field label={t("sourcing.offer.supplier")} htmlFor="ql-party"><PartyPicker value={party} onChange={(p) => { setParty(p); setSupersedes(""); setContactId(""); }} /></Field>
+        <Field label={t("sourcing.offer.supplier")} htmlFor="ql-party"><PartyField value={party} onChange={(p) => { setParty(p); setSupersedes(""); setContactId(""); }} /></Field>
         {party && (
           <Field label={t("sourcing.offer.contact")} htmlFor="of-contact" hint={recipient?.contact_id ? t("sourcing.offer.contactFromRfq") : undefined}>
-            <Select id="of-contact" value={contactId} onChange={(e) => setContactId(e.target.value)}>
-              <option value="">{t("sourcing.offer.noContact")}</option>
-              {contactOptions.map((c) => <option key={c.id} value={c.id}>{personName(c.name_fa, c.name_en, f.lang)}{c.status === "archived" ? ` (${t("parties.archived")})` : ""}</option>)}
-            </Select>
+            <SuggestedValue current={contactId} suggestion={sp.contact_id} onAccept={setContactId}
+              render={(id) => contactOptions.find((c) => c.id === id)?.[i18n.language === "fa" ? "name_fa" : "name_en"] ?? ""}>
+              <ContactField id="of-contact" contacts={contactOptions} value={contactId} onChange={setContactId} emptyLabel={t("sourcing.offer.noContact")} /></SuggestedValue>
           </Field>
         )}
         {recipients.length > 0 && !party && (
@@ -148,19 +152,24 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
               {OFFER_CHANNELS.map((c) => <option key={c} value={c}>{t(`sourcing.channels.${c}`)}</option>)}
             </Select>
           </Field>
-          <Field label={t("sourcing.currency")} htmlFor="of-cur"><CurrencySelect id="of-cur" className="w-full" allowEmpty={false} value={header.currency} onChange={(v) => setHeader({ ...header, currency: v })} /></Field>
+          <Field label={t("sourcing.currency")} htmlFor="of-cur"><CurrencyField id="of-cur" className="w-full" allowEmpty={false} value={header.currency} onChange={(v) => setHeader({ ...header, currency: v })} /></Field>
           <Field label={t("sourcing.offer.received")} htmlFor="of-rec">
             <DateInput id="of-rec" value={header.received_at ? fromDateString(header.received_at) : null} onChange={(d) => setHeader({ ...header, received_at: d ? toDateString(d) : null })} />
           </Field>
           <Field label={t("sourcing.incoterm")} htmlFor="of-inco">
-            <div className="flex gap-1.5"><IncotermSelect id="of-inco" value={header.incoterm} onChange={(v) => setHeader({ ...header, incoterm: v })} />
-              <Input dir="auto" aria-label={t("sourcing.incotermPlace")} placeholder={t("sourcing.incotermPlace")} value={header.incoterm_place} onChange={(e) => setHeader({ ...header, incoterm_place: e.target.value })} /></div>
+            <div className="flex gap-1.5">
+              <SuggestedValue current={header.incoterm} suggestion={sp.incoterm} onAccept={(v) => setHeader((h) => ({ ...h, incoterm: v }))}>
+                <IncotermField id="of-inco" value={header.incoterm} onChange={(v) => setHeader({ ...header, incoterm: v })} /></SuggestedValue>
+              <SuggestedValue current={header.incoterm_place} suggestion={sp.incoterm_place} onAccept={(v) => setHeader((h) => ({ ...h, incoterm_place: v }))}>
+                <Input dir="auto" aria-label={t("sourcing.incotermPlace")} placeholder={t("sourcing.incotermPlace")} value={header.incoterm_place} onChange={(e) => setHeader({ ...header, incoterm_place: e.target.value })} /></SuggestedValue></div>
           </Field>
           <Field label={t("sourcing.offer.validUntil")} htmlFor="of-valid">
             <DateInput id="of-valid" value={header.valid_until ? fromDateString(header.valid_until) : null} onChange={(d) => setHeader({ ...header, valid_until: d ? toDateString(d) : null })} />
           </Field>
           <Field label={t("sourcing.offer.leadTime")} htmlFor="of-lead"><Input id="of-lead" dir="ltr" inputMode="numeric" value={header.lead_time_days} onChange={(e) => setHeader({ ...header, lead_time_days: e.target.value.replace(/\D/g, "") })} /></Field>
-          <div className="sm:col-span-3"><Field label={t("sourcing.offer.paymentTerms")} htmlFor="of-pay"><Input id="of-pay" dir="auto" value={header.payment_terms} onChange={(e) => setHeader({ ...header, payment_terms: e.target.value })} /></Field></div>
+          <div className="sm:col-span-3"><Field label={t("sourcing.offer.paymentTerms")} htmlFor="of-pay">
+            <SuggestedValue current={header.payment_terms} suggestion={sp.payment_terms} onAccept={(v) => setHeader((h) => ({ ...h, payment_terms: v }))}>
+              <Input id="of-pay" dir="auto" value={header.payment_terms} onChange={(e) => setHeader({ ...header, payment_terms: e.target.value })} /></SuggestedValue></Field></div>
         </div>
         <div className="shrink-0 overflow-x-auto rounded-md border border-line">
           <table className="w-full text-sm">
@@ -173,24 +182,34 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
               <th className="p-1.5 text-start">{t("sourcing.offer.moq")}</th>
               <th className="p-1.5 text-start">{t("sourcing.offer.leadTimeShort")}</th>
               <th className="p-1.5 text-start">{t("sourcing.offer.deviation")}</th>
+              <th className="p-1.5 text-end">{t("smart.lineTotal")}</th>
             </tr></thead>
             <tbody>
               {rows.map((r, i) => (
                 <tr key={r.line_item_id} className={`border-t border-line ${r.include ? "" : "opacity-50"}`}>
                   <td className="p-1.5"><Checkbox label={<Bdi>{r.name}</Bdi>} checked={r.include} onChange={(v) => setRow(i, { include: v })} /></td>
-                  <td className="p-1.5"><input type="checkbox" aria-label={t("sourcing.offer.available")} className="h-4 w-4 accent-[var(--accent)]" checked={r.available} disabled={!r.include} onChange={(e) => setRow(i, { available: e.target.checked })} /></td>
+                  <td className="p-1.5"><Checkbox label={<span className="sr-only">{t("sourcing.offer.available")}</span>} checked={r.available} disabled={!r.include} onChange={(v) => setRow(i, { available: v })} /></td>
                   {GRID_COLUMNS.slice(0, 2).map((c) => (
                     <td key={c} className="p-1.5"><Input data-grid={`${i}-${c}`} dir="ltr" className={c === "unit_price" ? "w-28" : "w-20"} inputMode="decimal" aria-label={t(`sourcing.offer.grid.${c}`)}
                       disabled={!r.include || !r.available} value={r[c]} onKeyDown={(e) => gridKey(e, i, c)} onChange={(e) => setRow(i, { [c]: e.target.value })} /></td>
                   ))}
-                  <td className="p-1.5"><UnitInput code={r.unit_code} text={r.unit_text} onChange={(u) => setRow(i, u)} /></td>
+                  <td className="p-1.5"><UnitField code={r.unit_code} text={r.unit_text} onChange={(u) => setRow(i, u)} /></td>
                   {GRID_COLUMNS.slice(2).map((c) => (
                     <td key={c} className="p-1.5"><Input data-grid={`${i}-${c}`} dir={c === "spec_deviation" ? "auto" : "ltr"} className={c === "spec_deviation" ? "w-40" : "w-20"} aria-label={t(`sourcing.offer.grid.${c}`)}
                       disabled={!r.include} value={r[c]} onKeyDown={(e) => gridKey(e, i, c)} onChange={(e) => setRow(i, { [c]: e.target.value })} /></td>
                   ))}
+                  <td className="p-1.5 text-end whitespace-nowrap tabular-nums" data-testid="offer-line-total">{(() => {
+                    const line = r.include && r.available ? offerLineTotal(r.quantity, r.unit_price, r.price_per_quantity) : null;
+                    return line === null ? "—" : <bdi dir="ltr">{f.num(line)} {header.currency ?? ""}</bdi>;
+                  })()}</td>
                 </tr>
               ))}
             </tbody>
+            <tfoot><tr className="border-t border-line bg-surface-2 text-sm font-medium" data-testid="offer-total">
+              <td className="p-1.5" colSpan={8}>{t("smart.documentTotal")}
+                {totals.missing > 0 && <span className="ms-2 text-xs font-normal text-muted">{t("smart.withoutQuantity", { n: f.num(totals.missing) })}</span>}</td>
+              <td className="p-1.5 text-end whitespace-nowrap tabular-nums"><bdi dir="ltr">{f.num(totals.total)} {header.currency ?? ""}</bdi></td>
+            </tr></tfoot>
           </table>
         </div>
         <p className="text-xs text-muted">{t("sourcing.offer.gridHint")}</p>

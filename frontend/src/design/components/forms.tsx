@@ -196,7 +196,7 @@ export function Combobox({ options, value, onChange, placeholder, id, ariaLabel,
   };
   return (
     <span className={`relative inline-flex min-w-0 ${width(className)} ${className}`}>
-      <input id={id} role="combobox" aria-label={ariaLabel} aria-expanded={state.open} aria-controls={listId} aria-autocomplete="list" autoComplete="off"
+      <input id={id} role="combobox" data-value={value ?? ""} aria-label={ariaLabel} aria-expanded={state.open} aria-controls={listId} aria-autocomplete="list" autoComplete="off"
         aria-activedescendant={state.open && state.active >= 0 ? `${listId}-${state.active}` : undefined} disabled={disabled} dir={dir} data-testid={testId}
         value={text ?? shownLabel} placeholder={placeholder}
         onChange={(e) => { setText(e.target.value); setState({ open: true, active: 0 }); }}

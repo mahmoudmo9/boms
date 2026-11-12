@@ -8,9 +8,10 @@ import { Button, Card, DataTable, ErrorNote, Field, Input, Modal, PageHeader, Pa
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Case, CaseDetail, Party } from "../../lib/types";
-import { PartyPicker } from "../parties/QuickLog";
+
 import { PartyName } from "../parties/shared";
 import { Money, StatusBadge, useInvalidateSourcing } from "../sourcing/shared";
+import { PartyField } from "../../components/fields";
 
 const PAGE_SIZE = 50;
 export const CASE_STATUSES = ["open", "won", "lost", "closed", "cancelled"] as const;
@@ -31,7 +32,7 @@ function NewCaseDialog({ onClose }: { onClose: () => void }) {
         <Button variant="primary" type="submit" form="new-case" disabled={!title.trim()} busy={create.isPending}>{t("common.save")}</Button></>}>
       <form id="new-case" className="flex flex-col gap-3" onSubmit={(e: FormEvent) => { e.preventDefault(); create.mutate(); }}>
         <Field label={t("sourcing.case.title")} htmlFor="nc-title"><Input id="nc-title" dir="auto" autoFocus value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
-        <Field label={t("sourcing.case.buyer")} htmlFor="ql-party"><PartyPicker value={party} onChange={setParty} /></Field>
+        <Field label={t("sourcing.case.buyer")} htmlFor="ql-party"><PartyField value={party} onChange={setParty} /></Field>
         <p className="text-xs text-muted">{t("sourcing.case.withoutInquiry")}</p>
         <ErrorNote error={create.error} />
       </form>

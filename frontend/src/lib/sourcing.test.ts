@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  offerLineTotal, offerTotal,
   flattenComparison,
   isActiveRfq,
   parsePasted,
@@ -137,5 +138,23 @@ describe("RFQ tab (v0.3.2)", () => {
     expect(personName("عباس", "Abbas", "en")).toBe("Abbas");
     expect(personName(null, "Abbas", "fa")).toBe("Abbas");
     expect(personName(null, null, "en")).toBe("");
+  });
+});
+
+describe("offer totals", () => {
+  it("multiplies quantity by price over its basis", () => {
+    expect(offerLineTotal("10", "250", "1")).toBe(2500);
+    expect(offerLineTotal("10", "250", "5")).toBe(500);
+    expect(offerLineTotal(null, "250", "1")).toBeNull();
+    expect(offerLineTotal("10", "", "1")).toBeNull();
+  });
+  it("sums included, available lines and counts the ones without a quantity", () => {
+    const r = offerTotal([
+      { include: true, available: true, unit_price: "100", price_per_quantity: "1", quantity: "2" },
+      { include: true, available: true, unit_price: "50", price_per_quantity: "1", quantity: null },
+      { include: false, available: true, unit_price: "999", price_per_quantity: "1", quantity: "1" },
+      { include: true, available: false, unit_price: "999", price_per_quantity: "1", quantity: "1" },
+    ]);
+    expect(r).toEqual({ total: 200, counted: 1, missing: 1 });
   });
 });

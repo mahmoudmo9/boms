@@ -4,15 +4,16 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Bdi, Button, Card, EmptyState, ErrorNote, Field, Icon, IconButton, Input, Select, Spinner } from "../../design/components";
+import { Badge, Bdi, Button, Card, EmptyState, ErrorNote, Field, Icon, IconButton, Input} from "../../design/components";
 import { api, ApiError, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import { personName } from "../../lib/sourcing";
-import type { Currency, DocumentDetail, EventItem, LinkedDocument, PaymentTerm, Product, Unit } from "../../lib/types";
+import type { DocumentDetail, EventItem, LinkedDocument, PaymentTerm} from "../../lib/types";
 import { EventList } from "../events/EventLogPage";
 import { InUseNote } from "../parties/shared";
 
-export const INCOTERMS = ["EXW", "FCA", "FAS", "FOB", "CFR", "CIF", "CPT", "CIP", "DAP", "DPU", "DDP"] as const;
+export { INCOTERMS, useCurrencies, useUnits } from "../../lib/basedata";
+import { useUnits } from "../../lib/basedata";
 export const SOURCE_CHANNELS = ["whatsapp", "email", "phone", "tender_portal", "in_person", "letter", "other"] as const;
 export const INQUIRY_KINDS = ["rfq", "tender", "direct_order", "other"] as const;
 export const RFQ_CHANNELS = ["email", "whatsapp", "letter", "phone", "other"] as const;
@@ -33,22 +34,6 @@ export function StatusBadge({ group, status }: { group: string; status: string }
   return <Badge tone={TONES[status] ?? "neutral"}>{t(`sourcing.status.${group}.${status}`)}</Badge>;
 }
 
-export function useUnits() {
-  return useQuery({
-    queryKey: ["basedata", "units", "active"],
-    queryFn: () => api<Page<Unit>>("/api/basedata/units", { query: { active: true, page_size: 500 } }),
-    staleTime: 5 * 60_000,
-  });
-}
-
-export function useCurrencies() {
-  return useQuery({
-    queryKey: ["basedata", "currencies", "active"],
-    queryFn: () => api<Page<Currency>>("/api/basedata/currencies", { query: { active: true, page_size: 500 } }),
-    staleTime: 5 * 60_000,
-  });
-}
-
 export function usePaymentTerms() {
   return useQuery({ queryKey: ["sourcing", "payment-terms"], queryFn: () => api<PaymentTerm[]>("/api/inquiries/payment-terms"), staleTime: Infinity });
 }
@@ -63,70 +48,6 @@ export function useUnitLabel() {
   };
 }
 
-/** Unit: a sys.unit code, or free text when no unit matches ("barrels of 200 l"). */
-export function UnitInput({ code, text, onChange, id }: {
-  code: string | null;
-  text: string | null;
-  onChange: (v: { unit_code: string | null; unit_text: string | null }) => void;
-  id?: string;
-}) {
-  const { t } = useTranslation();
-  const f = useFormat();
-  const units = useUnits();
-  const [free, setFree] = useState(!code && !!text);
-  return (
-    <div className="flex min-w-0 gap-1.5">
-      <Select id={id} className="w-36 shrink-0" aria-label={t("sourcing.item.unit")} value={free ? "__text" : code ?? ""}
-        onChange={(e) => {
-          if (e.target.value === "__text") { setFree(true); onChange({ unit_code: null, unit_text: text ?? "" }); }
-          else { setFree(false); onChange({ unit_code: e.target.value || null, unit_text: null }); }
-        }}>
-        <option value="">—</option>
-        {(units.data?.items ?? []).map((u) => <option key={u.code} value={u.code}>{f.lang === "fa" ? u.name_fa : u.name_en}</option>)}
-        <option value="__text">{t("sourcing.item.unitOther")}</option>
-      </Select>
-      {free && <Input className="min-w-0 flex-1" aria-label={t("sourcing.item.unitText")} value={text ?? ""} maxLength={300}
-        onChange={(e) => onChange({ unit_code: null, unit_text: e.target.value })} />}
-    </div>
-  );
-}
-
-export function CurrencySelect({ value, onChange, id, allowEmpty = true, className = "w-28" }: {
-  value: string | null;
-  onChange: (v: string | null) => void;
-  id?: string;
-  allowEmpty?: boolean;
-  className?: string;
-}) {
-  const { t } = useTranslation();
-  const currencies = useCurrencies();
-  const common = ["USD", "EUR", "AED", "CNY", "IRR", "TRY", "RUB", "INR"];
-  const rows = currencies.data?.items ?? [];
-  const sorted = [...rows.filter((c) => common.includes(c.code)).sort((a, b) => common.indexOf(a.code) - common.indexOf(b.code)),
-    ...rows.filter((c) => !common.includes(c.code))];
-  return (
-    <Select id={id} dir="ltr" className={className} aria-label={t("sourcing.currency")} value={value ?? ""} onChange={(e) => onChange(e.target.value || null)}>
-      {allowEmpty && <option value="">—</option>}
-      {sorted.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-    </Select>
-  );
-}
-
-export function IncotermSelect({ value, onChange, id }: { value: string | null; onChange: (v: string | null) => void; id?: string }) {
-  const { t, i18n } = useTranslation();
-  // v0.9.0: the standard list (Incoterms® 2020) with its names; the code stays the value
-  const rules = useQuery({ queryKey: ["reference", "incoterms"], queryFn: () => api<{ code: string; name_en: string; name_fa: string }[]>("/api/reference/incoterms"),
-    staleTime: Infinity });
-  const rows = rules.data ?? INCOTERMS.map((code) => ({ code, name_en: "", name_fa: "" }));
-  return (
-    <Select id={id} dir="ltr" className="w-24" aria-label={t("sourcing.incoterm")} value={value ?? ""} onChange={(e) => onChange(e.target.value || null)}
-      title={rows.find((r) => r.code === value)?.[i18n.language === "fa" ? "name_fa" : "name_en"] ?? undefined}>
-      <option value="">—</option>
-      {rows.map((r) => <option key={r.code} value={r.code} title={i18n.language === "fa" ? r.name_fa : r.name_en}>{r.code}</option>)}
-    </Select>
-  );
-}
-
 /** Money: always amount + currency, left-to-right. */
 export function Money({ amount, currency, per, unit }: { amount: string | null | undefined; currency?: string | null; per?: string | null; unit?: string }) {
   const f = useFormat();
@@ -137,51 +58,6 @@ export function Money({ amount, currency, per, unit }: { amount: string | null |
 
 export function productName(p: { name_fa: string | null; name_en: string | null }, lang: string) {
   return ((lang === "fa" ? p.name_fa || p.name_en : p.name_en || p.name_fa) ?? "");
-}
-
-/** Search-as-you-type product picker. */
-export function ProductPicker({ value, onChange, id }: { value: string | null; onChange: (id: string | null, product?: Product) => void; id?: string }) {
-  const { t } = useTranslation();
-  const f = useFormat();
-  const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
-  const current = useQuery({
-    queryKey: ["products", "one", value],
-    queryFn: () => api<Product>(`/api/products/${value}`),
-    enabled: !!value,
-  });
-  const results = useQuery({
-    queryKey: ["products", "picker", q],
-    queryFn: () => api<Page<Product>>("/api/products", { query: { q, page_size: 8 } }),
-    enabled: open && q.trim().length > 0,
-  });
-  if (value) {
-    return (
-      <div className="flex items-center gap-2 rounded-md border border-line-strong px-2.5 py-1">
-        <Link to={`/sourcing/catalog/${value}`} className="truncate text-sm text-accent hover:underline"><Bdi>{current.data ? productName(current.data, f.lang) : "…"}</Bdi></Link>
-        <button type="button" className="ms-auto text-xs text-muted hover:text-fg" onClick={() => onChange(null)}>{t("sourcing.unlinkProduct")}</button>
-      </div>
-    );
-  }
-  return (
-    <div className="relative">
-      <Input id={id} type="search" placeholder={t("sourcing.productSearch")} value={q} onFocus={() => setOpen(true)}
-        onChange={(e) => { setQ(e.target.value); setOpen(true); }} />
-      {open && q.trim() && (
-        <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-md border border-line bg-surface shadow-lg">
-          {results.isFetching && <div className="p-2"><Spinner size={14} /></div>}
-          {(results.data?.items ?? []).map((p) => (
-            <button key={p.id} type="button" className="flex w-full items-center gap-2 px-2.5 py-1.5 text-start text-sm hover:bg-surface-2"
-              onClick={() => { onChange(p.id, p); setOpen(false); setQ(""); }}>
-              <Bdi>{productName(p, f.lang)}</Bdi>
-              {p.hs_code && <Bdi ltr className="ms-auto font-mono text-xs text-muted">{p.hs_code}</Bdi>}
-            </button>
-          ))}
-          {results.data && results.data.items.length === 0 && <div className="p-2 text-sm text-muted">{t("search.noResults")}</div>}
-        </div>
-      )}
-    </div>
-  );
 }
 
 /** Upload + link files to an entity (inquiry, case, line item, offer) and list them. */

@@ -13,9 +13,10 @@ import type { Contact, ContactMethod, DocumentDetail, EventItem, Followup, Inter
 import { EventList } from "../events/EventLogPage";
 import { CapabilitiesCard } from "../sourcing/Capabilities";
 import { Money, StatusBadge } from "../sourcing/shared";
-import { useCountries, CountrySelect } from "./PartiesPage";
-import { useQuickLog, PartyPicker } from "./QuickLog";
+import { useCountries } from "./PartiesPage";
+import { useQuickLog } from "./QuickLog";
 import { CancelFollowupButton, CHANNELS, DeleteButton, FollowupActions, InUseNote, METHOD_TYPES, PartyName, ROLES, SharedNumberPrompt, StageSelect, stageLabel } from "./shared";
+import { ContactField, CountryField, PartyField } from "../../components/fields";
 
 const TABS = ["overview", "contacts", "interactions", "documents", "quotes", "orders", "finance", "history"] as const;
 type Tab = (typeof TABS)[number];
@@ -124,7 +125,7 @@ function Overview({ party }: { party: PartyDetail }) {
               <option value="person">{t("parties.kinds.person")}</option>
             </Select>
           </Field>
-          <Field label={t("parties.country")} htmlFor="pd-country"><CountrySelect id="pd-country" value={form.country_iso2} onChange={(v) => setForm({ ...form, country_iso2: v })} /></Field>
+          <Field label={t("parties.country")} htmlFor="pd-country"><CountryField id="pd-country" value={form.country_iso2} onChange={(v) => setForm({ ...form, country_iso2: v })} /></Field>
           {/* v0.9.0: checked while typing (Iranian national ID check digit; Chinese USCC for CN parties) */}
           <Field label={t("finance.party.nationalId")} htmlFor="pd-nid">
             <ValidatedInput id="pd-nid" kind={party.country_iso2 === "CN" ? "uscc" : "national_id_ir"} value={form.national_id} testId="pd-national-id"
@@ -403,7 +404,6 @@ const minute = (d: Date) => Math.floor(d.getTime() / 60_000);
 /** Correct an interaction: text, and (v0.2.1) party, contact, channel, direction and time. */
 function InteractionEditForm({ row, party, onDone }: { row: Interaction; party: PartyDetail; onDone: () => void }) {
   const { t } = useTranslation();
-  const f = useFormat();
   const toast = useToast();
   const queryClient = useQueryClient();
   const original = new Date(row.occurred_at);
@@ -451,7 +451,7 @@ function InteractionEditForm({ row, party, onDone }: { row: Interaction; party: 
   return (
     <form className="mt-2 flex flex-col gap-3 rounded-md border border-line p-3" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
       <Field label={t("interactions.moveToParty")} htmlFor="ql-party">
-        <PartyPicker value={target} onChange={(p) => { setTarget(p); setContactId(""); }} />
+        <PartyField value={target} onChange={(p) => { setTarget(p); setContactId(""); }} />
       </Field>
       {moving && <p className="text-xs text-muted">{t("interactions.moveHint")}</p>}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -467,12 +467,7 @@ function InteractionEditForm({ row, party, onDone }: { row: Interaction; party: 
           </Select>
         </Field>
         <Field label={t("interactions.contact")} htmlFor={`ie-ct-${row.id}`}>
-          <Select id={`ie-ct-${row.id}`} value={contactId} disabled={!target} onChange={(e) => setContactId(e.target.value)}>
-            <option value="">—</option>
-            {contactList.filter((c) => c.status === "active" || c.id === row.contact_id).map((c) => (
-              <option key={c.id} value={c.id}>{(f.lang === "fa" ? c.name_fa || c.name_en : c.name_en || c.name_fa) ?? ""}</option>
-            ))}
-          </Select>
+          <ContactField id={`ie-ct-${row.id}`} contacts={contactList.filter((c) => c.status === "active" || c.id === row.contact_id)} value={contactId} disabled={!target} onChange={setContactId} />
         </Field>
       </div>
       <Field label={t("interactions.when")} htmlFor={`ie-day-${row.id}`}>

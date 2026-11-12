@@ -11,7 +11,8 @@ import type { Check, CaseDetail, Decision, InquiryDetail } from "../../lib/types
 import { PartyName } from "../parties/shared";
 import { SetadOrigin } from "../tenders/SetadOrigin";
 import { ItemsCard } from "./ItemsEditor";
-import { AttachedDocuments, CascadeDeleteCard, CurrencySelect, HistoryCard, StatusBadge, useInvalidateSourcing, usePaymentTerms } from "./shared";
+import { AttachedDocuments, CascadeDeleteCard, HistoryCard, StatusBadge, useInvalidateSourcing, usePaymentTerms } from "./shared";
+import { CurrencyField } from "../../components/fields";
 
 const CHECKS = ["feasible_sourcing", "exposure_acceptable", "requirements_ok"] as const;
 const LIGHT_TONE = { green: "success", yellow: "warning", red: "danger" } as const;
@@ -67,7 +68,7 @@ function DecisionPanel({ inquiry, onSaved }: { inquiry: InquiryDetail; onSaved: 
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t("sourcing.decision.exposure")} htmlFor="dc-exp" hint={t("sourcing.decision.exposureHint")}>
             <div className="flex gap-1.5"><Input id="dc-exp" dir="ltr" inputMode="decimal" value={form.exposure_estimate ?? ""} onChange={(e) => set({ exposure_estimate: e.target.value || null })} />
-              <CurrencySelect value={form.exposure_currency} onChange={(v) => set({ exposure_currency: v })} /></div>
+              <CurrencyField value={form.exposure_currency} onChange={(v) => set({ exposure_currency: v })} /></div>
           </Field>
           <Field label={t("sourcing.decision.paymentTerm")} htmlFor="dc-term">
             <Select id="dc-term" value={form.payment_term ?? ""} onChange={(e) => set({ payment_term: e.target.value || null })}>

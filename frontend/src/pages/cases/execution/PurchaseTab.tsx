@@ -11,8 +11,9 @@ import { manualPoSteps, PO_TONE } from "../../../lib/execution";
 import { toDateString } from "../../../lib/followups";
 import { useFormat } from "../../../lib/prefs";
 import type { CaseDetail, ClaimSuggestion, PurchaseOrderRow, ReceiptRow } from "../../../lib/types";
-import { IncotermSelect, Money } from "../../sourcing/shared";
+import { Money } from "../../sourcing/shared";
 import { dateOrNull, FilePick, MilestonesCard, OutputButtons, PartyLink, ReasonDialog, useExecution, useRun, type Body, type Method } from "./shared";
+import { IncotermField } from "../../../components/fields";
 
 type Run = (path: string, body?: Body, method?: Method) => Promise<unknown>;
 
@@ -172,7 +173,7 @@ function PoCard({ po, caseId, receipts }: { po: PurchaseOrderRow; caseId: string
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Field label={t("execution.purchase.language")} htmlFor={`po-lang-${po.id}`}><Select id={`po-lang-${po.id}`} disabled={!draft} value={po.language} onChange={(e) => patch({ language: e.target.value })}>
             <option value="fa">فارسی</option><option value="en">English</option></Select></Field>
-          <Field label={t("execution.purchase.incoterm")} htmlFor={`po-inc-${po.id}`}>{draft ? <IncotermSelect id={`po-inc-${po.id}`} value={po.incoterm} onChange={(v) => patch({ incoterm: v })} /> : <span className="text-sm">{po.incoterm ?? "—"} {po.incoterm_place ?? ""}</span>}</Field>
+          <Field label={t("execution.purchase.incoterm")} htmlFor={`po-inc-${po.id}`}>{draft ? <IncotermField id={`po-inc-${po.id}`} value={po.incoterm} onChange={(v) => patch({ incoterm: v })} /> : <span className="text-sm">{po.incoterm ?? "—"} {po.incoterm_place ?? ""}</span>}</Field>
           <Field label={t("execution.purchase.readyDue")} htmlFor={`po-rd-${po.id}`}><span className="flex flex-wrap items-center gap-1.5">
             {draft ? <DateInput id={`po-rd-${po.id}`} value={dateOrNull(po.ready_due_on)} onChange={(d) => patch({ ready_due_on: d ? toDateString(d) : null })} />
               : <span className="text-sm tabular-nums">{po.ready_due_on ? f.day(po.ready_due_on) : "—"}</span>}

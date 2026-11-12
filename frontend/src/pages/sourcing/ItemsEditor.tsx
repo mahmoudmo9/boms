@@ -4,16 +4,18 @@ import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AttributeEditor, useProductTemplates } from "../../components/AttributeEditor";
-import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, errorMessage, ErrorNote, Field, IconButton, Input, LookupField, Modal, Select, Textarea } from "../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, errorMessage, ErrorNote, Field, IconButton, Input, LookupField, Modal, Select, SuggestedValue, Textarea } from "../../design/components";
 import { api } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { attributeProblems, nounBody, nounOf, sameNoun } from "../../lib/nounmod";
 import { useFormat } from "../../lib/prefs";
+import { useSuggestions } from "../../lib/suggest";
 import { type ColumnMapping, type Delimiter, IMPORT_FIELDS, type ImportField, parsePasted, setColumnField, suggestMapping } from "../../lib/sourcing";
 import type { ItemWarning, LineItem, LinkedDocument, Spec } from "../../lib/types";
-import { CountrySelect } from "../parties/PartiesPage";
+
 import { ExtractButton } from "../../components/AiActions";
-import { AttachedDocuments, CurrencySelect, IncotermSelect, ProductPicker, StatusBadge, UnitInput, useSpecKeys, useUnitLabel } from "./shared";
+import { AttachedDocuments, StatusBadge, useSpecKeys, useUnitLabel } from "./shared";
+import { CountryField, CurrencyField, IncotermField, ProductField, UnitField } from "../../components/fields";
 
 export interface ItemOwner {
   inquiry_id?: string;
@@ -91,6 +93,9 @@ export function ItemDialog({ owner, item, ownerDocuments, onClose, onSaved }: {
     ? { ...(Object.fromEntries(Object.keys(EMPTY).map((k) => [k, item[k as keyof ItemForm] ?? EMPTY[k as keyof ItemForm]])) as ItemForm), specs: item.specs ?? [] }
     : EMPTY));
   const set = (patch: Partial<ItemForm>) => setForm((f) => ({ ...f, ...patch }));
+  const f = useFormat();
+  const unitLabel = useUnitLabel();
+  const sp = useSuggestions("product", form.product_id);     // v0.10.0: what the chosen product proposes
   // v0.10.0: the structured description (template, attributes, canonical fa/en); sent only when it was changed
   const savedNoun = nounOf(item);
   const [noun, setNoun] = useState(savedNoun);
@@ -121,22 +126,28 @@ export function ItemDialog({ owner, item, ownerDocuments, onClose, onSaved }: {
       <div className={`grid gap-4 ${pdfs.length ? "lg:grid-cols-[minmax(0,1fr)_16rem]" : ""}`}>
         <form id="item-form" className="grid max-h-[65vh] grid-cols-1 gap-3 overflow-y-auto pe-1 sm:grid-cols-2" onSubmit={(e: FormEvent) => { e.preventDefault(); save.mutate(); }}>
           <div className="sm:col-span-2"><Field label={t("sourcing.item.name")} htmlFor="it-name"><Input id="it-name" dir="auto" autoFocus value={form.name} maxLength={1000} onChange={(e) => set({ name: e.target.value })} /></Field></div>
-          <div className="sm:col-span-2"><Field label={t("sourcing.item.description")} htmlFor="it-desc"><Textarea id="it-desc" dir="auto" rows={2} value={form.description ?? ""} onChange={(e) => set({ description: e.target.value || null })} /></Field></div>
+          <div className="sm:col-span-2"><Field label={t("sourcing.item.description")} htmlFor="it-desc"><SuggestedValue current={form.description} suggestion={f.lang === "fa" ? sp.canonical_fa ?? sp.canonical_en : sp.canonical_en ?? sp.canonical_fa} onAccept={(v) => set({ description: v })}><Textarea id="it-desc" dir="auto" rows={2} value={form.description ?? ""} onChange={(e) => set({ description: e.target.value || null })} /></SuggestedValue></Field></div>
           <Field label={t("sourcing.item.quantity")} htmlFor="it-qty"><Input id="it-qty" dir="ltr" inputMode="decimal" value={form.quantity ?? ""} onChange={(e) => set({ quantity: e.target.value || null })} /></Field>
-          <Field label={t("sourcing.item.unit")} htmlFor="it-unit"><UnitInput id="it-unit" code={form.unit_code} text={form.unit_text} onChange={set} /></Field>
+          <Field label={t("sourcing.item.unit")} htmlFor="it-unit">
+            <SuggestedValue current={form.unit_code ?? form.unit_text} suggestion={sp.unit_code} render={unitLabel} onAccept={(v) => set({ unit_code: v, unit_text: null })}>
+              <UnitField id="it-unit" code={form.unit_code} text={form.unit_text} onChange={set} /></SuggestedValue></Field>
           <Field label={t("sourcing.item.targetPrice")} htmlFor="it-price">
-            <div className="flex gap-1.5"><Input id="it-price" dir="ltr" inputMode="decimal" value={form.target_price ?? ""} onChange={(e) => set({ target_price: e.target.value || null })} />
-              <CurrencySelect value={form.target_currency} onChange={(v) => set({ target_currency: v })} /></div>
+            <SuggestedValue current={form.target_price} suggestion={sp.last_purchase}
+              render={(p) => t("smart.lastPurchase", { price: `${f.num(p.unit_price)} ${p.currency}`, supplier: p.supplier ?? "" })}
+              onAccept={(p) => set({ target_price: String(p.unit_price), target_currency: p.currency })}>
+              <div className="flex gap-1.5"><Input id="it-price" dir="ltr" inputMode="decimal" value={form.target_price ?? ""} onChange={(e) => set({ target_price: e.target.value || null })} />
+                <CurrencyField value={form.target_currency} onChange={(v) => set({ target_currency: v })} /></div></SuggestedValue>
           </Field>
-          <Field label={t("sourcing.item.destination")} htmlFor="it-dest"><CountrySelect id="it-dest" emptyLabel="—" value={form.destination_country_iso2 ?? ""} onChange={(v) => set({ destination_country_iso2: v || null })} /></Field>
+          <Field label={t("sourcing.item.destination")} htmlFor="it-dest"><CountryField id="it-dest" emptyLabel="—" value={form.destination_country_iso2 ?? ""} onChange={(v) => set({ destination_country_iso2: v || null })} /></Field>
           <Field label={t("sourcing.incoterm")} htmlFor="it-inco">
-            <div className="flex gap-1.5"><IncotermSelect id="it-inco" value={form.incoterm} onChange={(v) => set({ incoterm: v })} />
+            <div className="flex gap-1.5"><IncotermField id="it-inco" value={form.incoterm} onChange={(v) => set({ incoterm: v })} />
               <Input dir="auto" aria-label={t("sourcing.incotermPlace")} placeholder={t("sourcing.incotermPlace")} value={form.incoterm_place ?? ""} onChange={(e) => set({ incoterm_place: e.target.value || null })} /></div>
           </Field>
           <Field label={t("sourcing.item.requiredBy")} htmlFor="it-due"><DateInput id="it-due" value={form.required_by ? fromDateString(form.required_by) : null} onChange={(d) => set({ required_by: d ? toDateString(d) : null })} /></Field>
           <Field label={t("sourcing.item.packaging")} htmlFor="it-pack"><Input id="it-pack" dir="auto" value={form.packaging ?? ""} onChange={(e) => set({ packaging: e.target.value || null })} /></Field>
           <Field label={t("sourcing.item.hsCode")} htmlFor="it-hs">
-            <Input id="it-hs" dir="ltr" inputMode="numeric" value={form.hs_code ?? ""} onChange={(e) => set({ hs_code: e.target.value.replace(/[^\d]/g, "") || null })} />
+            <SuggestedValue current={form.hs_code} suggestion={sp.hs_code} onAccept={(v) => set({ hs_code: v })}>
+              <Input id="it-hs" dir="ltr" inputMode="numeric" value={form.hs_code ?? ""} onChange={(e) => set({ hs_code: e.target.value.replace(/[^\d]/g, "") || null })} /></SuggestedValue>
             {/* v0.9.0: find the heading by name or code (the full tariff code can stay longer) */}
             <LookupField kind="hs" value={null} onChange={(it) => it && set({ hs_code: it.code })} ariaLabel={t("sourcing.item.hsCode")} testId="it-hs-lookup" />
           </Field>
@@ -145,7 +156,7 @@ export function ItemDialog({ owner, item, ownerDocuments, onClose, onSaved }: {
               {(["unknown", "domestic", "foreign", "both"] as const).map((r) => <option key={r} value={r}>{t(`sourcing.item.routes.${r}`)}</option>)}
             </Select>
           </Field>
-          <Field label={t("sourcing.item.product")} htmlFor="it-product"><ProductPicker id="it-product" value={form.product_id} onChange={(id) => set({ product_id: id })} /></Field>
+          <Field label={t("sourcing.item.product")} htmlFor="it-product"><ProductField id="it-product" value={form.product_id} onChange={(id) => set({ product_id: id })} /></Field>
           <details className="rounded-md border border-line p-2.5 sm:col-span-2" open={Boolean(savedNoun.template_id || savedNoun.canonical_override)} data-testid="item-description">
             <summary className="cursor-pointer text-xs font-medium text-muted">{t("nounmod.title")}</summary>
             <div className="pt-3"><AttributeEditor idPrefix="it" value={noun} onChange={setNoun} /></div>

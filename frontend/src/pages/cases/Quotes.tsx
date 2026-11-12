@@ -12,7 +12,8 @@ import { useFormat } from "../../lib/prefs";
 import { personName } from "../../lib/sourcing";
 import type { CaseDetail, CaseQuotes, Outcome, OutcomeReason, Quote, QuoteItem } from "../../lib/types";
 import { DueDatePicker, PartyName } from "../parties/shared";
-import { ContactName, CurrencySelect, IncotermSelect, Money, StatusBadge, useInvalidateSourcing, useUnitLabel } from "../sourcing/shared";
+import { ContactName, Money, StatusBadge, useInvalidateSourcing, useUnitLabel } from "../sourcing/shared";
+import { CurrencyField, IncotermField } from "../../components/fields";
 
 const OUTCOMES: Outcome[] = ["accepted", "rejected", "no_reply", "negotiating"];
 const SEND_CHANNELS = ["email", "whatsapp", "phone", "in_person", "letter", "other"] as const;
@@ -121,13 +122,13 @@ function OutcomeRow({ item, value, reasons, currency, onChange }: {
     <tr className="border-b border-line align-top">
       <td className="p-1.5"><Bdi>{item.description_override || item.name}</Bdi></td>
       <td className="p-1.5">
-        <Select className="w-auto min-w-32" aria-label={t("quotes.outcome")} value={outcome} onChange={(e) => onChange({ ...value, outcome: e.target.value || null })}>
+        <Select className="w-36 shrink-0" aria-label={t("quotes.outcome")} value={outcome} onChange={(e) => onChange({ ...value, outcome: e.target.value || null })}>
           <option value="">—</option>
           {OUTCOMES.map((o) => <option key={o} value={o}>{t(`quotes.outcomes.${o}`)}</option>)}
         </Select>
       </td>
       <td className="p-1.5">
-        <Select className="w-auto min-w-36" aria-label={t("quotes.reason")} value={(value.outcome_reason as string | null) ?? ""} onChange={(e) => onChange({ ...value, outcome_reason: e.target.value || null })}>
+        <Select className="w-48 shrink-0" aria-label={t("quotes.reason")} value={(value.outcome_reason as string | null) ?? ""} onChange={(e) => onChange({ ...value, outcome_reason: e.target.value || null })}>
           <option value="">{outcome === "rejected" ? t("quotes.reasonRequired") : "—"}</option>
           {reasons.map((r) => <option key={r.code} value={r.code}>{f.lang === "fa" ? r.label_fa : r.label_en}</option>)}
         </Select>
@@ -138,7 +139,7 @@ function OutcomeRow({ item, value, reasons, currency, onChange }: {
         <div className="flex gap-1">
           <Input dir="ltr" inputMode="decimal" className="w-28" aria-label={t("quotes.competitorPrice")} value={(value.competitor_price as string | null) ?? ""}
             onChange={(e) => onChange({ ...value, competitor_price: e.target.value || null, competitor_currency: (value.competitor_currency as string | null) ?? currency })} />
-          <CurrencySelect className="w-24" value={(value.competitor_currency as string | null) ?? null} onChange={(v) => onChange({ ...value, competitor_currency: v })} />
+          <CurrencyField className="w-32 shrink-0" value={(value.competitor_currency as string | null) ?? null} onChange={(v) => onChange({ ...value, competitor_currency: v })} />
         </div>
       </td>
     </tr>
@@ -160,7 +161,7 @@ function OutcomesDialog({ quote, onClose, onDone }: { quote: Quote; onClose: () 
     <Modal open wide title={t("quotes.recordOutcome")} onClose={onClose}
       footer={<><Button onClick={onClose}>{t("common.cancel")}</Button><Button variant="primary" disabled={missingReason} busy={save.isPending} onClick={() => save.mutate()}>{t("common.save")}</Button></>}>
       <div className="max-h-[60vh] overflow-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-max text-sm">
           <thead><tr className="border-b border-line text-xs text-muted">
             {["item", "outcome", "reason", "competitor"].map((h) => <th key={h} className="p-1.5 text-start">{t(`quotes.outcomeColumns.${h}`)}</th>)}
           </tr></thead>
@@ -258,7 +259,7 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
             <DateInput id="q-valid" value={fromDateString(q.valid_until)} onChange={(d) => draft && d && patch.mutate({ valid_until: toDateString(d) })} />
           </Field>
           <Field label={t("sourcing.incoterm")} htmlFor="q-inco">
-            <div className="flex gap-1.5"><IncotermSelect id="q-inco" value={q.incoterm} onChange={(v) => draft && patch.mutate({ incoterm: v })} />
+            <div className="flex gap-1.5"><IncotermField id="q-inco" value={q.incoterm} onChange={(v) => draft && patch.mutate({ incoterm: v })} />
               <BlurInput dir="auto" aria-label={t("sourcing.incotermPlace")} placeholder={t("sourcing.incotermPlace")} value={q.incoterm_place} disabled={!draft} onSave={save("incoterm_place")} /></div>
           </Field>
           <Field label={t("quotes.leadTime")} htmlFor="q-lead"><BlurInput id="q-lead" dir="ltr" inputMode="numeric" value={q.lead_time_days === null ? null : String(q.lead_time_days)} disabled={!draft}

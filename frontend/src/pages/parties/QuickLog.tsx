@@ -4,12 +4,12 @@ import { createContext, type DragEvent, type ReactNode, useCallback, useContext,
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { Badge, Bdi, Button, Checkbox, DateInput, errorMessage, ErrorNote, Field, Icon, Input, Modal, Select, Spinner, Textarea, useToast } from "../../design/components";
-import { api, ApiError, type Page } from "../../lib/api";
+import { Bdi, Button, Checkbox, DateInput, errorMessage, ErrorNote, Field, Icon, Input, Modal, Select, Spinner, Textarea, useToast } from "../../design/components";
+import { api, ApiError} from "../../lib/api";
 import { canSaveQuickLog } from "../../lib/followups";
-import { useFormat } from "../../lib/prefs";
-import type { Contact, DocumentDetail, Party, PartyDetail, PossibleDuplicate } from "../../lib/types";
-import { CHANNELS, DueDatePicker, PartyName, stageLabel, useStages } from "./shared";
+import type { Contact, DocumentDetail, Party, PartyDetail} from "../../lib/types";
+import { CHANNELS, DueDatePicker, stageLabel, useStages } from "./shared";
+import { ContactField, PartyField } from "../../components/fields";
 
 interface QuickLogContextValue {
   open: (partyId?: string) => void;
@@ -43,88 +43,7 @@ export function QuickLogProvider({ children }: { children: ReactNode }) {
   );
 }
 
-const hasPersian = (value: string) => /[؀-ۿ]/.test(value);
 
-/** Searchable party picker that can also create a party (with the duplicate check). */
-export function PartyPicker({ value, onChange }: { value: Party | null; onChange: (p: Party | null) => void }) {
-  const { t } = useTranslation();
-  const [q, setQ] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const [duplicates, setDuplicates] = useState<PossibleDuplicate[] | null>(null);
-  useEffect(() => {
-    const id = window.setTimeout(() => setDebounced(q.trim()), 200);
-    return () => window.clearTimeout(id);
-  }, [q]);
-  const results = useQuery({
-    queryKey: ["parties", "picker", debounced],
-    queryFn: () => api<Page<Party>>("/api/parties", { query: { q: debounced, page_size: 8 } }),
-    enabled: !value && debounced.length > 0,
-  });
-  const create = useMutation({
-    mutationFn: (confirm: boolean) =>
-      api<{ created: boolean; possible_duplicates: PossibleDuplicate[]; party?: PartyDetail }>("/api/parties", {
-        method: "POST",
-        body: { [hasPersian(q) ? "name_fa" : "name_en"]: q.trim(), confirm_duplicate: confirm },
-      }),
-    onSuccess: (res) => {
-      if (res.created && res.party) {
-        onChange(res.party);
-        setDuplicates(null);
-      } else setDuplicates(res.possible_duplicates);
-    },
-  });
-  const pickById = async (id: string) => onChange(await api<PartyDetail>(`/api/parties/${id}`));
-
-  if (value) {
-    return (
-      <div className="flex items-center gap-2 rounded-md border border-line-strong px-2.5 py-1.5">
-        <PartyName fa={value.name_fa} en={value.name_en} dnc={value.do_not_contact} />
-        <button type="button" className="ms-auto text-xs text-accent hover:underline" onClick={() => onChange(null)}>
-          {t("quicklog.changeParty")}
-        </button>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Input id="ql-party" autoFocus placeholder={t("quicklog.partyPlaceholder")} value={q}
-        onChange={(e) => { setQ(e.target.value); setDuplicates(null); }} />
-      {debounced && (
-        <div className="max-h-48 overflow-y-auto rounded-md border border-line">
-          {results.isFetching && <div className="p-2"><Spinner size={14} /></div>}
-          {(results.data?.items ?? []).map((p) => (
-            <button key={p.id} type="button" onClick={() => onChange(p)}
-              className="flex w-full items-center gap-2 px-2.5 py-1.5 text-start text-sm hover:bg-surface-2">
-              <PartyName fa={p.name_fa} en={p.name_en} dnc={p.do_not_contact} />
-              {p.status === "archived" && <Badge>{t("parties.archived")}</Badge>}
-            </button>
-          ))}
-          <button type="button" disabled={create.isPending} onClick={() => create.mutate(false)}
-            className="flex w-full items-center gap-2 border-t border-line px-2.5 py-1.5 text-start text-sm text-accent hover:bg-surface-2">
-            <Icon name="plus" size={14} /> {t("quicklog.createParty")} <Bdi className="font-medium">{q.trim()}</Bdi>
-          </button>
-        </div>
-      )}
-      {duplicates && (
-        <div className="rounded-md border border-transparent bg-warning-soft p-2.5 text-sm">
-          <p className="mb-1.5 font-medium text-warning">{t("parties.possibleDuplicates")}</p>
-          <ul className="mb-2 flex flex-col gap-1">
-            {duplicates.map((d) => (
-              <li key={d.id} className="flex items-center gap-2">
-                <PartyName fa={d.name_fa} en={d.name_en} dnc={d.do_not_contact} />
-                <button type="button" className="ms-auto text-xs text-accent hover:underline" onClick={() => void pickById(d.id)}>
-                  {t("quicklog.useThis")}
-                </button>
-              </li>
-            ))}
-          </ul>
-          <Button onClick={() => create.mutate(true)} busy={create.isPending}>{t("parties.createAnyway")}</Button>
-        </div>
-      )}
-      <ErrorNote error={create.error} />
-    </div>
-  );
-}
 
 interface Attachment {
   name: string;
@@ -135,7 +54,6 @@ interface Attachment {
 
 function QuickLogDialog({ initialPartyId, onClose }: { initialPartyId?: string; onClose: () => void }) {
   const { t } = useTranslation();
-  const f = useFormat();
   const toast = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -242,7 +160,7 @@ function QuickLogDialog({ initialPartyId, onClose }: { initialPartyId?: string; 
       }
     >
       <div className="flex max-h-[65vh] flex-col gap-3 overflow-y-auto pe-1">
-        <Field label={t("quicklog.party")} htmlFor="ql-party"><PartyPicker value={party} onChange={(p) => { setParty(p); setContactId(""); setMoveRole(""); }} /></Field>
+        <Field label={t("quicklog.party")} htmlFor="ql-party"><PartyField value={party} onChange={(p) => { setParty(p); setContactId(""); setMoveRole(""); }} /></Field>
         {party?.do_not_contact && (
           <p className="rounded-md bg-danger-soft px-2.5 py-1.5 text-sm text-danger">{t("parties.dncWarning")} {party.do_not_contact_reason}</p>
         )}
@@ -259,12 +177,7 @@ function QuickLogDialog({ initialPartyId, onClose }: { initialPartyId?: string; 
             </Select>
           </Field>
           <Field label={t("interactions.contact")} htmlFor="ql-contact">
-            <Select id="ql-contact" value={contactId} onChange={(e) => setContactId(e.target.value)} disabled={!party}>
-              <option value="">—</option>
-              {(contacts.data ?? []).filter((c) => c.status === "active").map((c) => (
-                <option key={c.id} value={c.id}>{(f.lang === "fa" ? c.name_fa || c.name_en : c.name_en || c.name_fa) ?? ""}</option>
-              ))}
-            </Select>
+            <ContactField id="ql-contact" contacts={(contacts.data ?? []).filter((c) => c.status === "active")} value={contactId} onChange={setContactId} disabled={!party} />
           </Field>
         </div>
         <Field label={t("interactions.when")} htmlFor="ql-day">

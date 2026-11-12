@@ -11,7 +11,8 @@ import { gateChecklist, gridTarget, marginMarkupView } from "../../lib/costing";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
 import type { CaseCosting, CaseDetail, CostLine, CostSheet, CostTemplate, CostGate, DealType, GateFailure, Quote, TaxParameter } from "../../lib/types";
-import { CurrencySelect, Money, StatusBadge, useInvalidateSourcing } from "../sourcing/shared";
+import { Money, StatusBadge, useInvalidateSourcing } from "../sourcing/shared";
+import { CurrencyField } from "../../components/fields";
 
 const KINDS = ["purchase", "freight_international", "insurance", "bank_fees", "customs_duty", "levy", "customs_clearance",
   "storage", "inspection", "freight_domestic", "export_clearance", "vat", "other"] as const;
@@ -82,7 +83,7 @@ function NewSheetDialog({ caseData, onClose, onCreated }: { caseData: CaseDetail
           </Select>
         </Field>
         <Field label={t("costing.pricingCurrency")} htmlFor="ns-cur" hint={t("costing.pricingCurrencyHint")}>
-          <CurrencySelect id="ns-cur" allowEmpty={false} value={currency} onChange={setCurrency} />
+          <CurrencyField id="ns-cur" allowEmpty={false} value={currency} onChange={setCurrency} />
         </Field>
         <Field label={t("costing.template")} htmlFor="ns-tpl">
           <Select id="ns-tpl" className="w-auto min-w-56" value={template} onChange={(e) => setTemplate(e.target.value)}>
@@ -132,7 +133,7 @@ function FxCard({ sheet, editable, onChanged }: { sheet: CostSheet; editable: bo
           m.setFx.mutate({ from_currency: form.from_currency, to_currency: sheet.pricing_currency, rate: form.rate, as_of: form.as_of,
             rate_kind: form.rate_kind || null, source_note: form.source_note || null });
         }}>
-          <Field label={t("costing.fx.from")} htmlFor="fx-from"><CurrencySelect id="fx-from" allowEmpty={false} value={form.from_currency} onChange={(v) => setForm({ ...form, from_currency: v })} /></Field>
+          <Field label={t("costing.fx.from")} htmlFor="fx-from"><CurrencyField id="fx-from" allowEmpty={false} value={form.from_currency} onChange={(v) => setForm({ ...form, from_currency: v })} /></Field>
           <Field label={t("costing.fx.rate", { to: sheet.pricing_currency })} htmlFor="fx-rate"><Input id="fx-rate" dir="ltr" inputMode="decimal" className="w-36" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} /></Field>
           <Field label={t("costing.fx.kind")} htmlFor="fx-kind">
             <Input id="fx-kind" dir="auto" list="fx-kinds" value={form.rate_kind} placeholder={t("costing.fx.kindPlaceholder")} onChange={(e) => setForm({ ...form, rate_kind: e.target.value })} />
@@ -172,7 +173,7 @@ function LineRow({ line, index, rows, sheet, editable, params, onChanged }: {
         {warn.map((w) => <div key={w.code} className="mt-0.5 text-xs text-warning">{t(`costing.warnings.${w.code}`, { defaultValue: w.code })}</div>)}
       </td>
       <td className="p-1.5">
-        <Select className="w-auto min-w-32" aria-label={t("costing.lines.basis")} value={line.basis} disabled={!editable}
+        <Select className="w-44 shrink-0" aria-label={t("costing.lines.basis")} value={line.basis} disabled={!editable}
           onChange={(e) => patch(e.target.value.startsWith("percent") ? { basis: e.target.value, amount: null, currency: null } : { basis: e.target.value, percent: null, tax_parameter_id: null })}>
           {BASES.map((b) => <option key={b} value={b}>{t(`costing.bases.${b}`)}</option>)}
         </Select>
@@ -194,13 +195,13 @@ function LineRow({ line, index, rows, sheet, editable, params, onChanged }: {
           <div className="flex gap-1">
             <CommitInput dir="ltr" inputMode="decimal" className="w-40" aria-label={t("costing.lines.amount")} value={line.amount} disabled={!editable}
               grid={{ row: index, column: "value" }} rows={rows} onCommit={(v) => patch({ amount: v, currency: line.currency ?? sheet.pricing_currency })} />
-            <CurrencySelect className="w-24" value={line.currency} onChange={(v) => editable && patch({ currency: v })} />
+            <CurrencyField className="w-32 shrink-0" value={line.currency} onChange={(v) => editable && patch({ currency: v })} />
           </div>
         )}
       </td>
       <td className="p-1.5">
         {line.scope === "case" && line.basis === "total" ? (
-          <Select className="w-auto min-w-28" aria-label={t("costing.lines.allocation")} value={line.allocation} disabled={!editable}
+          <Select className="w-40 shrink-0" aria-label={t("costing.lines.allocation")} value={line.allocation} disabled={!editable}
             onChange={(e) => patch({ allocation: e.target.value })}>
             {ALLOCATIONS.map((a) => <option key={a} value={a}>{t(`costing.allocations.${a}`)}</option>)}
           </Select>
@@ -254,7 +255,7 @@ function LinesCard({ sheet, editable, onChanged }: { sheet: CostSheet; editable:
   return (
     <Card padded={false} title={t("costing.lines.title")}>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-max text-sm">
           <thead><tr className="border-b border-line bg-surface-2 text-xs text-muted">
             {["kind", "label", "basis", "value", "allocation", "paidBefore", "computed", ""].map((h) => <th key={h} className="p-1.5 text-start whitespace-nowrap">{h ? t(`costing.lines.columns.${h}`) : ""}</th>)}
           </tr></thead>

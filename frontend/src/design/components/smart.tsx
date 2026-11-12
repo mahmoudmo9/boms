@@ -16,9 +16,13 @@ const width = (className: string) => (/(^|\s)(w-|flex-1|grow)/.test(className) ?
 
 /** Type a name or a code; results are ranked by the backend (exact code, code prefix, name prefix, contains,
  * similar). Arrow keys move, Enter or Tab chooses, Escape closes. The chosen row is shown as «name (code)». */
-export function LookupField({ kind, value, onChange, placeholder, filters, ariaLabel, testId, id, className = "", disabled }: {
+export function LookupField({ kind, value, onChange, placeholder, filters, ariaLabel, testId, id, className = "", disabled, create, renderValue }: {
   kind: string; value: LookupItem | null; onChange: (item: LookupItem | null) => void; placeholder?: string; filters?: Record<string, string>;
-  ariaLabel?: string; testId?: string; id?: string; className?: string; disabled?: boolean }) {
+  ariaLabel?: string; testId?: string; id?: string; className?: string; disabled?: boolean;
+  /** A last option that creates a record from the typed text («+ طرف جدید: …»). */
+  create?: { label: (text: string) => string; onCreate: (text: string) => void };
+  /** How the chosen value is shown (default: its name and code). */
+  renderValue?: (item: LookupItem) => ReactNode }) {
   const { t, i18n } = useTranslation();
   const listId = useId();
   const input = useRef<HTMLInputElement>(null);
@@ -37,13 +41,16 @@ export function LookupField({ kind, value, onChange, placeholder, filters, ariaL
   // only results for exactly what is typed: Enter / Tab / arrows never act on a list that is still being replaced
   const fresh = q === text;
   const items = fresh ? results.data ?? [] : [];
+  const creating = !!create && fresh && text.trim().length > 0 && !results.isFetching;
+  const count = items.length + (creating ? 1 : 0);
   const choose = (i: number | null) => {
     if (i !== null && items[i]) { onChange(items[i]); setText(""); }
+    else if (i !== null && creating && i === items.length) { create!.onCreate(text.trim()); setText(""); }
   };
   const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!LIST_KEYS.includes(e.key)) return;
     if (e.key === "Tab" && !state.open) return;
-    const next = lookupKey(state, e.key as LookupKey, items.length);
+    const next = lookupKey(state, e.key as LookupKey, count);
     if (e.key !== "Tab" || next.choose !== null) e.preventDefault();
     setState(next.state);
     choose(next.choose);
@@ -51,7 +58,7 @@ export function LookupField({ kind, value, onChange, placeholder, filters, ariaL
   if (value && !state.open) {
     return (
       <div className={`${CONTROL} flex items-center justify-between gap-2 ${width(className)} ${className}`} data-testid={testId} data-chosen>
-        <span className="min-w-0 truncate"><bdi>{lookupLabel(value, i18n.language)}</bdi></span>
+        <span className="min-w-0 truncate">{renderValue ? renderValue(value) : <bdi>{lookupLabel(value, i18n.language)}</bdi>}</span>
         {!disabled && (
           <button type="button" id={id} aria-label={`${t("smart.clear")}: ${lookupLabel(value, i18n.language)}`}
             onClick={() => { onChange(null); setState({ open: true, active: -1 }); window.requestAnimationFrame(() => input.current?.focus()); }}
@@ -74,9 +81,9 @@ export function LookupField({ kind, value, onChange, placeholder, filters, ariaL
       <Icon name="search" size={15} className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted" />
       {state.open && (
         <OptionList id={listId} active={state.active} empty={!fresh || results.isFetching ? t("common.loading") : t("smart.noMatch")}
-          options={items.map((item) => ({ value: `${item.kind}-${item.id}`, label: i18n.language === "fa" ? item.name_fa || item.name_en : item.name_en || item.name_fa,
-            code: item.code, hint: item.subtitle }))}
-          onPick={(o) => { choose(items.findIndex((item) => `${item.kind}-${item.id}` === o.value)); setState({ open: false, active: -1 }); }}
+          options={[...items.map((item) => ({ value: `${item.kind}-${item.id}`, label: i18n.language === "fa" ? item.name_fa || item.name_en : item.name_en || item.name_fa,
+            code: item.code, hint: item.subtitle })), ...(creating ? [{ value: "__create", label: create!.label(text.trim()), code: "+" }] : [])]}
+          onPick={(o) => { choose(o.value === "__create" ? items.length : items.findIndex((item) => `${item.kind}-${item.id}` === o.value)); setState({ open: false, active: -1 }); }}
           onHover={(i) => setState({ open: true, active: i })} />
       )}
     </div>
@@ -86,18 +93,19 @@ export function LookupField({ kind, value, onChange, placeholder, filters, ariaL
 /** A proposed value shown under the field with its source chip («از PO-1405-0007»); Tab or a click accepts it while
  * the field is empty. Wraps the field it proposes for. */
 export function SuggestedValue<T>({ current, suggestion, render, onAccept, children }: {
-  current: T | null | undefined | ""; suggestion: Suggestion<T> | null | undefined; render?: (value: T) => ReactNode; onAccept: (value: T) => void; children: ReactNode }) {
+  /** The field's present value; only whether it is empty matters (a suggested price fills an amount and currency). */
+  current: unknown; suggestion: Suggestion<T> | null | undefined; render?: (value: T) => ReactNode; onAccept: (value: T) => void; children: ReactNode }) {
   const { t } = useTranslation();
   const show = suggestion && (current === null || current === undefined || current === "");
   return (
     <div className="flex min-w-0 flex-col gap-1.5" onKeyDown={(e) => {
       if (e.key !== "Tab" || e.shiftKey) return;
-      const accepted = acceptSuggestion(current, suggestion, "Tab");
+      const accepted = acceptSuggestion(current as T | null | undefined | "", suggestion, "Tab");
       if (accepted !== null) { e.preventDefault(); onAccept(accepted); }
     }}>
       {children}
       {show && (
-        <button type="button" data-testid="suggested-value" onClick={() => { const v = acceptSuggestion(current, suggestion, "click"); if (v !== null) onAccept(v); }}
+        <button type="button" data-testid="suggested-value" onClick={() => { const v = acceptSuggestion(current as T | null | undefined | "", suggestion, "click"); if (v !== null) onAccept(v); }}
           className="flex min-h-6 cursor-pointer flex-wrap items-center gap-1.5 self-start rounded-sm text-start text-xs text-muted hover:text-fg">
           <span className="text-fg-2"><bdi>{render ? render(suggestion.value) : String(suggestion.value)}</bdi></span>
           {suggestion.source && <SourceChip><bdi dir="ltr">{t("smart.from", { source: suggestion.source })}</bdi></SourceChip>}

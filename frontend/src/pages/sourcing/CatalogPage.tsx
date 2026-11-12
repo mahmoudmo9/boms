@@ -11,7 +11,8 @@ import { attributeProblems, nounBody, nounOf, sameNoun } from "../../lib/nounmod
 import { useFormat } from "../../lib/prefs";
 import type { Product, ProductPage as ProductPageData, ProductQuotes } from "../../lib/types";
 import { PartyName, stageLabel } from "../parties/shared";
-import { ContactName, Money, productName, StatusBadge, UnitInput, useInvalidateSourcing, useUnitLabel } from "./shared";
+import { ContactName, Money, productName, StatusBadge, useInvalidateSourcing, useUnitLabel } from "./shared";
+import { UnitField } from "../../components/fields";
 
 const PAGE_SIZE = 50;
 
@@ -74,7 +75,7 @@ function NewProductDialog({ onClose }: { onClose: () => void }) {
           </div>
         )}
         <Field label={t("sourcing.item.hsCode")} htmlFor="np-hs"><Input id="np-hs" dir="ltr" inputMode="numeric" value={form.hs_code} onChange={(e) => setForm({ ...form, hs_code: e.target.value.replace(/\D/g, "") })} /></Field>
-        <Field label={t("sourcing.catalog.defaultUnit")} htmlFor="np-unit"><UnitInput id="np-unit" code={form.default_unit_code} text={null} onChange={(u) => setForm({ ...form, default_unit_code: u.unit_code })} /></Field>
+        <Field label={t("sourcing.catalog.defaultUnit")} htmlFor="np-unit"><UnitField id="np-unit" code={form.default_unit_code} text={null} onChange={(u) => setForm({ ...form, default_unit_code: u.unit_code })} /></Field>
         <Field label={t("sourcing.catalog.kindNote")} htmlFor="np-kind"><Input id="np-kind" dir="auto" value={form.kind_note} onChange={(e) => setForm({ ...form, kind_note: e.target.value })} /></Field>
         <Field label={t("sourcing.catalog.category")} htmlFor="np-cat">
           <Select id="np-cat" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
@@ -216,7 +217,7 @@ function EditProductDialog({ product, onClose, onSaved }: { product: Product; on
           </div>
         )}
         <Field label={t("sourcing.item.hsCode")} htmlFor="ep-hs"><Input id="ep-hs" dir="ltr" inputMode="numeric" value={form.hs_code} onChange={(e) => change({ hs_code: e.target.value.replace(/\D/g, "") })} /></Field>
-        <Field label={t("sourcing.catalog.defaultUnit")} htmlFor="ep-unit"><UnitInput id="ep-unit" code={form.default_unit_code} text={null} onChange={(u) => change({ default_unit_code: u.unit_code })} /></Field>
+        <Field label={t("sourcing.catalog.defaultUnit")} htmlFor="ep-unit"><UnitField id="ep-unit" code={form.default_unit_code} text={null} onChange={(u) => change({ default_unit_code: u.unit_code })} /></Field>
         <Field label={t("sourcing.catalog.kindNote")} htmlFor="ep-kind"><Input id="ep-kind" dir="auto" value={form.kind_note} onChange={(e) => change({ kind_note: e.target.value })} /></Field>
         <Field label={t("sourcing.catalog.category")} htmlFor="ep-cat">
           <Select id="ep-cat" value={form.category_id} onChange={(e) => change({ category_id: e.target.value })}>

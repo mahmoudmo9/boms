@@ -137,7 +137,7 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       await sentCard.locator('li[data-recipient]').getByRole('button', { name: t('sourcing.rfq.recordOffer'), exact: true }).click();
       await page.waitForSelector('#of-contact');
       await page.waitForTimeout(500);
-      check(r, 'contactPreselected', (await page.locator('#of-contact').inputValue()) === c.contact.id);
+      check(r, 'contactPreselected', (await page.locator('#of-contact').getAttribute('data-value')) === c.contact.id   /* v0.10.0: a combobox shows the name */);
       await shot(`${lang}-offer-form-contact`);
       await page.getByRole('dialog').getByRole('button', { name: t('common.cancel'), exact: true }).click();
 

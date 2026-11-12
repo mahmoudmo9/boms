@@ -185,7 +185,10 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
         await page.locator('#ac-kind').selectOption(kind);
         await page.locator('#ac-desc').fill(`${kind} ${tag}`);
         await page.locator('#ac-amount').fill(amount);
-        await page.locator('[data-testid=cost-dialog] select').nth(1).selectOption(currency);
+        // v0.10.0: the currency is a combobox (smart field): type the code and pick the match
+        const cur = page.locator('[data-testid=cost-dialog]').getByRole('combobox', { name: t('sourcing.currency') });
+        await cur.click(); await cur.fill(currency);
+        await page.locator('[data-testid=cost-dialog] [role=option]').filter({ hasText: currency }).first().click();
         if (rate) await page.locator('#ac-rate').fill(rate);
         await page.locator('[data-testid=cost-save]').click();
         await page.locator('[data-testid=cost-dialog]').waitFor({ state: 'detached' });

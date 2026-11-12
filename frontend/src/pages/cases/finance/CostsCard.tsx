@@ -7,8 +7,9 @@ import { Badge, Button, Card, DateInput, EmptyState, ErrorNote, Field, Input, Mo
 import { COST_KINDS, type CostRow } from "../../../lib/finance";
 import { toDateString } from "../../../lib/followups";
 import { useFormat } from "../../../lib/prefs";
-import { CurrencySelect, Money } from "../../sourcing/shared";
+import { Money } from "../../sourcing/shared";
 import { useFinanceRun } from "./shared";
+import { CurrencyField, MoneyNote } from "../../../components/fields";
 
 function NewCost({ caseId, onClose }: { caseId: string; onClose: () => void }) {
   const { t } = useTranslation();
@@ -28,8 +29,9 @@ function NewCost({ caseId, onClose }: { caseId: string; onClose: () => void }) {
           {COST_KINDS.map((k) => <option key={k} value={k}>{t(`finance.profit.lines.${k}`)}</option>)}</Select></Field>
         <Field label={t("finance.invoices.description")} htmlFor="ac-desc"><Input id="ac-desc" dir="auto" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
         <Field label={t("finance.amount")} htmlFor="ac-amount"><span className="flex gap-1.5"><Input id="ac-amount" dir="ltr" inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-          <CurrencySelect value={form.currency} onChange={(v) => setForm({ ...form, currency: v })} /></span></Field>
+          <CurrencyField value={form.currency} onChange={(v) => setForm({ ...form, currency: v })} /></span></Field>
         {foreign && <Field label={t("finance.fxRate", { cur: form.currency })} htmlFor="ac-rate"><Input id="ac-rate" dir="ltr" inputMode="decimal" value={form.fx_rate_to_base} onChange={(e) => setForm({ ...form, fx_rate_to_base: e.target.value })} /></Field>}
+        <div className="sm:col-span-2"><MoneyNote amount={form.amount} currency={form.currency} rate={foreign ? form.fx_rate_to_base : null} rateCurrency="IRR" /></div>
         <Field label={t("finance.costs.vat")} htmlFor="ac-vat"><Input id="ac-vat" dir="ltr" inputMode="decimal" value={form.vat_amount} onChange={(e) => setForm({ ...form, vat_amount: e.target.value })} /></Field>
         <Field label={t("finance.costs.date")} htmlFor="ac-date"><DateInput id="ac-date" value={form.incurred_on} onChange={(d) => setForm({ ...form, incurred_on: d })} /></Field>
         <Field label={t("finance.costs.status")} htmlFor="ac-status"><Select id="ac-status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>

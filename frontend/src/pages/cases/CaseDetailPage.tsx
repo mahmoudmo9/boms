@@ -11,7 +11,7 @@ import { useFormat } from "../../lib/prefs";
 import type { CaseCosting, CaseDetail, CaseQuotes } from "../../lib/types";
 import { PartyName } from "../parties/shared";
 import { ItemsCard } from "../sourcing/ItemsEditor";
-import { AttachedDocuments, CascadeDeleteCard, HistoryCard, Money, StatusBadge, useInvalidateSourcing, usePaymentTerms, CurrencySelect } from "../sourcing/shared";
+import { AttachedDocuments, CascadeDeleteCard, HistoryCard, Money, StatusBadge, useInvalidateSourcing, usePaymentTerms } from "../sourcing/shared";
 import { CASE_STATUSES } from "./CasesPage";
 import { CostingTab } from "./Costing";
 import { ComparisonTab, CoverageCard, OffersTab } from "./Offers";
@@ -22,6 +22,7 @@ import { DeliveryTab, ExecutionHeaderFacts, LogisticsTab, OrderTab, PurchaseTab 
 import { SetadOrigin } from "../tenders/SetadOrigin";
 import { CaseTasksTab } from "../tasks/CaseTasksTab";
 import { FinanceHeaderFacts, FinanceTab } from "./finance";
+import { CurrencyField } from "../../components/fields";
 
 const TABS = ["items", "tender", "rfqs", "offers", "comparison", "costing", "quotes", "order", "purchase", "logistics", "delivery", "finance",
   "tasks", "documents", "history"] as const;
@@ -49,7 +50,7 @@ function EditCaseDialog({ c, onClose, onSaved }: { c: CaseDetail; onClose: () =>
         {term?.requires_reason && <Field label={t("sourcing.decision.obpReason")} htmlFor="ec-obp"><Input id="ec-obp" dir="auto" value={form.ordering_before_payment_reason ?? ""} onChange={(e) => setForm({ ...form, ordering_before_payment_reason: e.target.value || null })} /></Field>}
         <Field label={t("sourcing.decision.exposure")} htmlFor="ec-exp" hint={t("sourcing.decision.exposureHint")}>
           <div className="flex gap-1.5"><Input id="ec-exp" dir="ltr" inputMode="decimal" value={form.exposure_estimate ?? ""} onChange={(e) => setForm({ ...form, exposure_estimate: e.target.value || null })} />
-            <CurrencySelect value={form.exposure_currency} onChange={(v) => setForm({ ...form, exposure_currency: v })} /></div>
+            <CurrencyField value={form.exposure_currency} onChange={(v) => setForm({ ...form, exposure_currency: v })} /></div>
         </Field>
         <Field label={t("parties.notes")} htmlFor="ec-notes"><Textarea id="ec-notes" dir="auto" rows={3} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value || null })} /></Field>
         <ErrorNote error={save.error} />

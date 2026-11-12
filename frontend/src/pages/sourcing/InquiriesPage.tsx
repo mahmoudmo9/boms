@@ -9,9 +9,10 @@ import { api, type Page } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
 import type { Inquiry, InquiryDetail, Party, PartyDetail } from "../../lib/types";
-import { PartyPicker } from "../parties/QuickLog";
+
 import { PartyName } from "../parties/shared";
 import { INQUIRY_KINDS, SOURCE_CHANNELS, StatusBadge, useInvalidateSourcing } from "./shared";
+import { PartyField } from "../../components/fields";
 
 const PAGE_SIZE = 50;
 const STATUSES = ["new", "needs_info", "ready_for_screening", "rejected", "no_reply", "converted"] as const;
@@ -53,7 +54,7 @@ export function NewInquiryDialog({ interactionId, onClose }: { interactionId?: s
       footer={<><Button onClick={onClose}>{t("common.cancel")}</Button>
         <Button variant="primary" type="submit" form="new-inquiry" busy={create.isPending}>{t("common.save")}</Button></>}>
       <form id="new-inquiry" className="grid max-h-[65vh] grid-cols-1 gap-3 overflow-y-auto pe-1 sm:grid-cols-2" onSubmit={(e: FormEvent) => { e.preventDefault(); create.mutate(); }}>
-        <div className="sm:col-span-2"><Field label={t("sourcing.inquiry.party")} htmlFor="ql-party"><PartyPicker value={party} onChange={setParty} /></Field></div>
+        <div className="sm:col-span-2"><Field label={t("sourcing.inquiry.party")} htmlFor="ql-party"><PartyField value={party} onChange={setParty} /></Field></div>
         <Field label={t("sourcing.inquiry.channel")} htmlFor="ni-channel">
           <Select id="ni-channel" value={form.source_channel} onChange={(e) => setForm({ ...form, source_channel: e.target.value })}>
             {SOURCE_CHANNELS.map((c) => <option key={c} value={c}>{t(`sourcing.channels.${c}`)}</option>)}

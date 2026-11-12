@@ -13,7 +13,8 @@ import { useFormat } from "../../lib/prefs";
 import { blockerMessage, combineDateTime, nextGuaranteeSteps, parseReminderDays, progressText, stepper, timeOf } from "../../lib/tenders";
 import type { Blocker, CaseDetail, CompanyDocumentRow, EnvelopeItemRow, GuaranteeRow, ProposalRow, ResultReasonRow, TenderDetail, TenderStage } from "../../lib/types";
 import { PartyName } from "../parties/shared";
-import { Money, CurrencySelect } from "../sourcing/shared";
+import { Money } from "../sourcing/shared";
+import { CurrencyField, MoneyNote } from "../../components/fields";
 
 type Body = Record<string, unknown>;
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -483,7 +484,8 @@ function GuaranteeForm({ initial, onSave, onClose, busy, error }: { initial: Par
         <Field label={t("tenders.guarantee.form")} htmlFor="g-form"><Select id="g-form" value={String(g.form ?? "")} onChange={set("form")}>
           <option value="">—</option>{["bank", "electronic_bank", "cheque", "cash_deposit", "insurance", "promissory_note", "other"].map((p) => <option key={p} value={p}>{t(`tenders.guarantee.forms.${p}`)}</option>)}</Select></Field>
         <Field label={t("tenders.guarantee.amount")} htmlFor="g-amount"><div className="flex gap-1.5"><Input id="g-amount" dir="ltr" inputMode="decimal" value={String(g.amount ?? "")} onChange={set("amount")} />
-          <CurrencySelect value={(g.amount_currency as string) ?? "IRR"} onChange={(v) => setG({ ...g, amount_currency: v })} /></div></Field>
+          <CurrencyField value={(g.amount_currency as string) ?? "IRR"} onChange={(v) => setG({ ...g, amount_currency: v })} /></div>
+          <MoneyNote amount={g.amount as string | null} currency={(g.amount_currency as string) ?? "IRR"} /></Field>
         <Field label={t("tenders.guarantee.bank")} htmlFor="g-bank"><Input id="g-bank" dir="auto" value={String(g.bank_name ?? "")} onChange={set("bank_name")} /></Field>
         <Field label={t("tenders.guarantee.branch")} htmlFor="g-branch"><Input id="g-branch" dir="auto" value={String(g.branch ?? "")} onChange={set("branch")} /></Field>
         <Field label={t("tenders.guarantee.number")} htmlFor="g-number"><Input id="g-number" dir="ltr" value={String(g.number ?? "")} onChange={set("number")} /></Field>

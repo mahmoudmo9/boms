@@ -185,7 +185,7 @@ export function AppShell() {
           <div className="flex min-w-0 flex-1 flex-col">
             <TopBar onPalette={() => setPaletteOpen(true)} onMenu={() => setNavOpen(true)} onShortcuts={() => setSheetOpen(true)} />
             <main id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto px-4 py-5 outline-none lg:px-8 lg:py-7">
-              <div className="mx-auto w-full max-w-screen-3xl">
+              <div className="mx-auto h-full w-full max-w-screen-3xl">
                 <Outlet />
               </div>
             </main>

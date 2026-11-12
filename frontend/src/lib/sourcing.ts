@@ -211,3 +211,22 @@ export function sortRfqs<T extends Pick<Rfq, "status" | "created_at">>(rfqs: T[]
 export function personName(fa: string | null | undefined, en: string | null | undefined, lang: string): string {
   return ((lang === "fa" ? fa || en : en || fa) ?? "").trim();
 }
+
+/** v0.10.0 section 5: the calculation beside an offer's prices — each included, available line's total (quantity ×
+ * unit price ÷ price basis) and the offer's total of the lines whose quantity is known. Display only. */
+export function offerLineTotal(quantity: string | number | null | undefined, unitPrice: string, per: string): number | null {
+  const q = Number(quantity); const p = Number(unitPrice); const b = Number(per || "1");
+  if (quantity === null || quantity === undefined || quantity === "" || !unitPrice || Number.isNaN(q) || Number.isNaN(p) || !b) return null;
+  return (q * p) / b;
+}
+
+export function offerTotal(rows: { include: boolean; available: boolean; unit_price: string; price_per_quantity: string; quantity?: string | null }[]):
+  { total: number; counted: number; missing: number } {
+  let total = 0, counted = 0, missing = 0;
+  for (const r of rows) {
+    if (!r.include || !r.available || !r.unit_price) continue;
+    const line = offerLineTotal(r.quantity, r.unit_price, r.price_per_quantity);
+    if (line === null) missing += 1; else { total += line; counted += 1; }
+  }
+  return { total, counted, missing };
+}

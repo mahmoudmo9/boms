@@ -139,6 +139,50 @@ SETAD_CHECKLIST = ["کالا/خدمت در حوزه کاری ما است", "شر
                    "مهلت برای گرفتن قیمت از تأمین‌کننده کافی است"]
 
 # key -> (default, validator)
+BANK_TEXT_FIELDS = ("bank_name", "account_holder", "other")
+BANK_LABELS = {"fa": {"account_holder": "صاحب حساب", "iban": "شبا (IBAN)", "bic": "BIC / SWIFT"},
+               "en": {"account_holder": "Account holder", "iban": "IBAN", "bic": "BIC / SWIFT"}}
+
+
+def _bank(value: Any) -> dict | None:
+    """v0.10.0: the company's bank details as fields — bank name and account holder per language, IBAN and BIC
+    (validated and normalized), and any other lines per language. ``None`` clears them."""
+    from app.modules.lookup import validators
+
+    if value is None:
+        return None
+    if not isinstance(value, dict) or set(value) - {*BANK_TEXT_FIELDS, "iban", "bic"}:
+        raise ValueError("expected bank_name, account_holder, iban, bic, other")
+    out: dict[str, Any] = {k: _signature(value.get(k) or {}) for k in BANK_TEXT_FIELDS}
+    for key, check in (("iban", validators.iban), ("bic", validators.bic)):
+        raw = value.get(key) or ""
+        if not isinstance(raw, str) or len(raw) > 64:
+            raise ValueError(f"{key}: expected text")
+        if raw.strip():
+            result = check(raw)
+            if not result["valid"]:
+                raise ValueError(f"{key}: {result['reason']}")
+            out[key] = result["normalized"]
+        else:
+            out[key] = ""
+    return out
+
+
+def bank_text(bank: dict, lang: str) -> str:
+    """The printed bank lines of one language, from the fields (what `company.bank_details` held as free text)."""
+    labels = BANK_LABELS.get(lang, BANK_LABELS["en"])
+    pick = lambda k: (bank.get(k) or {}).get(lang) or next((v for v in (bank.get(k) or {}).values() if v), "")  # noqa: E731
+    lines = [pick("bank_name")]
+    if pick("account_holder"):
+        lines.append(f"{labels['account_holder']}: {pick('account_holder')}")
+    if bank.get("iban"):
+        lines.append(f"{labels['iban']}: {bank['iban']}")
+    if bank.get("bic"):
+        lines.append(f"{labels['bic']}: {bank['bic']}")
+    lines.append(pick("other"))
+    return "\n".join(line for line in lines if line)
+
+
 DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "backup.time": ("02:00", _time),
     "backup.secondary_path": (None, _optional_path),
@@ -162,6 +206,7 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "company.logo_document_id": (None, _optional_uuid),
     "company.footer": ({"fa": "", "en": ""}, _signature),
     "company.bank_details": ({"fa": "", "en": ""}, _signature),
+    "company.bank": (None, _bank),                      # v0.10.0: the fields behind company.bank_details
     "pdf.browser_path": (None, _optional_path),
     # Setad connector and screening (v0.5.0)
     "setad.files_dir": (None, _optional_path),          # None = <data folder>/setad-files (not backed up)
@@ -266,6 +311,8 @@ def update(db: Session, changes: dict[str, Any], source: str, actor: str | None 
             errors[key] = str(exc)
     if errors:
         raise AppError("invalid_settings", "Invalid settings", {"fields": errors}, status=422)
+    if clean.get("company.bank"):          # the letterhead keeps printing the text, now made from the fields
+        clean["company.bank_details"] = {lang: bank_text(clean["company.bank"], lang) for lang in ("fa", "en")}
 
     for key, value in clean.items():
         row = db.get(Setting, key)
