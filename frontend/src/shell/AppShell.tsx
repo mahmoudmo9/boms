@@ -142,7 +142,7 @@ function TopBar({ onPalette, onMenu, onShortcuts }: { onPalette: () => void; onM
         <Menu label={t("shell.user")} testId="user" trigger={(p) => (
           <button type="button" {...p} data-testid="user" aria-label={`${user.username} — ${t("shell.user")}`}
             className="ms-1 inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg px-1.5 text-sm text-fg-2 transition-colors duration-150 hover:bg-hover">
-            <span aria-hidden className="flex size-8 items-center justify-center rounded-2xl border border-accent-line bg-accent-soft text-xs font-semibold text-accent">{user.username.slice(0, 1).toUpperCase()}</span>
+            <span aria-hidden className="flex size-8 items-center justify-center rounded-2xl border border-accent-line bg-accent-soft text-xs font-semibold text-accent"><Icon name="user" size={15} /></span>
             <bdi className="max-sm:hidden">{user.username}</bdi>
           </button>)}
           items={[{ key: "settings", label: t("nav.settings"), icon: "settings", onSelect: () => navigate("/settings") },

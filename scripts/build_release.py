@@ -108,7 +108,9 @@ def assemble(ver: str, skip_wheels: bool) -> Path:
     (out / "scripts").mkdir()
     for name in SCRIPT_FILES:
         shutil.copy2(ROOT / "scripts" / name, out / "scripts" / name)
-    shutil.copytree(ROOT / "docs", out / "docs")
+    # v0.10.0: the review screenshots and design mockups are for the reviewer, not the office PC
+    # (the screenshots ship beside the zip as screens-<version>.zip)
+    shutil.copytree(ROOT / "docs", out / "docs", ignore=shutil.ignore_patterns("screens", "design-reference"))
     (out / "VERSION").write_text(ver + "\n", encoding="ascii")
     shutil.copy2(ROOT / "docs" / "README.md", out / "README.md")
     if skip_wheels:

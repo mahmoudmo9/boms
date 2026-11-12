@@ -300,8 +300,8 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
           <div><dt className="text-xs text-muted">{t("costing.pricing.priceBeforeVat")}</dt><dd className="font-semibold"><Money amount={q.subtotal} currency={q.currency} /></dd></div>
           <div><dt className="text-xs text-muted">{t("costing.pricing.vat")}</dt><dd><Money amount={q.vat_amount} currency={q.currency} /></dd></div>
           <div><dt className="text-xs text-muted">{t("quotes.total")}</dt><dd className="font-semibold"><Money amount={q.total} currency={q.currency} /></dd></div>
-          <div className="self-end text-xs text-muted">{t(`quotes.basisNote.${q.price_basis}`)}</div>
         </dl>
+        <p className="px-4 pb-3 text-xs text-muted">{t(`quotes.basisNote.${q.price_basis}`)}</p>
         <ErrorNote error={patchItem.error} />
       </Card>
       <Card title={t("quotes.terms")} actions={draft ? <Button variant="ghost" onClick={() => action.mutate("terms")}>{t("quotes.regenerateTerms")}</Button> : undefined}>

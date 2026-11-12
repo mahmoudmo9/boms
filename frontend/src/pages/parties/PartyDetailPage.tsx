@@ -741,14 +741,16 @@ export function PartyDetailPage() {
       <Tabs label={t("nav.parties")} active={tab} onSelect={(key) => setParams({ tab: key }, { replace: true })} panelId="party-tab"
         tabs={TABS.filter((key) => key !== "quotes" || p.roles.some((r) => r.role === "buyer")).map((key) => ({ key, label: t(`parties.tabs.${key}`),
           count: key === "contacts" ? f.num(p.contacts.filter((c) => c.status === "active").length) : undefined }))} />
-      {tab === "overview" && <Overview key={p.updated_at} party={p} />}
-      {tab === "contacts" && <Contacts party={p} />}
-      {tab === "interactions" && <Interactions party={p} highlight={params.get("interaction")} />}
-      {tab === "documents" && <Documents party={p} />}
-      {tab === "quotes" && <Quotes partyId={p.id} />}
-      {tab === "orders" && <Orders partyId={p.id} />}
-      {tab === "finance" && <PartyFinance partyId={p.id} />}
-      {tab === "history" && <History partyId={p.id} />}
+      <div id="party-tab" role="tabpanel" aria-label={t(`parties.tabs.${tab}`)} className="flex flex-col gap-4">
+        {tab === "overview" && <Overview key={p.updated_at} party={p} />}
+        {tab === "contacts" && <Contacts party={p} />}
+        {tab === "interactions" && <Interactions party={p} highlight={params.get("interaction")} />}
+        {tab === "documents" && <Documents party={p} />}
+        {tab === "quotes" && <Quotes partyId={p.id} />}
+        {tab === "orders" && <Orders partyId={p.id} />}
+        {tab === "finance" && <PartyFinance partyId={p.id} />}
+        {tab === "history" && <History partyId={p.id} />}
+      </div>
     </div>
   );
 }

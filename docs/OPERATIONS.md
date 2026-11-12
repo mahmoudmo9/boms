@@ -451,3 +451,29 @@ Folders, outputs, codes:
       products show their codes; PI / SO / PO / INV numbers are unchanged.
 - [ ] Settings → «داده‌های مرجع»: download the official UN/LOCODE CSV (UNECE) and the ELF list (GLEIF) and import them
       from the file; the locations show «تأییدشده با فایل رسمی».
+
+## Manual checks for v0.10.0 (design system) — Windows checklist
+
+Not run by the developer (no Windows PC); please tick each on the office PC.
+
+1. **Update from 0.9.0 with BOMS running.** Leave BOMS open in Edge and the Setad browser window open, then run
+   `update.bat`. Expected: the updater stops BOMS and its helpers (server, worker, Setad agent, Claude CLI) and checks
+   that the program folders can be renamed; if a file is still held, it names the program holding it and stops
+   *without changing anything*. After closing that program, a second run completes. If the PC loses power mid-update,
+   the next `update.bat` repairs the half-done update first (`update-in-progress.json`).
+2. The pre-update backup exists and «آزمون بازیابی» (restore test) passes from Settings → System.
+3. **Claude sign-in.** Settings → AI → Claude subscription → «ورود به Claude» opens a console window on this PC; sign
+   in, close it, and the block shows «وارد شده» with the account. No other window appears during AI calls.
+4. **Theme.** Top bar → theme → «سیستم». Switch Windows between light and dark (Settings → Personalisation → Colours):
+   BOMS follows within a second, with no white flash when a page loads. Light and dark both stay readable.
+5. **Tour in both themes and languages:** command center, a case (deal path, tabs, side column), Tenders & calls
+   (the table scrolls inside its box, the panel scrolls on its own), finance desk, a tender, a shipment, a party,
+   the AI review and AI settings. No page scrolls sideways at 1024 px or wider.
+6. **Ctrl+K:** type a case code (e.g. CS-1405-0001) — it is the first result; Enter opens it. Recent items show
+   when the palette opens empty.
+7. **Quick triage:** Tenders → «غربال سریع». S stars, R marks as reviewing, D dismisses, arrows move; the counter
+   advances and the detail of the current listing is shown.
+8. **Live updates:** start «دریافت فایل‌ها» for a Setad listing; the attachments appear in the open panel when the
+   download finishes, without reloading. A backup started from Settings → System appears in its list when done.
+9. **Bank details:** Settings → Letterhead → bank card; a wrong IBAN is marked; after saving, a quote PDF prints the
+   lines of the preview.

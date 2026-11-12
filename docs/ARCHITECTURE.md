@@ -1099,3 +1099,68 @@ currency, invoices, ratings) and the national ID / economic code fields. Setting
 - Shared components (`components/smart.tsx`): `LookupField`, `SuggestedValue`, `ValidatedInput`, `CodeChip`,
   `AmountInWords`; their logic is in `lib/smart.ts` (tested without a browser). `LookupField` acts only on results for
   exactly what is typed.
+
+## Design system and live updates (v0.10.0, migration `0021_live_updates`)
+
+v0.10.0 is presentation only, apart from the carry-over of section 0, the change feed and the structured bank fields.
+**Rule: new UI uses only the library in `frontend/src/design/` and the app pickers in `frontend/src/components/fields.tsx`.**
+There is no second set of components and no page-level CSS.
+
+### Tokens and themes (`design/tokens.css`, `design/tokens.ts`)
+
+- Every colour, radius, shadow, motion duration and z layer is a CSS custom property. `:root` / `.theme-light` is the light
+  theme «جوهر و برنج»; `:root.dark` / `.theme-dark` the dark theme «نیمه‌شب و طلا». Tailwind v4 reads them through
+  `@theme inline`; the default Tailwind palette is removed (`--color-*: initial`), so only token colours exist.
+- Type scale `text-2xs … 5xl`, radii `xs … 3xl`, motion 150–250 ms (off under `prefers-reduced-motion`), the rail width.
+- `tokens.ts` reads both themes and computes WCAG contrast for every text/surface and status pair (`contrastTable`);
+  the unit test fails below AA.
+- Theme setting: light, dark or system (follows the OS live). `public/theme-init.js` sets it before the first paint
+  (CSP forbids inline scripts).
+- Fonts: Noto Naskh Arabic (OFL) bundled in `design/fonts`; nothing is fetched at run time.
+- `scripts/check-design.mjs` (part of `npm run lint`) fails the build on physical-direction classes, colour literals,
+  pixel font sizes and arbitrary spacing.
+
+### Component catalogue (`design/components/`, shown at `/design` in developer mode)
+
+| Group | Components |
+|---|---|
+| primitives | Button, ButtonLink, IconButton, TextLink, Badge, Status, Chip, Kbd, CodeChip, Tooltip, Spinner, Bdi, Icon |
+| forms | Field/FormRow (with source chip), Input, Textarea, Select, Checkbox, RadioGroup, Switch, Segmented, Combobox, DatePicker/DateInput (Jalali and Gregorian), MoneyInput, QuantityInput, FileDrop (full and compact) |
+| smart | LookupField (`/api/lookup`, create option), SuggestedValue (source chip, Tab accepts), ValidatedInput (IBAN, BIC, national ID, container …), AmountInWords |
+| containers | Card, Section, Tabs/ScrollTabs, Modal, Drawer, Popover, Menu, ConfirmDialog, Toast (focus trap and return) |
+| data | DataTable (sort, keyboard rows, selection, dense), Pagination, DescriptionList, Timeline, DatedTimeline, Stepper, KpiTile, Stat, ProgressBar, ProgressRing |
+| charts | Sparkline, Bars, ProfitBridge, CashFlow, RouteLine — each with a text alternative (a table or `aria-label`) |
+| feedback | Skeleton, Loading, EmptyState (with its next action), ErrorState (with retry), InlineAlert, ErrorNote, Busy |
+| layout | Breadcrumb, PageHeader, PageGrid (side column) |
+
+App pickers (`components/fields.tsx`), all on the smart fields: CurrencyField, UnitField, IncotermField, CountryField,
+ProductField, PartyField (search or create, duplicate check), ContactField, PartyChoice, and MoneyNote (line total,
+conversion at a rate, amount in words). They send the same values as the v0.9.0 pickers they replace.
+
+### Page patterns
+
+- Shell (`shell/AppShell.tsx`): collapsible rail, top bar (command palette Ctrl+K, quick add, theme, language,
+  shortcuts sheet, lock, user), skip link, live dot. Pages render inside a full-height wrapper, so a workspace page
+  (listings) can fill the screen with its own scrolling table.
+- Every page: `PageHeader` (breadcrumb, eyebrow, title, code, status, actions); data regions show a skeleton, an
+  `EmptyState` with one next action, or an `ErrorState` with retry; wide tables scroll inside their own box.
+- Pages with a reference mockup (`docs/design-reference/`): command center (`overview` section), case (deal path, side
+  column, route card), listings and quick triage (`tenders/triage`, keys S/R/D), finance (profit bridge, deal cash flow),
+  tender (countdown, dated timeline, envelopes in columns), shipment, party, AI review, AI settings.
+
+### Change feed and live updates (module `live`)
+
+- `GET /api/live/changes?since=` and `GET /api/live/stream` (server-sent events, `Last-Event-ID`) read what the worker,
+  the Setad agent and the server wrote: `sys.job` status, `core.event` record changes, `ext.listing_file` downloads,
+  `ext.harvest_run` and `ext.agent_status`. Rows are read with a 10 s overlap; each notice has a stable `key`, names
+  what changed and never its content. Each source is read newest first up to 300 rows; `overflow: true` tells the
+  browser to refresh everything shown. `0021_live_updates` adds the `updated_at` indexes.
+- `/api/live/*` does not refresh the idle lock.
+- Browser: `LiveUpdatesProvider` maps notices to query roots (`lib/live.ts`), falls back to polling after three stream
+  errors; `useJob` / `useJobRunner` keep a job's button busy until the job finishes, so it cannot be submitted twice.
+
+### Structured bank details (setting `company.bank`)
+
+Bank name and account holder per language, IBAN and BIC (validated and normalized by `lookup/validators.py`) and other
+lines. Saving them composes `company.bank_details` per language, which quotes, proformas and invoices keep printing as
+before; the letterhead page shows the same lines as a preview (`lib/bank.ts` mirrors `settings.bank_text`).
