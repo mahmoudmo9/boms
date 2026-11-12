@@ -31,7 +31,7 @@ export function NewInquiryDialog({ interactionId, onClose }: { interactionId?: s
   const navigate = useNavigate();
   const invalidate = useInvalidateSourcing();
   const [party, setParty] = useState<Party | null>(null);
-  const [form, setForm] = useState({ source_channel: "whatsapp", kind: "rfq", subject: "", raw_text: "", response_due_on: null as string | null,
+  const [form, setForm] = useState({ source_channel: "whatsapp", kind: "rfq", subject: new URLSearchParams(window.location.search).get("subject") ?? "", raw_text: "", response_due_on: null as string | null,
     received_at: null as string | null, source_interaction_id: null as string | null });
   useEffect(() => {
     if (!interactionId) return;
@@ -88,7 +88,7 @@ export function InquiriesPage() {
   const status = params.get("status") ?? "";
   const page = Number(params.get("page") ?? 1);
   const fromInteraction = params.get("from_interaction");
-  const [creating, setCreating] = useState(!!fromInteraction);
+  const [creating, setCreating] = useState(!!fromInteraction || params.get("new") === "1");   // v0.10.0: «?new=1» from the palette
   const set = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
     Object.entries(changes).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)));
@@ -130,7 +130,7 @@ export function InquiriesPage() {
         <DataTable columns={columns} data={list.data?.items ?? []} loading={list.isFetching} rowKey={(r) => r.id} empty={t("sourcing.noInquiries")} />
         <Pagination page={page} pageSize={PAGE_SIZE} total={list.data?.total ?? 0} onPage={(p) => set({ page: String(p) })} />
       </Card>
-      {creating && <NewInquiryDialog interactionId={fromInteraction} onClose={() => { setCreating(false); if (fromInteraction) set({ from_interaction: null }); }} />}
+      {creating && <NewInquiryDialog interactionId={fromInteraction} onClose={() => { setCreating(false); if (fromInteraction || params.get("new")) set({ from_interaction: null, new: null, subject: null }); }} />}
     </div>
   );
 }

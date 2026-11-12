@@ -122,7 +122,8 @@
       "sales_invoice": "Sales invoice",
       "purchase_invoice": "Supplier invoice",
       "payment": "Payment",
-      "actual_cost": "Actual cost"
+      "actual_cost": "Actual cost",
+      "code": "Codes"
     }
   },
   "date": {
@@ -369,7 +370,10 @@
       "skipped": "Skipped",
       "failed": "Failed",
       "disabled": "Off"
-    }
+    },
+    "backupDone": "The backup is finished",
+    "restoreTestDone": "The restore test is finished",
+    "jobFailed": "The job failed; see the job list"
   },
   "settings": {
     "display": "Display",
@@ -3789,5 +3793,72 @@
     "devMode": "Developer mode",
     "devModeHint": "Shows the link to the design system page. In this browser only.",
     "open": "Open the design system"
+  },
+  "palette": {
+    "title": "Command or search",
+    "open": "Command or search…",
+    "placeholder": "Type a name, a code or a command",
+    "results": "Results",
+    "noResults": "Nothing found for “{{q}}”",
+    "recent": "Recent",
+    "actions": "Actions",
+    "exactCode": "exact code",
+    "move": "move",
+    "anywhere": "from any page",
+    "action": {
+      "newInquiry": "New inquiry",
+      "newInquiryFor": "New inquiry for “{{q}}”",
+      "newParty": "New trading party",
+      "newTask": "New task",
+      "openSettings": "Settings: {{page}}",
+      "theme": {
+        "light": "Light theme (Ink and brass)",
+        "dark": "Dark theme (Midnight and gold)",
+        "system": "Theme follows Windows"
+      },
+      "language": {
+        "fa": "Language: فارسی",
+        "en": "Language: English"
+      }
+    },
+    "openRow": "open"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "group": {
+      "everywhere": "Everywhere",
+      "lists": "Lists and tables",
+      "triage": "Quick triage",
+      "fields": "Fields"
+    },
+    "palette": "Command or search",
+    "paletteSlash": "Command or search (outside a field)",
+    "sheet": "This sheet",
+    "quickLog": "Log an interaction",
+    "close": "Close a dialog or menu",
+    "rows": "Previous / next row",
+    "ends": "First / last row",
+    "openRow": "Open the row",
+    "selectRow": "Select the row",
+    "star": "Star",
+    "reviewing": "Reviewing",
+    "dismiss": "Dismiss",
+    "nextPrev": "Next / previous listing",
+    "acceptSuggestion": "Accept the suggestion",
+    "openCalendar": "Open the calendar"
+  },
+  "shell": {
+    "tagline": "Trade management",
+    "collapse": "Collapse the menu",
+    "expand": "Expand the menu",
+    "quickAdd": "Quick add",
+    "user": "User",
+    "switchLanguage": "Switch the language to {{language}}",
+    "skip": "Skip to the page content",
+    "live": {
+      "stream": "Live updates connected",
+      "polling": "Updating every 2 seconds",
+      "offline": "Live updates disconnected"
+    }
   }
 }

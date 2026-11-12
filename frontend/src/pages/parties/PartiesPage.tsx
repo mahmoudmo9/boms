@@ -154,7 +154,7 @@ export function PartiesPage() {
   const quickLog = useQuickLog();
   const stages = useStages();
   const [params, setParams] = useSearchParams();
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(params.get("new") === "1");   // v0.10.0: «?new=1» from the palette
   const q = params.get("q") ?? "";
   const role = params.get("role") ?? "";
   const stage = params.get("stage") ?? "";
@@ -234,7 +234,7 @@ export function PartiesPage() {
           empty={t("parties.empty")} />
         <Pagination page={page} pageSize={PAGE_SIZE} total={list.data?.total ?? 0} onPage={(p) => set({ page: String(p) })} />
       </Card>
-      {creating && <NewPartyDialog onClose={() => setCreating(false)} />}
+      {creating && <NewPartyDialog onClose={() => { setCreating(false); if (params.get("new")) { const next = new URLSearchParams(params); next.delete("new"); setParams(next, { replace: true }); } }} />}
     </div>
   );
 }

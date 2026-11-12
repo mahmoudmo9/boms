@@ -54,7 +54,8 @@ def current_user(request: Request, db: Annotated[Session, Depends(get_db)]) -> A
         if not session.get("lk"):
             set_session(request, {**session, "lk": True})
         raise Locked()
-    if request.headers.get("x-boms-background") != "1":
+    # background requests (polling, the live stream) never count as activity for the idle lock
+    if request.headers.get("x-boms-background") != "1" and not request.url.path.startswith("/api/live/"):
         set_session(request, {**session, "t": int(current)})
     request.state.user = user
     return user

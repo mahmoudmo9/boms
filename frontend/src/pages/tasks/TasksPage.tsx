@@ -18,7 +18,7 @@ function useCaseOptions() {
   return useQuery({ queryKey: ["cases", "options"], queryFn: () => api<Page<Case>>("/api/cases", { query: { page_size: 200 } }) });
 }
 
-export function QuickAddTask({ caseId }: { caseId?: string }) {
+export function QuickAddTask({ caseId, focus }: { caseId?: string; focus?: boolean }) {
   const { t } = useTranslation();
   const invalidate = useTasksInvalidate();
   const cases = useCaseOptions();
@@ -35,7 +35,7 @@ export function QuickAddTask({ caseId }: { caseId?: string }) {
     <div className="flex flex-col gap-2" data-testid="task-quick-add">
       <div className="flex flex-wrap items-end gap-2">
         <Field label={t("tasks.title")} htmlFor="task-title">
-          <Input id="task-title" className="w-72" dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <Input id="task-title" className="w-72" dir="auto" autoFocus={focus} value={title} onChange={(e) => setTitle(e.target.value)} />
         </Field>
         {!caseId && (
           <Field label={t("tasks.case")} htmlFor="task-case">
@@ -75,7 +75,7 @@ export function TasksPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("nav.sub.myTasks")} subtitle={t("tasks.subtitle")} />
-      <Card title={t("tasks.quickAdd")}><QuickAddTask /></Card>
+      <Card title={t("tasks.quickAdd")}><QuickAddTask focus={params.get("new") === "1"} /></Card>
       <div className="flex flex-wrap items-end gap-2">
         <Field label={t("tasks.case")} htmlFor="tasks-filter-case">
           <Select id="tasks-filter-case" className="w-56" value={caseId} onChange={(e) => set("case", e.target.value)}>

@@ -1,12 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
 import { Link } from "react-router";
 
 import { Badge, Bdi, Button, buttonClass, Card, DataTable, ErrorNote, PageHeader, Pagination, Stat, Switch, useToast } from "../../design/components";
 import { devMode, setDevMode } from "./DesignPage";
+import { useJobRunner } from "../../shell/LiveUpdates";
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { BackupRun, Health, Job } from "../../lib/types";
@@ -54,20 +55,12 @@ export function SystemPage() {
   });
 
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["system"] });
-  const backupNow = useMutation({
-    mutationFn: () => api("/api/system/backups", { method: "POST" }),
-    onSuccess: () => {
-      toast(t("system.backupQueued"), "success");
-      refresh();
-    },
-  });
-  const restoreTest = useMutation({
-    mutationFn: () => api("/api/system/restore-test", { method: "POST", body: {} }),
-    onSuccess: () => {
-      toast(t("system.restoreTestQueued"), "success");
-      refresh();
-    },
-  });
+  // v0.10.0: a job button stays busy until its job has finished (live feed), so it cannot run twice
+  const finished = (doneKey: string) => (status: "done" | "failed") => { toast(t(status === "done" ? doneKey : "system.jobFailed"), status === "done" ? "success" : "error"); refresh(); };
+  const backupNow = useJobRunner(useCallback(() => api<{ job_id: string }>("/api/system/backups", { method: "POST" }), []),
+    useMemo(() => finished("system.backupDone"), []));      // eslint-disable-line react-hooks/exhaustive-deps
+  const restoreTest = useJobRunner(useCallback(() => api<{ job_id: string }>("/api/system/restore-test", { method: "POST", body: {} }), []),
+    useMemo(() => finished("system.restoreTestDone"), []));  // eslint-disable-line react-hooks/exhaustive-deps
 
   const backupColumns = useMemo<ColumnDef<BackupRun, unknown>[]>(
     () => [
@@ -142,8 +135,8 @@ export function SystemPage() {
         subtitle={t("system.subtitle")}
         actions={
           <>
-            <Button icon="refresh" busy={restoreTest.isPending} onClick={() => restoreTest.mutate()}>{t("system.runRestoreTest")}</Button>
-            <Button variant="primary" icon="database" busy={backupNow.isPending} onClick={() => backupNow.mutate()}>{t("system.backupNow")}</Button>
+            <Button icon="refresh" busy={restoreTest.busy} onClick={() => void restoreTest.run()} data-testid="restore-test-now">{t("system.runRestoreTest")}</Button>
+            <Button variant="primary" icon="database" busy={backupNow.busy} onClick={() => void backupNow.run()} data-testid="backup-now">{t("system.backupNow")}</Button>
           </>
         }
       />
