@@ -692,6 +692,70 @@
       "moadian_pending": "Moadian not sent / rejected",
       "payments_without_rate": "Payments without FX rate",
       "ready_to_close": "Ready to close"
+    },
+    "attention": "Needs attention",
+    "focus": {
+      "eyebrow": "Most important now",
+      "timeLeft": "Time left",
+      "open": "Open",
+      "clear": "Nothing urgent",
+      "clearHint": "No deadline in the next 72 hours.",
+      "kind": {
+        "tender": "Tender",
+        "setad": "Setad listing",
+        "task": "Task",
+        "followup": "Follow-up",
+        "step": "Execution step",
+        "quote": "Quote"
+      }
+    },
+    "line": {
+      "title": "Today's timeline",
+      "count": "{{n}} deadlines",
+      "empty": "Nothing is due today.",
+      "allDay": "today"
+    },
+    "kpi": {
+      "title": "Figures",
+      "profit": "Profit of deals closed this quarter",
+      "quarter": "Q{{q}}",
+      "season": "{{name}} {{year}}",
+      "seasons": {
+        "1": "Spring",
+        "2": "Summer",
+        "3": "Autumn",
+        "4": "Winter"
+      },
+      "deals": "{{n}} deals",
+      "noClosed": "No deal closed in {{period}}",
+      "winRate": "Quote win rate",
+      "winNote": "{{won}} of {{decided}} in 6 months",
+      "noDecided": "No quote decided in the last 6 months",
+      "tiedUp": "Cash tied up",
+      "tiedCases": "in {{n}} open deals",
+      "nothingTied": "No cash is tied up now",
+      "setad": "Setad today",
+      "setadUnit": "match keywords",
+      "setadNone": "No new listing of the last harvest matched the keywords"
+    },
+    "cash": {
+      "title": "Cash flow, next 90 days",
+      "subtitle": "from open payment milestones",
+      "in": "In",
+      "out": "Out",
+      "net": "Running net",
+      "lowest": "Lowest point",
+      "thisWeek": "This week",
+      "empty": "No open payment milestone in the next 90 days.",
+      "overdue": "Past due: in {{in}} · out {{out}} {{currency}}",
+      "undated": "{{n}} milestones without a date"
+    },
+    "aiLine": {
+      "title": "AI this month",
+      "settings": "Settings",
+      "ofCap": "of the {{cap}} USD cap",
+      "none": "No provider is connected yet.",
+      "connect": "Connect"
     }
   },
   "funnel": {
@@ -2098,7 +2162,9 @@
       "failed": "failed",
       "no_files": "no attachments",
       "fetched": "fetched"
-    }
+    },
+    "headerCounts": "{{open}} open · {{fresh}} new",
+    "sourcesLabel": "Listing type"
   },
   "setad": {
     "connected": "Connected to Setad",
@@ -2588,6 +2654,10 @@
       "lines": "{{n}} lines",
       "reasons": "Result reasons",
       "active": "Active"
+    },
+    "hero": {
+      "window": "Ring: share left of 14 days",
+      "count": "{{n}} dates"
     }
   },
   "execution": {
@@ -2820,7 +2890,7 @@
       "docNo": "Transport document no.",
       "containers": "Containers",
       "containersHint": "Separate with spaces or commas",
-      "vessel": "Vessel / flight",
+      "vessel": "Vessel or flight",
       "origin": "Origin",
       "destination": "Destination",
       "quantity": "Quantity",
@@ -2885,7 +2955,14 @@
       },
       "containerNumber": "Container number (ISO 6346)",
       "containerType": "Container type",
-      "addContainer": "Add container"
+      "addContainer": "Add container",
+      "eventPlace": "Place of the event",
+      "vsPlan": "Against plan",
+      "onPlan": "On plan",
+      "late": "{{n}} days late",
+      "early": "{{n}} days early",
+      "lastEvent": "Last event",
+      "docNoNumber": "no number"
     },
     "warnings": {
       "eta_passed": "ETA passed without arrival ({{days}} days)",
@@ -3355,7 +3432,8 @@
         "actual_costs": "Costs CSV",
         "deals": "Deals CSV",
         "receivables": "Aging CSV"
-      }
+      },
+      "exportsLabel": "CSV exports"
     },
     "vatDecision": {
       "title": "VAT on domestic invoices",
@@ -3364,6 +3442,23 @@
       "noParameter": "No VAT tax parameter in force on the issue date",
       "zero": "Zero VAT, with a reason",
       "becomesDefault": "Saved as the default (Settings → Finance)."
+    },
+    "bridge": {
+      "title": "From planned to actual profit",
+      "subtitle": "In {{cur}}; each bar is the change of profit in one group",
+      "plan": "Plan",
+      "actual": "Actual",
+      "other": "Other",
+      "planned": "Planned profit",
+      "marginNote": "margin {{margin}}% · markup {{markup}}%",
+      "expectedNote": "expected margin {{margin}}%",
+      "fxNote": "included in the bars"
+    },
+    "dealCash": {
+      "title": "Deal cash flow",
+      "subtitle": "This deal's open receipts and payments by month",
+      "empty": "No open dated payment is left for the coming months.",
+      "undated": "{{n}} payments without a due date"
     }
   },
   "smart": {
@@ -3427,13 +3522,16 @@
         "spent": "This month {{spent}} of {{cap}} USD ({{percent}} %)",
         "warning": "{{level}} % warning",
         "subscription": "{{count}} tasks on the subscription",
-        "disabled": "The cap is 0: the API key route is off."
+        "disabled": "The cap is 0: the API key route is off.",
+        "spentLabel": "Spent this month",
+        "capLabel": "Monthly cap"
       },
       "routes": {
         "title": "Route per task",
         "primary": "Primary",
         "fallback": "Fallback",
-        "privacy": "Privacy"
+        "privacy": "Privacy",
+        "task": "Task"
       },
       "log": {
         "title": "What was sent where",
@@ -3449,7 +3547,8 @@
         "tokens": "Tokens",
         "cost": "Cost",
         "subscription": "Subscription",
-        "inputDesc": "{{files}} files, {{pages}} pages, {{characters}} characters, {{images}} images"
+        "inputDesc": "{{files}} files, {{pages}} pages, {{characters}} characters, {{images}} images",
+        "empty": "No request has been sent to AI yet."
       },
       "cloud": "Cloud",
       "cloudNote": "This address is not on this PC or the local network, so it counts as cloud: names are redacted and local-only cases are never sent to it.",
@@ -3524,7 +3623,10 @@
       "pageOf": "Page {{page}} of {{pages}}",
       "pageImage": "Page {{page}} of {{name}}",
       "regionFound": "The source of this value is marked",
-      "regionNotFound": "The exact place was not found on this page"
+      "regionNotFound": "The exact place was not found on this page",
+      "legend": "Confidence:",
+      "rejectedCount": "{{n}} rejected",
+      "openCount": "{{n}} undecided"
     },
     "extract": {
       "title": "Extract with AI",
@@ -3859,6 +3961,70 @@
       "stream": "Live updates connected",
       "polling": "Updating every 2 seconds",
       "offline": "Live updates disconnected"
+    }
+  },
+  "case": {
+    "path": {
+      "label": "Deal path",
+      "progress": "Progress",
+      "inquiry": "Inquiry",
+      "offer": "Offer",
+      "order": "Order",
+      "shipment": "Shipment",
+      "delivery": "Delivery",
+      "close": "Close"
+    },
+    "side": {
+      "figures": "Key figures",
+      "marginMarkup": "Margin · markup",
+      "opened": "Opened on",
+      "tasks": "Open tasks",
+      "all": "All",
+      "route": "Shipment route",
+      "routeCaption": "From recorded events; not a live vessel position.",
+      "story": "Deal story",
+      "noHistory": "Nothing recorded yet."
+    }
+  },
+  "triage": {
+    "open": "Quick triage",
+    "title": "Quick triage",
+    "total": "{{n}} listings in this filter",
+    "progress": "Triage progress",
+    "position": "{{n}} of {{total}}",
+    "counts": {
+      "starred": "{{n}} starred",
+      "reviewing": "{{n}} reviewing",
+      "dismissed": "{{n}} dismissed"
+    },
+    "back": "Back to the list",
+    "emptyTitle": "Nothing to triage",
+    "empty": "No listing is left in this filter.",
+    "decided": {
+      "star": "Starred",
+      "reviewing": "Reviewing",
+      "dismiss": "Dismissed"
+    },
+    "keyword": "Keyword: {{word}}",
+    "timeLeft": "Time left",
+    "items": "Items",
+    "attachments": "Attachments",
+    "docPrice": "Document price",
+    "buyerNote": "Buyer's description",
+    "noNote": "No description recorded; fetch the detail from Setad.",
+    "itemsList": "Items",
+    "noItems": "The items are not fetched yet.",
+    "starNext": "Star and next",
+    "next": "Next"
+  },
+  "party": {
+    "scores": {
+      "overall": "Average rating",
+      "ratings": "{{n}} ratings",
+      "deals": "Orders with this party",
+      "dealsNote": "{{so}} sales orders · {{po}} purchase orders",
+      "claims": "Open claims",
+      "claimsNote": "of {{n}} claims"
     }
   }
 }

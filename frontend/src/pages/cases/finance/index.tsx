@@ -8,9 +8,10 @@ import type { CaseDetail } from "../../../lib/types";
 import { useExecution } from "../execution/shared";
 import { CloseCard } from "./CloseCard";
 import { CostsCard } from "./CostsCard";
+import { DealCashCard } from "./DealCashCard";
 import { InvoicesCard } from "./InvoicesCard";
 import { PaymentsCard } from "./PaymentsCard";
-import { ProfitCard } from "./ProfitCard";
+import { ProfitBridgeCard, ProfitCard } from "./ProfitCard";
 import { useFinance } from "./shared";
 import { SupplierInvoicesCard } from "./SupplierInvoicesCard";
 
@@ -23,6 +24,8 @@ export function FinanceTab({ caseData }: { caseData: CaseDetail }) {
   const closed = caseData.status === "closed";   // a closed deal is read-only
   return (
     <div className="flex flex-col gap-4" data-testid="finance-tab">
+      <ProfitBridgeCard profit={d.profit} />
+      <DealCashCard execution={execution.data} />
       <div className="grid gap-4 xl:grid-cols-2">
         <InvoicesCard caseId={caseData.id} invoices={d.sales_invoices} execution={execution.data} readOnly={closed} />
         <SupplierInvoicesCard caseId={caseData.id} invoices={d.purchase_invoices} execution={execution.data} readOnly={closed} />

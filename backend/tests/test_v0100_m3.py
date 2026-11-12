@@ -119,3 +119,21 @@ def test_migration_0021_down_up():
             assert conn.execute(text(q)).scalar() == 3
     finally:
         engine.dispose()
+
+
+def test_a_burst_keeps_the_newest_changes_and_says_it_overflowed(client, db, monkeypatch):
+    """More changes than one read holds: the newest are sent (not the oldest) and ``overflow`` tells the browser to
+    refresh everything it shows; a quiet read says no overflow."""
+    from app.modules.live import service
+
+    start = service.changes(db, None)["cursor"]
+    parties = [make_party(client, name_en=f"Burst {tag()}") for _ in range(5)]
+    monkeypatch.setattr(service, "LIMIT", 3)
+    out = client.get("/api/live/changes", params={"since": start}).json()
+    assert out["overflow"] is True
+    seen = {n.get("entity_id") for n in out["notices"] if n["kind"] == "record"}
+    assert parties[-1]["id"] in seen and parties[0]["id"] not in seen
+    assert [n["at"] for n in out["notices"]] == sorted(n["at"] for n in out["notices"])   # still oldest to newest
+    monkeypatch.setattr(service, "LIMIT", 300)
+    quiet = client.get("/api/live/changes", params={"since": out["cursor"]}).json()
+    assert quiet["overflow"] is False

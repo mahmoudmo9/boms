@@ -1,16 +1,18 @@
 /** Case tab «لجستیک» (v0.7.0): the process checklist(s) with references, dates, documents and reminders; shipments with
  * their events and documents and the delay warnings; inspections. */
-import { Badge, Bdi, Button, Card, CodeChip, DateInput, EmptyState, ErrorNote, Field, Input, Loading, LookupField, Modal, Select, ValidatedInput } from "../../../design/components";
+import { Badge, Bdi, Button, Card, CodeChip, DateInput, EmptyState, ErrorNote, Field, Icon, Input, Loading, LookupField, Modal, RouteLine, Select, Stat, ValidatedInput } from "../../../design/components";
 import type { LookupItem } from "../../../lib/smart";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 import { TimeLeftBadge } from "../../../components/TimeLeft";
 import { ApiError, api } from "../../../lib/api";
 import { parseContainers, STEP_TONE, stepGroups, stepState } from "../../../lib/execution";
 import { toDateString } from "../../../lib/followups";
 import { useFormat } from "../../../lib/prefs";
+import { routeStops } from "../CaseOverview";
 import type { CaseDetail, CaseExecution, InspectionRow, ProcessRow, ProcessStepRow, ShipmentRow } from "../../../lib/types";
 import { OpenClaimButton } from "./PurchaseTab";
 import { dateOrNull, FilePick, useExecution, useRun, type Body, type Method } from "./shared";
@@ -166,6 +168,27 @@ function ShipmentDialog({ data, onClose, run }: { data: CaseExecution; onClose: 
 
 const DOC_KINDS = ["commercial_invoice", "packing_list", "bl", "awb", "cmr", "certificate_of_origin", "inspection_certificate", "insurance_policy", "customs_declaration", "other"] as const;
 
+/** v0.10.0 (ProShipment): the route from the recorded events, the ETA against the first ETA (the delay a customer
+ * date feels) and what is known about the voyage. Not a live position. */
+function ShipmentOverview({ s }: { s: ShipmentRow }) {
+  const { t, i18n } = useTranslation();
+  const f = useFormat();
+  const stops = routeStops(s, i18n.language, (iso) => f.date(iso));
+  const days = s.first_eta && s.eta ? Math.round((new Date(s.eta).getTime() - new Date(s.first_eta).getTime()) / 86400_000) : 0;
+  return (
+    <div className="flex flex-col gap-3" data-testid="shipment-overview">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat label="ETA" value={s.eta ? f.day(s.eta) : "—"} tone={days > 0 ? "danger" : undefined} />
+        <Stat label={t("execution.shipments.vsPlan")} value={days === 0 ? t("execution.shipments.onPlan") : t(days > 0 ? "execution.shipments.late" : "execution.shipments.early", { n: f.num(Math.abs(days)) })}
+          tone={days > 0 ? "danger" : days < 0 ? "success" : undefined} />
+        <Stat label={t("execution.shipments.vessel")} value={s.vessel_or_flight ? <bdi dir="ltr">{s.vessel_or_flight}</bdi> : "—"} />
+        <Stat label={t("execution.shipments.lastEvent")} value={s.events.length ? `${t(`execution.shipments.events.${s.events[s.events.length - 1].kind}`, { defaultValue: s.events[s.events.length - 1].kind })} · ${f.date(s.events[s.events.length - 1].at)}` : "—"} />
+      </div>
+      {stops.length >= 2 && <RouteLine label={t("case.side.route")} stops={stops} rtl={i18n.language === "fa"} height={180} caption={t("case.side.routeCaption")} />}
+    </div>
+  );
+}
+
 function ShipmentCard({ s, caseId, warnings }: { s: ShipmentRow; caseId: string; warnings: CaseExecution["warnings"] }) {
   const { t, i18n } = useTranslation();
   const f = useFormat();
@@ -173,6 +196,7 @@ function ShipmentCard({ s, caseId, warnings }: { s: ShipmentRow; caseId: string;
   const run: Run = (path, body, method = "POST") => m.mutateAsync({ path, body, method });
   const patch = (body: Body) => void run(`/api/shipments/${s.id}`, body, "PATCH");
   const [event, setEvent] = useState({ kind: "loaded", note: "" });
+  const [place, setPlace] = useState<LookupItem | null>(null);     // v0.10.0: where the event happened (a transshipment port)
   const [doc, setDoc] = useState({ kind: "commercial_invoice", number: "", document_id: null as string | null });
   const mine = warnings.filter((w) => w.shipment_id === s.id);
   return (
@@ -183,9 +207,10 @@ function ShipmentCard({ s, caseId, warnings }: { s: ShipmentRow; caseId: string;
       <CodeChip code={s.code} />
       {s.route && <span className="text-xs font-normal" data-testid="shipment-route"><bdi>{i18n.language === "fa" ? s.route.fa : s.route.en}</bdi></span>}</span>}>
       <div className="flex flex-col gap-3 px-4 py-3" data-testid="shipment" data-shipment={s.id}>
+        <ShipmentOverview s={s} />
         {mine.map((w) => <p key={w.kind} className="rounded-md bg-danger-soft px-3 py-1.5 text-sm text-danger" role="alert" data-testid="delay-warning">
           {t(`execution.warnings.${w.kind}`, { days: f.num(w.days) })}</p>)}
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
           <Field label={t("execution.shipments.status")} htmlFor={`sh-st-${s.id}`}><Select id={`sh-st-${s.id}`} value={s.status} onChange={(e) => patch({ status: e.target.value })}>
             {["planned", "booked", "in_transit", "arrived", "at_customs", "cleared", "delivered", "cancelled"].map((x) => <option key={x} value={x}>{t(`execution.shipments.statuses.${x}`)}</option>)}</Select></Field>
           {(["etd", "eta", "atd", "ata"] as const).map((k) => (
@@ -196,7 +221,12 @@ function ShipmentCard({ s, caseId, warnings }: { s: ShipmentRow; caseId: string;
           <Field label={t("execution.shipments.eventKind")} htmlFor={`ev-${s.id}`}><Select id={`ev-${s.id}`} value={event.kind} onChange={(e) => setEvent({ ...event, kind: e.target.value })}>
             {["booked", "loaded", "departed", "transshipment", "arrived", "customs_entry", "released", "delivered", "delay", "other"].map((k) => <option key={k} value={k}>{t(`execution.shipments.events.${k}`)}</option>)}</Select></Field>
           <Field label={t("execution.shipments.eventNote")} htmlFor={`evn-${s.id}`}><Input id={`evn-${s.id}`} dir="auto" value={event.note} onChange={(e) => setEvent({ ...event, note: e.target.value })} /></Field>
-          <Button onClick={() => void run(`/api/shipments/${s.id}/events`, { kind: event.kind, note: event.note || null }).then(() => setEvent({ ...event, note: "" }))} data-testid="add-event">{t("common.add")}</Button>
+          <Field label={t("execution.shipments.eventPlace")} htmlFor={`evp-${s.id}`}>
+            <LookupField id={`evp-${s.id}`} kind="location" value={place} onChange={setPlace} className="w-60" ariaLabel={t("execution.shipments.eventPlace")} testId="event-place"
+              filters={s.mode === "air" ? { function: "air" } : s.mode === "sea" ? { function: "sea" } : undefined} />
+          </Field>
+          <Button onClick={() => void run(`/api/shipments/${s.id}/events`, { kind: event.kind, note: event.note || null, ...(place ? { location_id: place.id } : {}) })
+            .then(() => { setEvent({ ...event, note: "" }); setPlace(null); })} data-testid="add-event">{t("common.add")}</Button>
         </div>
         {s.events.length > 0 && <ul className="text-xs" data-testid="shipment-events">{s.events.map((e) => (
           <li key={e.id}><span className="tabular-nums text-muted">{f.date(e.at)}</span> · {t(`execution.shipments.events.${e.kind}`, { defaultValue: e.kind })}{e.note && <> · <bdi dir="auto">{e.note}</bdi></>}</li>))}</ul>}
@@ -208,8 +238,15 @@ function ShipmentCard({ s, caseId, warnings }: { s: ShipmentRow; caseId: string;
           <Button disabled={!doc.document_id} data-testid="add-shipment-doc"
             onClick={() => void run(`/api/shipments/${s.id}/documents`, { kind: doc.kind, document_id: doc.document_id, number: doc.number || null }).then(() => setDoc({ kind: doc.kind, number: "", document_id: null }))}>{t("common.add")}</Button>
         </div>
-        {s.documents.length > 0 && <ul className="flex flex-wrap gap-2 text-xs" data-testid="shipment-documents">{s.documents.map((d) => (
-          <li key={d.id}><Badge>{t(`execution.shipments.documents.${d.kind}`)}</Badge>{d.number && <bdi dir="ltr" className="ms-1">{d.number}</bdi>}</li>))}</ul>}
+        {s.documents.length > 0 && <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 xl:grid-cols-3" data-testid="shipment-documents">
+          {[...new Set(s.documents.map((d) => d.kind))].map((kind) => (
+            <div key={kind} className="flex min-w-0 flex-col gap-1">
+              <dt className="text-xs text-muted">{t(`execution.shipments.documents.${kind}`)}</dt>
+              <dd className="flex flex-wrap gap-1.5">{s.documents.filter((d) => d.kind === kind).map((d) => (
+                <Link key={d.id} to={`/documents/${d.document_id}`} className="inline-flex items-center gap-1 rounded-sm border border-line px-2 py-0.5 text-xs hover:border-accent-line">
+                  <Icon name="file" size={12} /><bdi dir="ltr">{d.number || t("execution.shipments.docNoNumber")}</bdi></Link>))}</dd>
+            </div>))}
+        </dl>}
         <ErrorNote error={m.error} />
       </div>
     </Card>

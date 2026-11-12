@@ -218,7 +218,7 @@
   --z-palette: 70;
 
   /* layout */
-  --rail-width: 15.5rem;
+  --rail-width: 17rem;
   --rail-width-collapsed: 4.25rem;
   --topbar-height: 3.75rem;
   --target: 2.5rem; /* the smallest pointer target, 40 px */

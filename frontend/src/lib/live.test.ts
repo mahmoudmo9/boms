@@ -1,7 +1,7 @@
 /** v0.10.0 live updates: what a notice refreshes, repeated notices dropped, job states, falling back to polling. */
 import { describe, expect, it } from "vitest";
 
-import { afterStreamError, jobStates, matches, type Notice, rootsFor, Seen } from "./live";
+import { afterStreamError, type Batch, jobStates, matches, type Notice, OVERFLOW_GAP_MS, refreshAll, rootsFor, Seen } from "./live";
 
 const job = (id: string, status: "queued" | "running" | "done" | "failed", type = "backup.run", at = "2026-11-12T10:00:00+00:00"): Notice =>
   ({ kind: "job", key: `job:${id}:${status}:${at}`, id, type, status, lane: "default", at });
@@ -56,5 +56,18 @@ describe("job states", () => {
 describe("transport", () => {
   it("falls back to polling after three stream errors", () => {
     expect([1, 2, 3].map(afterStreamError)).toEqual(["stream", "stream", "polling"]);
+  });
+});
+
+describe("refreshAll", () => {
+  const batch = (overflow?: boolean): Batch => ({ cursor: "c", notices: [], overflow });
+  it("refreshes everything after an overflow, at most once per gap", () => {
+    expect(refreshAll(batch(true), 0, 10_000)).toBe(true);
+    expect(refreshAll(batch(true), 10_000, 10_000 + OVERFLOW_GAP_MS - 1)).toBe(false);
+    expect(refreshAll(batch(true), 10_000, 10_000 + OVERFLOW_GAP_MS)).toBe(true);
+  });
+  it("does nothing without an overflow", () => {
+    expect(refreshAll(batch(false), 0, 10_000)).toBe(false);
+    expect(refreshAll(batch(), 0, 10_000)).toBe(false);
   });
 });

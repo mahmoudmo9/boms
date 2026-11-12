@@ -8,6 +8,9 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const OUT = process.argv[2]; const I18N = process.argv[3];
 const BASE = 'http://127.0.0.1:8765';
+// every listing, whatever its deadline: the fake host's deadlines are relative to the day it was fetched, so the
+// number still open varies by day (and a later fetch marks earlier rows old); the checks below need 100+ rows
+const LIST = `${BASE}/tenders?deadline=any&include_old=1`;
 const L = { fa: JSON.parse(fs.readFileSync(`${I18N}/fa.json`)), en: JSON.parse(fs.readFileSync(`${I18N}/en.json`)) };
 const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
 
@@ -67,7 +70,7 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       for (const source of ['setad_purchase', 'setad_tender'])   // start from a clean screening state
         await call('POST', '/api/listings/bulk', { filters: { source, include_old: true }, action: 'unstar' });
       await page.evaluate(() => { try { localStorage.removeItem('boms.listings.columns.setad_purchase'); localStorage.removeItem('boms.listings.pageSize'); } catch (e) {} });
-      await page.goto(`${BASE}/tenders`);
+      await page.goto(LIST);
       await page.locator('[data-testid=listing-table] tbody tr').first().waitFor();
       check(r, 'sidebar label', await page.getByText(t('nav.tenders')).first().isVisible());
       const all = await total();
@@ -77,7 +80,7 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       await page.waitForTimeout(700); await settle();     // the search reaches the URL after a 350 ms debounce
       const searched = await total();
       check(r, 'search narrows the list', searched > 0 && searched < all, `${searched} of ${all}`);
-      await page.locator('[data-testid=clear-filters]').click();
+      await page.locator('[data-testid=clear-filters]').click(); await page.goto(LIST); await page.locator('[data-testid=listing-table] tbody tr').first().waitFor();
       await page.waitForTimeout(500); await settle();
       check(r, 'clear filters', (await total()) === all);
       // organisation multi-pick with its own search
@@ -91,7 +94,7 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       await page.waitForURL(/organizations=/);
       await dlg.getByRole('button', { name: t('common.close') }).last().click();
       check(r, 'organisation filter', await waitTotal((v) => v > 0 && v < all), `${await total()}`);
-      await page.locator('[data-testid=clear-filters]').click(); await settle();
+      await page.locator('[data-testid=clear-filters]').click(); await page.goto(LIST); await settle();
       // chips carry counts over the whole result
       check(r, 'chip counts', /\d|[۰-۹]/.test(await page.locator('[data-testid=chip-all]').innerText()));
       // column chooser: show "documents", remembered after reload
@@ -151,7 +154,7 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       // 1024 px, dark
       await page.setViewportSize({ width: 1024, height: 800 });
       await call('PATCH', '/api/me', { theme: 'dark' });
-      await page.goto(`${BASE}/tenders`); await page.locator('[data-testid=listing-table] tbody tr').first().waitFor();
+      await page.goto(LIST); await page.locator('[data-testid=listing-table] tbody tr').first().waitFor();
       await page.locator('[data-testid=listing-table] tbody tr button').first().click();
       await page.locator('[data-testid=listing-panel]').waitFor(); await settle();
       await overflow(`${lang} 1024`);

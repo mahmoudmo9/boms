@@ -36,6 +36,7 @@ import { TemplatesPage } from "./pages/sourcing/TemplatesPage";
 import { SystemPage } from "./pages/system/SystemPage";
 import { DesignPage, devMode } from "./pages/system/DesignPage";
 import { ListingsPage } from "./pages/tenders/ListingsPage";
+import { TriagePage } from "./pages/tenders/TriagePage";
 import { TasksPage } from "./pages/tasks/TasksPage";
 import { FinancePage } from "./pages/finance/FinancePage";
 import { AppShell } from "./shell/AppShell";
@@ -64,6 +65,7 @@ export function App() {
         <Route path="tasks" element={<TasksPage />} />
         <Route path="finance" element={<FinancePage />} />
         <Route path="tenders" element={<ListingsPage />} />
+        <Route path="tenders/triage" element={<TriagePage />} />
         <Route path="parties" element={<PartiesPage />} />
         <Route path="parties/funnels" element={<FunnelsPage />} />
         <Route path="parties/:id" element={<PartyDetailPage />} />

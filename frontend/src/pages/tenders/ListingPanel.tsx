@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Bdi, Button, Checkbox, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../design/components";
+import { Badge, Bdi, Button, ButtonLink, Checkbox, ErrorNote, Field, IconButton, Input, Loading, Modal, Select, Status, Tabs, Textarea } from "../../design/components";
 import { TimeLeftBadge } from "../../components/TimeLeft";
 import { api } from "../../lib/api";
 import { groupTechnical, listingJobState, siteDate, type TechRow, technicalLabel, valueLabel } from "../../lib/setadFields";
@@ -139,7 +139,7 @@ export function ListingPanel({ id, onClose, onConvert, tab, onTab, refreshKey }:
   useEffect(() => { setNote(detail.data?.screening?.note ?? ""); }, [detail.data?.screening?.note]);
   const downloading = listingJobState(agent.data, id, "download_files");
   const detailing = listingJobState(agent.data, id, "fetch_detail");
-  const shell = "flex h-full min-h-0 w-full flex-col overflow-hidden rounded-md border border-line bg-surface";
+  const shell = "flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-line bg-surface-2";
   if (detail.isLoading) return <aside className={shell} data-testid="listing-panel"><Loading /></aside>;
   if (!detail.data) return <aside className={shell} data-testid="listing-panel"><ErrorNote error={detail.error} /></aside>;
   const d = detail.data;
@@ -157,15 +157,15 @@ export function ListingPanel({ id, onClose, onConvert, tab, onTab, refreshKey }:
   const techRows: TechRow[] = d.technical.map(([key, value]) => ({ key, label: technicalLabel(key, null, lang), value: valueLabel(value, lang) }));
   return (
     <aside className={shell} data-testid="listing-panel" aria-label={t("listings.panel")}>
-      <header className="shrink-0 border-b border-line p-3">
-        <div className="mb-1 flex items-start gap-2">
-          <h2 className="min-w-0 flex-1 text-base font-semibold [overflow-wrap:anywhere]" dir="auto">{l.title}</h2>
-          <button type="button" className="shrink-0 text-muted hover:text-fg" aria-label={t("common.close")} onClick={onClose}>✕</button>
+      <header className="shrink-0 border-b border-line px-5 pt-4 pb-3">
+        <div className="mb-1.5 flex items-start gap-2">
+          <h2 className="min-w-0 flex-1 font-display text-xl leading-snug font-semibold text-title [overflow-wrap:anywhere]" dir="auto">{l.title}</h2>
+          <IconButton icon="x" size="sm" label={t("common.close")} onClick={onClose} />
         </div>
-        <p className="mb-2 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted">
+        <p className="mb-3 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted">
           <bdi dir="ltr" className="font-mono">{l.external_no}</bdi><span className="min-w-0 truncate" dir="auto" title={l.organization}>{l.organization}</span>
-          <Badge tone={converted ? "success" : status === "dismissed" ? "neutral" : status === "starred" ? "warning" : "accent"}>{t(`listings.status.${status}`)}</Badge>
-          {d.warn.map((w) => <Badge key={w} tone="danger">⚠ <Bdi>{w}</Bdi></Badge>)}
+          <Status tone={converted ? "success" : status === "dismissed" ? "neutral" : status === "starred" ? "warning" : "info"} icon={status === "starred" ? "star" : undefined}>{t(`listings.status.${status}`)}</Status>
+          {d.warn.map((w) => <Badge key={w} tone="warning" icon="alert"><Bdi>{w}</Bdi></Badge>)}
         </p>
         {converted && s?.inquiry_id && <p className="mb-2 flex flex-wrap items-center gap-2 text-sm"><Link className="text-accent hover:underline" to={`/sourcing/inquiries/${s.inquiry_id}`}>{t("listings.convertedTo")}</Link>
           {tender && <TenderStage listingId={id} />}</p>}
@@ -181,7 +181,7 @@ export function ListingPanel({ id, onClose, onConvert, tab, onTab, refreshKey }:
           <Button disabled={Boolean(downloading)} onClick={() => command.mutate({ command: "download_files", listing_ids: [id] })}>{t("listings.download")}</Button>
           {!converted && (status === "starred" || status === "reviewing") && onConvert &&
             <Button variant="primary" onClick={() => onConvert(id)}>{t("listings.convert")}</Button>}
-          {l.detail_url && <a className="inline-flex h-8 items-center rounded-md px-2 text-sm text-accent hover:bg-surface-2" href={l.detail_url} target="_blank" rel="noreferrer">{t("listings.openOnSetad")}</a>}
+          {l.detail_url && <ButtonLink variant="ghost" icon="external" href={l.detail_url} newTab>{t("listings.openOnSetad")}</ButtonLink>}
           {tender && (l.in_my_calls
             ? <Button variant="ghost" onClick={() => setDialog("remove")}>{t("listings.removeMyCalls")}</Button>
             : <Button onClick={() => setDialog("add")}>{t("listings.addMyCalls")}</Button>)}
@@ -191,18 +191,17 @@ export function ListingPanel({ id, onClose, onConvert, tab, onTab, refreshKey }:
           {[jobText(detailing, "detail"), jobText(downloading, "download")].filter(Boolean).join(" · ")}</p>}
         <ErrorNote error={screen.error || command.error} />
         <div className="mt-2 flex items-center gap-2">
-          <div className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto" role="tablist" data-testid="panel-tabs">
-            {tabs.map((x) => (
-              <button key={x} type="button" role="tab" aria-selected={current === x} onClick={() => onTab(x)} data-testid={`panel-tab-${x}`}
-                className={`shrink-0 rounded px-2 py-1 text-xs ${current === x ? "bg-accent-soft font-medium text-accent" : "text-muted hover:bg-surface-2"}`}>{t(`listings.tabs.${x}`)}</button>
-            ))}
+          <div className="min-w-0 flex-1" data-testid="panel-tabs">
+            <Tabs label={t("listings.panel")} active={current} onSelect={(x) => onTab(x as PanelTab)} panelId="listing-panel-body"
+              tabs={tabs.map((x) => ({ key: x, label: t(`listings.tabs.${x}`), testId: `panel-tab-${x}`,
+                count: x === "files" && d.files.length ? f.num(d.files.length) : x === "history" && d.changes.length ? f.num(d.changes.length) : undefined }))} />
           </div>
           {d.technical.length > 0 && <Checkbox label={t("listings.technical")} checked={technical}
             onChange={(v) => { setTechnical(v); save("boms.listings.technical", v ? "1" : "0"); if (!v && current === "technical") onTab("fields"); }} />}
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 text-sm" data-testid="panel-body">
+      <div id="listing-panel-body" role="tabpanel" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 py-4 text-sm" data-testid="panel-body">
         {current === "fields" && (d.groups.length === 0 ? <p className="text-muted">{t("listings.noDetailYet")}</p> : d.groups.map((g) => (
           <section key={g.title} className="mb-3">
             <h3 className="mb-1.5 text-xs font-medium text-muted" dir="auto">{g.title}</h3>

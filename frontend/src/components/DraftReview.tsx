@@ -6,9 +6,21 @@ import { useTranslation } from "react-i18next";
 
 import { api } from "../lib/api";
 import { draftPoll, fromText, groupFields, rectStyle, reviewSummary, shownValue, sourceFocus, splitSpan, toText, type Draft, type DraftField, type FieldSource } from "../lib/ai";
-import { Badge, Button, ErrorNote, Input, Modal, Spinner } from "../design/components";
+import { Badge, Button, ErrorNote, Input, Modal, Spinner, Status } from "../design/components";
 
 const TONE = { high: "success", medium: "warning", low: "danger" } as const;
+const EDGE = { high: "border-s-success", medium: "border-s-warning", low: "border-s-danger" } as const;
+
+/** What the three confidence levels mean (ProReview's legend). */
+function Legend() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-xs text-muted" data-testid="confidence-legend">
+      <span>{t("ai.review.legend")}</span>
+      {(["high", "medium", "low"] as const).map((c) => <Status key={c} tone={TONE[c]}>{t(`ai.review.confidence.${c}`)}</Status>)}
+    </div>
+  );
+}
 
 function FieldRow({ draft, field, focused, onFocus, onChanged }: { draft: Draft; field: DraftField; focused: boolean; onFocus: () => void; onChanged: () => void }) {
   const { t } = useTranslation();
@@ -20,12 +32,12 @@ function FieldRow({ draft, field, focused, onFocus, onChanged }: { draft: Draft;
   });
   const open = draft.status === "ready";
   return (
-    <li className={`flex flex-col gap-1 border-b border-line px-1 py-2 ${focused ? "bg-accent-soft" : ""}`} data-testid="draft-field" data-path={field.path}
+    <li className={`flex flex-col gap-1.5 border-b border-s-2 border-b-line px-3 py-2.5 transition-colors duration-150 ${EDGE[field.confidence]} ${focused ? "bg-accent-soft" : ""}`} data-testid="draft-field" data-path={field.path}
       data-decision={field.decision ?? "open"} data-focused={focused} onFocusCapture={onFocus} onMouseEnter={onFocus}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs text-muted"><bdi>{field.label ?? field.path}</bdi></span>
         <span className="flex items-center gap-1">
-          <Badge tone={TONE[field.confidence]}>{t(`ai.review.confidence.${field.confidence}`)}</Badge>
+          <Status tone={TONE[field.confidence]}>{t(`ai.review.confidence.${field.confidence}`)}</Status>
           {field.source?.page && <Badge>{t("ai.review.page", { page: field.source.page })}</Badge>}
           {field.decision && <Badge tone={field.decision === "rejected" ? "danger" : "accent"}>{t(`ai.review.decision.${field.decision}`)}</Badge>}
         </span>
@@ -150,9 +162,13 @@ export function DraftReview({ draftId, open, onClose, onCommitted }: { draftId: 
     enabled: Boolean(focusField), staleTime: Infinity,
   });
   return (
-    <Modal open={open} wide title={t("ai.review.title")} onClose={onClose} footer={d?.status === "ready" ? (
+    <Modal open={open} size="xl" title={t("ai.review.title")} subtitle={d && d.status === "ready" ? <Legend /> : undefined} onClose={onClose} footer={d?.status === "ready" ? (
       <span className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted">{t("ai.review.summary", { accepted: sum!.accepted + sum!.edited, total: sum!.total })}</span>
+        <span className="me-auto flex flex-wrap items-center gap-3 text-xs text-muted" data-testid="review-counts">
+          <span>{t("ai.review.summary", { accepted: sum!.accepted + sum!.edited, total: sum!.total })}</span>
+          {sum!.rejected > 0 && <span>{t("ai.review.rejectedCount", { n: sum!.rejected })}</span>}
+          {sum!.open > 0 && <span className="text-warning">{t("ai.review.openCount", { n: sum!.open })}</span>}
+        </span>
         <Button disabled={!sum!.confidentOpen} busy={confident.isPending} onClick={() => confident.mutate()} data-testid="accept-confident">{t("ai.review.acceptConfident")}</Button>
         <Button variant="ghost" busy={reject.isPending} onClick={() => reject.mutate()}>{t("ai.review.rejectAll")}</Button>
         <Button variant="primary" disabled={!sum!.canCommit} busy={commit.isPending} onClick={() => commit.mutate()} data-testid="draft-commit">{t("ai.review.commit")}</Button>
@@ -163,16 +179,18 @@ export function DraftReview({ draftId, open, onClose, onCommitted }: { draftId: 
         <p className="text-sm text-danger" data-testid="draft-failed">{t("ai.review.failed")} <bdi className="text-xs">{d.error}</bdi></p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2" data-testid="draft-review" data-status={d.status}>
-          <SourcePanel draft={d} focus={focusField && focus.data?.field_id === focusField.id ? focus.data : null} />
+          <div className="min-w-0 lg:sticky lg:top-0 lg:self-start">   {/* the source stays in view while the fields scroll */}
+            <SourcePanel draft={d} focus={focusField && focus.data?.field_id === focusField.id ? focus.data : null} />
+          </div>
           <div className="flex flex-col gap-2">
             {d.checks.length > 0 && (
-              <div className="rounded-md border border-warning bg-warning-soft p-2 text-xs" data-testid="draft-checks">
+              <div className="rounded-xl border border-warning bg-warning-soft px-3 py-2 text-xs" data-testid="draft-checks">
                 {d.checks.map((c, i) => <p key={i}>{t("ai.review.totalDiffers", { item: c.item + 1, stated: c.stated, computed: c.computed })}</p>)}
               </div>
             )}
             {[...groupFields(d.fields).entries()].map(([item, fields]) => (
-              <section key={item} className="rounded-md border border-line px-2">
-                <h3 className="pt-2 text-xs font-semibold">{item >= 0 ? t("ai.review.item", { n: item + 1 }) : t("ai.review.other")}</h3>
+              <section key={item} className="overflow-hidden rounded-xl border border-line">
+                <h3 className="bg-surface-2 px-3 py-2 text-xs font-semibold text-title">{item >= 0 ? t("ai.review.item", { n: item + 1 }) : t("ai.review.other")}</h3>
                 <ul>{fields.map((f) => <FieldRow key={f.id} draft={d} field={f} focused={f.id === focusId} onFocus={() => setFocusId(f.id)} onChanged={refresh} />)}</ul>
               </section>
             ))}

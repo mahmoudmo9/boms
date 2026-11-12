@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { capTone } from "../../lib/ai";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Bdi, Button, Card, EmptyState, ErrorNote, Loading, PageHeader } from "../../design/components";
+import { Badge, Bdi, Button, Card, EmptyState, ErrorState, Loading, PageHeader } from "../../design/components";
 import { TimeLeftBadge } from "../../components/TimeLeft";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
@@ -12,6 +11,7 @@ import type { CommandCenter, ExecutionSummary, FollowupRow, SetadSummary, Sourci
 import { useQuickLog } from "./QuickLog";
 import { FollowupActions, PartyName, stageLabel } from "./shared";
 import { TaskList } from "../tasks/TaskList";
+import { TodayTop } from "./Today";
 
 const FUNNELS = ["buyer", "supplier"] as const;
 
@@ -55,7 +55,7 @@ function SourcingSection({ s }: { s: SourcingSummary }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-base font-semibold">{t("cc.sourcing.title")}</h2>
+        <h2 className="text-lg font-medium text-title">{t("cc.sourcing.title")}</h2>
         <span className="rounded-md border border-line px-3 py-1 text-sm">
           {t("cc.sourcing.coverage")}: <b className="tabular-nums">{s.coverage_status_percent === null ? "—" : `${f.num(s.coverage_status_percent, 1)}%`}</b>
           <span className="ms-1 text-xs text-muted tabular-nums">({f.num(s.open_items_with_status)}/{f.num(s.open_items)})</span>
@@ -92,7 +92,7 @@ function SourcingSection({ s }: { s: SourcingSummary }) {
       {s.quotes_awaiting_approval !== undefined && (
         <>
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-base font-semibold">{t("cc.sales.title")}</h2>
+            <h2 className="text-lg font-medium text-title">{t("cc.sales.title")}</h2>
             <span className="rounded-md border border-line px-3 py-1 text-sm" data-testid="won-lost">
               {t("cc.sales.won30")}: <b className="tabular-nums text-success">{f.num(s.quotes_won_30_days ?? 0)}</b>
               <span className="mx-2 text-muted">·</span>
@@ -136,7 +136,7 @@ function SetadSection({ s }: { s: SetadSummary }) {
   return (
     <section className="flex flex-col gap-3" data-testid="cc-setad">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-base font-semibold">{t("cc.setad.title")}</h2>
+        <h2 className="text-lg font-medium text-title">{t("cc.setad.title")}</h2>
         {s.runs.map((r) => (
           <span key={r.source} className={`text-xs ${r.stale ? "text-warning" : "text-muted"}`}>
             {t(`listings.sources.${r.source}`)}: {r.at ? <span className="tabular-nums">{f.date(r.at, true)}</span> : t("setad.noRun")}
@@ -182,7 +182,7 @@ function TendersSection({ s }: { s: TendersSummary }) {
   );
   return (
     <section className="flex flex-col gap-3" data-testid="cc-tenders">
-      <h2 className="text-base font-semibold">{t("cc.tenders.title")}</h2>
+      <h2 className="text-lg font-medium text-title">{t("cc.tenders.title")}</h2>
       <div className="grid gap-4 xl:grid-cols-3">
         {card("datesSoon", s.dates_soon.length, "warning", list(s.dates_soon.map((r) => ({ key: `${r.tender_id}-${r.kind}-${r.at}`, to: tab(r.case_id), label: r.case_title,
           extra: <span className="flex items-center gap-1.5 text-xs"><span>{t(`tenders.dateKinds.${r.kind}`)}</span><TimeLeftBadge at={r.at} /></span> }))))}
@@ -222,7 +222,7 @@ export function ExecutionSection({ s }: { s: ExecutionSummary }) {
   const to = (caseId: string, tab: string) => `/cases/${caseId}?tab=${tab}`;
   return (
     <section className="flex flex-col gap-3" data-testid="cc-execution">
-      <h2 className="text-base font-semibold">{t("cc.execution.title")}</h2>
+      <h2 className="text-lg font-medium text-title">{t("cc.execution.title")}</h2>
       <div className="grid gap-4 xl:grid-cols-3">
         {card("unconfirmed", s.pos_unconfirmed.length, "warning", list(s.pos_unconfirmed.map((r) => ({ key: r.purchase_order_id, to: to(r.case_id, "purchase"), label: r.case_title,
           extra: <span className="text-xs text-warning"><bdi dir="ltr">{r.number}</bdi> · {t("cc.execution.daysAgo", { n: f.num(r.days) })}</span> }))))}
@@ -256,7 +256,7 @@ function TasksSection({ s }: { s: NonNullable<CommandCenter["tasks"]> }) {
   return (
     <section className="flex flex-col gap-3" data-testid="cc-tasks">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-base font-semibold">{t("cc.tasks.title")}</h2>
+        <h2 className="text-lg font-medium text-title">{t("cc.tasks.title")}</h2>
         <Link to="/tasks" className="text-sm text-accent hover:underline">{t("cc.tasks.all")}</Link>
       </div>
       <div className="grid gap-4 xl:grid-cols-3">{card("overdue")}{card("today")}{card("tomorrow")}</div>
@@ -280,7 +280,7 @@ function FinanceSection({ s }: { s: NonNullable<CommandCenter["finance"]> }) {
   const to = (caseId: string) => `/cases/${caseId}?tab=finance`;
   return (
     <section className="flex flex-col gap-3" data-testid="cc-finance">
-      <div className="flex flex-wrap items-center gap-3"><h2 className="text-base font-semibold">{t("cc.finance.title")}</h2>
+      <div className="flex flex-wrap items-center gap-3"><h2 className="text-lg font-medium text-title">{t("cc.finance.title")}</h2>
         <Link to="/finance" className="text-sm text-accent hover:underline">{t("cc.finance.open")}</Link></div>
       <div className="grid gap-4 xl:grid-cols-2">
         {card("receivables_overdue", s.receivables_overdue.map((r) => ({ key: r.invoice_id, to: to(r.case_id), label: <bdi dir="ltr">{r.number}</bdi>,
@@ -310,17 +310,19 @@ export function CommandCenterPage() {
     queryFn: () => api<CommandCenter>("/api/command-center", { background: true }),
     refetchInterval: 60_000,
   });
-  if (cc.isLoading) return <Loading />;
-  if (cc.error || !cc.data) return <ErrorNote error={cc.error} />;
+  if (cc.isLoading) return <Loading rows={8} />;
+  if (cc.error || !cc.data) return <ErrorState error={cc.error} onRetry={() => void cc.refetch()} />;
   const d = cc.data;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5" data-testid="command-center">
       <PageHeader
         title={t("nav.commandCenter")}
         subtitle={t("cc.subtitle", { date: f.day(d.today_date) })}
         actions={<Button variant="primary" icon="plus" onClick={() => quickLog.open()}>{t("quicklog.button")}</Button>}
       />
+      <TodayTop cc={d} />
+      <h2 className="mt-4 font-display text-xl font-semibold text-title">{t("cc.attention")}</h2>
       <div className="grid gap-4 xl:grid-cols-2">
         <Card padded={false} className={d.overdue_count ? "border-danger" : ""}
           title={<span className={`flex items-center gap-2 ${d.overdue_count ? "text-danger" : ""}`}>{t("cc.overdue")} <Badge tone={d.overdue_count ? "danger" : "neutral"}>{f.num(d.overdue_count)}</Badge></span>}>
@@ -357,13 +359,6 @@ export function CommandCenterPage() {
       {d.tenders && <TendersSection s={d.tenders} />}
       {d.execution && <ExecutionSection s={d.execution} />}
       {d.finance && <FinanceSection s={d.finance} />}
-      {d.ai?.configured && (
-        <p className="text-sm" data-testid="cc-ai">
-          <Link to="/settings/ai" className="text-accent hover:underline">{t("ai.settings.title")}</Link>{": "}
-          {t("ai.settings.cap.spent", { spent: f.num(d.ai.spent_usd), cap: f.num(d.ai.cap_usd), percent: f.num(d.ai.percent) })}
-          {d.ai.warning && <> <Badge tone={capTone(d.ai)}>{t("ai.settings.cap.warning", { level: d.ai.warning })}</Badge></>}
-        </p>
-      )}
       <div className="grid gap-4 xl:grid-cols-2">
         {FUNNELS.map((role) => (
           <Card key={role} title={t(`funnel.title.${role}`)} actions={<Link className="text-sm text-accent hover:underline" to={`/parties/funnels?role=${role}`}>{t("funnel.openBoard")}</Link>}>

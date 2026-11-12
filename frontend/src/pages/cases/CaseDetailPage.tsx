@@ -3,14 +3,15 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
-import { Bdi, Button, CodeChip, ErrorNote, Field, Icon, Input, Loading, Modal, PageHeader, ScrollTabs, Select, Textarea } from "../../design/components";
+import { Bdi, Button, ErrorNote, ErrorState, Field, Input, Loading, Modal, PageGrid, PageHeader, ScrollTabs, Select, Textarea } from "../../design/components";
+import { CaseSide, DealPath } from "./CaseOverview";
 import { CaseFolderButton, CaseLocalOnly } from "../../components/CaseTools";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { CaseCosting, CaseDetail, CaseQuotes } from "../../lib/types";
 import { PartyName } from "../parties/shared";
 import { ItemsCard } from "../sourcing/ItemsEditor";
-import { AttachedDocuments, CascadeDeleteCard, CurrencySelect, HistoryCard, Money, StatusBadge, useInvalidateSourcing, usePaymentTerms } from "../sourcing/shared";
+import { AttachedDocuments, CascadeDeleteCard, HistoryCard, Money, StatusBadge, useInvalidateSourcing, usePaymentTerms, CurrencySelect } from "../sourcing/shared";
 import { CASE_STATUSES } from "./CasesPage";
 import { CostingTab } from "./Costing";
 import { ComparisonTab, CoverageCard, OffersTab } from "./Offers";
@@ -75,41 +76,42 @@ export function CaseDetailPage() {
   useEffect(() => {
     if (tab === "items" && highlightItem) document.getElementById(`item-${highlightItem}`)?.scrollIntoView({ block: "center" });
   }, [tab, highlightItem, caseQuery.data]);
-  if (caseQuery.isLoading) return <Loading />;
-  if (caseQuery.error || !caseQuery.data) return <ErrorNote error={caseQuery.error} />;
+  if (caseQuery.isLoading) return <Loading rows={8} />;
+  if (caseQuery.error || !caseQuery.data) return <ErrorState error={caseQuery.error} onRetry={() => void caseQuery.refetch()} />;
   const c = caseQuery.data;
+  const items = c.items.filter((i) => i.status !== "cancelled").length;
   return (
-    <div className="flex flex-col gap-4">
-      <Link to="/cases" className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg"><Icon name="chevronStart" size={15} /> {t("nav.cases")}</Link>
-      <PageHeader title={<span dir="auto">{c.title}</span>}
-        subtitle={<span className="flex flex-wrap items-center gap-2">
-          <CodeChip code={c.code} />
-          <StatusBadge group="case" status={c.status} />
-          {c.party_id && <PartyName fa={c.party_name_fa ?? null} en={c.party_name_en ?? null} id={c.party_id} />}
+    <div className="flex flex-col gap-5" data-testid="case-page">
+      <PageHeader title={<bdi>{c.title}</bdi>} code={c.code} status={<StatusBadge group="case" status={c.status} />}
+        breadcrumb={[{ label: t("nav.cases"), to: "/cases" }, { label: c.code ?? c.title }]}
+        eyebrow={c.party_id ? <PartyName fa={c.party_name_fa ?? null} en={c.party_name_en ?? null} id={c.party_id} /> : undefined}
+        subtitle={<span className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           {c.inquiry_id && <Link to={`/sourcing/inquiries/${c.inquiry_id}`} className="text-accent hover:underline">{t("sourcing.case.fromInquiry")}</Link>}
           {c.payment_term && <span>{t(`sourcing.paymentTerms.${c.payment_term}`)}</span>}
           {c.exposure_estimate && <span>{t("sourcing.decision.exposure")}: <Money amount={c.exposure_estimate} currency={c.exposure_currency} /></span>}
           {costing.data?.current?.exposure !== undefined && <span data-testid="computed-exposure">{t("costing.computedExposure")}: <Money amount={costing.data.current.exposure} currency={costing.data.current.currency} /></span>}
           {costing.data?.current?.margin_percent && <span>{t("costing.pricing.margin")} <span className="tabular-nums">{f.num(costing.data.current.margin_percent)} %</span> · {t("costing.pricing.markup")} <span className="tabular-nums">{f.num(costing.data.current.markup_percent ?? "")} %</span></span>}
           {quotes.data?.summary.latest && <span className="inline-flex items-center gap-1">{t("quotes.latest")}: <Bdi ltr>{quotes.data.summary.latest.number}</Bdi> <StatusBadge group="quote" status={quotes.data.summary.latest.status} /></span>}
-          <span className="tabular-nums">{f.date(c.created_at)}</span>
           <TenderHeaderFacts caseId={c.id} />
           <ExecutionHeaderFacts caseId={c.id} />
           <FinanceHeaderFacts caseId={c.id} />
         </span>}
         actions={<>
-          <Select className="w-36" aria-label={t("sourcing.status.label")} value={c.status} onChange={(e) => setStatus.mutate(e.target.value)}>
+          <Select className="w-40" aria-label={t("sourcing.status.label")} value={c.status} onChange={(e) => setStatus.mutate(e.target.value)}>
             {CASE_STATUSES.map((s) => <option key={s} value={s}>{t(`sourcing.status.case.${s}`)}</option>)}
           </Select>
           <CaseLocalOnly caseId={c.id} />
           <CaseFolderButton caseId={c.id} />
           <Button icon="edit" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
-        </>} />
+        </>}>
+        <DealPath c={c} />
+      </PageHeader>
       {c.inquiry_id && <SetadOrigin inquiryId={c.inquiry_id} />}
       <ErrorNote error={setStatus.error} />
-      <ScrollTabs label={t("sourcing.case.tabsLabel")} active={tab} onSelect={(key) => setParams({ tab: key }, { replace: true })}
-        tabs={TABS.map((key) => ({ key, label: <>{t(`sourcing.case.tabs.${key}`)}
-          {key === "items" && ` (${f.num(c.items.filter((i) => i.status !== "cancelled").length)})`}</> }))} />
+      <PageGrid side={<CaseSide c={c} />} sideWidth="2xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <ScrollTabs label={t("sourcing.case.tabsLabel")} active={tab} onSelect={(key) => setParams({ tab: key }, { replace: true })} panelId="case-tab"
+        tabs={TABS.map((key) => ({ key, label: t(`sourcing.case.tabs.${key}`), count: key === "items" ? f.num(items) : undefined }))} />
+      <div id="case-tab" role="tabpanel" className="flex min-w-0 flex-col gap-4">
       {tab === "items" && (
         <div className="flex flex-col gap-4">
           <CoverageCard key={c.updated_at + c.items.map((i) => i.status).join()} caseId={c.id} onChanged={refresh} />
@@ -135,6 +137,8 @@ export function CaseDetailPage() {
           hint={t("sourcing.case.cascadeHint")} typeLabel={t("sourcing.case.typeTitle")} button={t("sourcing.case.cascadeButton")}
           onDeleted={() => { invalidate(); navigate("/cases"); }} />
       </>}
+      </div>
+      </PageGrid>
       {editing && <EditCaseDialog c={c} onClose={() => setEditing(false)} onSaved={refresh} />}
     </div>
   );

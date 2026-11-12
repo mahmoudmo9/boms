@@ -176,7 +176,10 @@ const psql = (sql) => execFileSync('psql', ['-h', '127.0.0.1', '-U', process.env
         await poll(async () => (await ok('GET', `/api/purchase-orders/${po.id}`)).status === 'approved');
         for (const fmt of ['PDF', 'Word']) {
           const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 90000 }), scope.getByRole('button', { name: fmt, exact: true }).click()]);
-          const name = dl.suggestedFilename();
+          // headless Chromium names any non-ASCII file «download»; read the RFC 5987 name the server sends instead
+          const cd = (await page.request.get(dl.url())).headers()['content-disposition'] ?? '';
+          const star = /filename\*=utf-8''([^;]+)/i.exec(cd);
+          const name = star ? decodeURIComponent(star[1]) : dl.suggestedFilename();
           await dl.saveAs(`${OUT}/${lang}-${name}`);
           const head = fs.readFileSync(`${OUT}/${lang}-${name}`).subarray(0, 4).toString('latin1');
           check(`${po.currency} ${fmt}`, name.startsWith(po.number) && !name.includes('DRAFT') && (fmt === 'PDF' ? head === '%PDF' : head.startsWith('PK')), `${name} ${head}`);
@@ -350,7 +353,7 @@ const psql = (sql) => execFileSync('psql', ['-h', '127.0.0.1', '-U', process.env
     await page.goto(`${BASE}/cases/${kase.id}?tab=order`);
     await page.locator('[data-testid=create-so]').click();
     await page.locator('[data-testid=so-confirm]').click();
-    await page.getByRole('checkbox').check();
+    await page.getByRole('dialog').getByRole('checkbox').check();
     await page.locator('[data-testid=confirm-save]').click();
     check('order confirmed without a signed document', await poll(async () => (await ex(kase.id)).sales_orders[0].status === 'confirmed'));
     check('domestic checklist', await poll(async () => (await ex(kase.id)).processes[0]?.deal_type === 'domestic'));

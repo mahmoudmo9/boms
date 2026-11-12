@@ -310,7 +310,44 @@ def route_out(db: Session, s: Shipment) -> dict | None:
     d = db.get(Location, s.destination_location_id) if s.destination_location_id else None
     return {"fa": reference.route_label(db, o, d, s.mode, "fa"), "en": reference.route_label(db, o, d, s.mode, "en"),
             "origin": o and {"id": o.id, "unlocode": o.unlocode, "name": o.name, "name_fa": o.name_fa},
-            "destination": d and {"id": d.id, "unlocode": d.unlocode, "name": d.name, "name_fa": d.name_fa}}
+            "destination": d and {"id": d.id, "unlocode": d.unlocode, "name": d.name, "name_fa": d.name_fa},
+            "stops": route_stops(db, s, o, d)}
+
+
+def route_stops(db: Session, s: Shipment, origin, destination) -> list[dict]:
+    """v0.10.0: the route as recorded, for the route diagram: the origin, every shipment event recorded at a place (a
+    transshipment port), the destination; each with its UN/LOCODE (IATA code for air) and the time of its latest
+    event. ``last`` marks where the most recent event at a place happened. Read only; nothing is inferred."""
+    from app.modules.reference import service as reference
+    from app.modules.reference.models import Location
+
+    def stop(loc, role):
+        code = (reference.airport_code(db, loc) if s.mode == "air" else None) or loc.unlocode
+        return {"role": role, "location_id": str(loc.id), "code": code, "name": loc.name, "name_fa": loc.name_fa, "at": None, "event": None}
+
+    stops: list[dict] = [stop(origin, "origin")] if origin else []
+    events = [e for e in shipment_events(db, s.id) if e.location_id]
+    for e in sorted(events, key=lambda e: e.at):
+        loc = db.get(Location, e.location_id)
+        if loc is None:
+            continue
+        same = next((x for x in stops if x["location_id"] == str(loc.id)), None)
+        if same is None:
+            same = stop(loc, "destination" if destination is not None and loc.id == destination.id else "via")
+            stops.append(same)
+        same["at"], same["event"] = e.at.isoformat(), e.kind
+    if destination is not None and not any(x["location_id"] == str(destination.id) for x in stops):
+        stops.append(stop(destination, "destination"))
+    # the origin first, the destination last, the rest in the order they were reached
+    stops.sort(key=lambda x: (x["role"] == "destination", x["role"] != "origin"))
+    if s.atd and stops and stops[0]["role"] == "origin" and stops[0]["at"] is None:
+        stops[0]["at"], stops[0]["event"] = s.atd.isoformat() if hasattr(s.atd, "isoformat") else str(s.atd), "departed"
+    if s.ata and stops and stops[-1]["role"] == "destination" and stops[-1]["at"] is None:
+        stops[-1]["at"], stops[-1]["event"] = s.ata.isoformat() if hasattr(s.ata, "isoformat") else str(s.ata), "arrived"
+    reached = [i for i, x in enumerate(stops) if x["at"]]
+    for i, x in enumerate(stops):
+        x["state"] = "last" if reached and i == reached[-1] else "done" if reached and i < reached[-1] else "upcoming"
+    return stops
 
 
 def shipment_out(db: Session, s: Shipment) -> dict:

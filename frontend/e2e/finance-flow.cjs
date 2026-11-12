@@ -101,7 +101,9 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
   await page.waitForSelector('aside');
   try {
     await ok('PATCH', '/api/settings', { 'company.name_fa': 'بازرگانی نمونه', 'company.name_en': 'Sample Trading', 'company.national_id': '10320000000',
-      'company.economic_code': '411111111111' });
+      'company.economic_code': '411111111111',
+      // v0.9.0 asks once how VAT applies to domestic invoices; a fresh dev database has no answer yet
+      'finance.vat_default_domestic': { mode: 'apply' } });
     for (const lang of ['fa', 'en']) {
       const t = (k) => tr(lang, k);
       const r = { lang };

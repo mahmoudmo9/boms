@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Bdi, Button, Card, Checkbox, CodeChip, DateInput, EmptyState, errorMessage, ErrorNote, Field, Icon, IconButton, Input, Loading, Modal, Segmented, Select, Textarea, useToast, ValidatedInput } from "../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, CodeChip, DateInput, EmptyState, errorMessage, ErrorNote, ErrorState, Field, Icon, IconButton, InlineAlert, Input, KpiTile, Loading, Modal, PageHeader, ProgressRing, Segmented, Select, Status, Tabs, Textarea, useToast, ValidatedInput } from "../../design/components";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
@@ -13,8 +13,8 @@ import type { Contact, ContactMethod, DocumentDetail, EventItem, Followup, Inter
 import { EventList } from "../events/EventLogPage";
 import { CapabilitiesCard } from "../sourcing/Capabilities";
 import { Money, StatusBadge } from "../sourcing/shared";
-import { CountrySelect } from "./PartiesPage";
-import { PartyPicker, useQuickLog } from "./QuickLog";
+import { useCountries, CountrySelect } from "./PartiesPage";
+import { useQuickLog, PartyPicker } from "./QuickLog";
 import { CancelFollowupButton, CHANNELS, DeleteButton, FollowupActions, InUseNote, METHOD_TYPES, PartyName, ROLES, SharedNumberPrompt, StageSelect, stageLabel } from "./shared";
 
 const TABS = ["overview", "contacts", "interactions", "documents", "quotes", "orders", "finance", "history"] as const;
@@ -678,6 +678,43 @@ function History({ partyId }: { partyId: string }) {
   return <Card padded={false}><EventList items={events.data?.items ?? []} compact /></Card>;
 }
 
+function CountryName({ code }: { code: string }) {
+  const f = useFormat();
+  const countries = useCountries();
+  const c = countries.data?.items.find((x) => x.iso2 === code);
+  return <span className="inline-flex items-center gap-1"><Icon name="globe" size={13} />{c ? (f.lang === "fa" ? c.name_fa : c.name_en) : <bdi dir="ltr">{code}</bdi>}</span>;
+}
+
+/** v0.10.0 (ProParty): the party's scores, only from data BOMS has — the average of its ratings and its deals.
+ * A tile with no data is not shown. On-time delivery, inspection results and RFQ response time are not computed
+ * by BOMS yet, so they are not shown. */
+function PartyScores({ partyId }: { partyId: string }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const fin = useQuery({ queryKey: ["party-finance", partyId], queryFn: () => api<{ ratings: { count: number; average: Record<string, number | null> } }>(`/api/parties/${partyId}/finance`) });
+  const ex = useQuery({ queryKey: ["party-execution", partyId], queryFn: () => api<{ sales_orders: unknown[]; purchase_orders: unknown[]; claims: { status: string }[] }>(`/api/parties/${partyId}/execution`) });
+  const avg = Object.entries(fin.data?.ratings.average ?? {}).filter(([, v]) => v !== null) as [string, number][];
+  const overall = avg.length ? avg.reduce((s, [, v]) => s + v, 0) / avg.length : null;
+  const deals = (ex.data?.sales_orders.length ?? 0) + (ex.data?.purchase_orders.length ?? 0);
+  const openClaims = ex.data?.claims.filter((c) => !["closed", "resolved", "rejected"].includes(c.status)).length ?? 0;
+  if (overall === null && deals === 0) return null;
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-testid="party-scores">
+      {overall !== null && (
+        <article className="flex items-center gap-4 rounded-2xl border border-accent-line bg-linear-to-br from-card-accent-from to-card-accent-to px-5 py-4 xl:col-span-2">
+          <ProgressRing value={(overall / 5) * 100} size={76} label={t("party.scores.overall")}><span className="text-lg text-title tabular-nums">{f.num(overall, 1)}</span></ProgressRing>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <span className="text-xs text-muted">{t("party.scores.overall")} · {t("party.scores.ratings", { n: f.num(fin.data!.ratings.count) })}</span>
+            <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">{avg.map(([k, v]) => <span key={k}>{t(`finance.ratings.criteria.${k}`)} <b className="tabular-nums text-title">{f.num(v, 1)}</b></span>)}</span>
+          </div>
+        </article>
+      )}
+      {deals > 0 && <KpiTile label={t("party.scores.deals")} value={f.num(deals)} note={t("party.scores.dealsNote", { so: f.num(ex.data!.sales_orders.length), po: f.num(ex.data!.purchase_orders.length) })} />}
+      {deals > 0 && <KpiTile label={t("party.scores.claims")} value={f.num(openClaims)} tone={openClaims ? "warning" : "neutral"} note={t("party.scores.claimsNote", { n: f.num(ex.data!.claims.length) })} />}
+    </div>
+  );
+}
+
 export function PartyDetailPage() {
   const { id = "" } = useParams();
   const { t } = useTranslation();
@@ -686,35 +723,29 @@ export function PartyDetailPage() {
   const [params, setParams] = useSearchParams();
   const tab = (TABS.includes(params.get("tab") as Tab) ? params.get("tab") : "overview") as Tab;
   const party = useParty(id);
-  if (party.isLoading) return <Loading />;
-  if (party.error || !party.data) return <ErrorNote error={party.error} />;
+  if (party.isLoading) return <Loading rows={8} />;
+  if (party.error || !party.data) return <ErrorState error={party.error} onRetry={() => void party.refetch()} />;
   const p = party.data;
   // the other-language name, only when both exist (PartyName already shows whichever one exists)
   const subtitle: ReactNode = p.name_fa && p.name_en ? (f.lang === "fa" ? p.name_en : p.name_fa) : null;
   return (
-    <div className="flex flex-col gap-4">
-      <Link to="/parties" className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg"><Icon name="chevronStart" size={15} /> {t("nav.parties")}</Link>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-semibold"><PartyName fa={p.name_fa} en={p.name_en} dnc={p.do_not_contact} /></h1>
-            {p.status === "archived" && <Badge>{t("parties.archived")}</Badge>}
-            {p.roles.map((r) => <Badge key={r.role} tone="accent">{t(`parties.roles.${r.role}`)} · {stageLabel(t, r.role, r.stage)}</Badge>)}
-          </div>
-          {subtitle && <p className="mt-0.5 text-sm text-muted"><Bdi>{subtitle}</Bdi></p>}
-          {p.do_not_contact && <p className="mt-1 text-sm text-danger">{t("parties.dncWarning")} {p.do_not_contact_reason}</p>}
-        </div>
-        <Button variant="primary" icon="plus" onClick={() => quickLog.open(p.id)}>{t("quicklog.button")}</Button>
-      </div>
-      <div className="flex gap-1 overflow-x-auto border-b border-line">
-        {TABS.filter((key) => key !== "quotes" || p.roles.some((r) => r.role === "buyer")).map((key) => (
-          <button key={key} type="button" onClick={() => setParams({ tab: key }, { replace: true })}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap ${key === tab ? "border-accent font-medium text-accent" : "border-transparent text-muted hover:text-fg"}`}>
-            {t(`parties.tabs.${key}`)}
-            {key === "contacts" && ` (${f.num(p.contacts.filter((c) => c.status === "active").length)})`}
-          </button>
-        ))}
-      </div>
+    <div className="flex flex-col gap-5" data-testid="party-page">
+      <PageHeader title={<PartyName fa={p.name_fa} en={p.name_en} dnc={p.do_not_contact} />} code={p.code}
+        breadcrumb={[{ label: t("nav.parties"), to: "/parties" }, { label: p.code ?? (f.lang === "fa" ? p.name_fa || p.name_en : p.name_en || p.name_fa) ?? "" }]}
+        status={<>{p.status === "archived" && <Status tone="neutral">{t("parties.archived")}</Status>}
+          {p.roles.map((r) => <Badge key={r.role} tone="accent">{t(`parties.roles.${r.role}`)} · {stageLabel(t, r.role, r.stage)}</Badge>)}</>}
+        subtitle={<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {subtitle && <Bdi>{subtitle}</Bdi>}
+          {p.country_iso2 && <CountryName code={p.country_iso2} />}
+          {p.website && <a href={p.website} target="_blank" rel="noreferrer" className="text-accent hover:underline"><bdi dir="ltr">{p.website.replace(/^https?:\/\//, "")}</bdi></a>}
+        </span>}
+        actions={<Button variant="primary" icon="plus" onClick={() => quickLog.open(p.id)}>{t("quicklog.button")}</Button>}>
+        {p.do_not_contact && <InlineAlert tone="danger" title={t("parties.dncWarning")}>{p.do_not_contact_reason}</InlineAlert>}
+        <PartyScores partyId={p.id} />
+      </PageHeader>
+      <Tabs label={t("nav.parties")} active={tab} onSelect={(key) => setParams({ tab: key }, { replace: true })} panelId="party-tab"
+        tabs={TABS.filter((key) => key !== "quotes" || p.roles.some((r) => r.role === "buyer")).map((key) => ({ key, label: t(`parties.tabs.${key}`),
+          count: key === "contacts" ? f.num(p.contacts.filter((c) => c.status === "active").length) : undefined }))} />
       {tab === "overview" && <Overview key={p.updated_at} party={p} />}
       {tab === "contacts" && <Contacts party={p} />}
       {tab === "interactions" && <Interactions party={p} highlight={params.get("interaction")} />}

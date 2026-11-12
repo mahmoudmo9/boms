@@ -11,7 +11,15 @@ export type Notice =
   | { kind: "agent"; key: string; command: string | null; listing_id: string | null; files_done: number | null; files_total: number | null;
       pages_done: number | null; pages_total: number | null; connected: boolean | null; at: string };
 
-export type Batch = { cursor: string; notices: Notice[] };
+/** ``overflow``: a source had more changes than one read holds; the newest were sent and the rest are not named. */
+export type Batch = { cursor: string; notices: Notice[]; overflow?: boolean };
+
+/** After an overflow everything shown is refreshed, at most once per ``OVERFLOW_GAP_MS`` (the feed repeats its
+ * overlap window for a few seconds, so the same burst overflows on several reads in a row). */
+export const OVERFLOW_GAP_MS = 3000;
+export function refreshAll(batch: Batch, lastRefresh: number, now: number): boolean {
+  return !!batch.overflow && now - lastRefresh >= OVERFLOW_GAP_MS;
+}
 
 /** Query roots that never follow the feed. */
 export const NEVER = new Set(["lookup", "words", "search", "suggest", "calc"]);

@@ -157,3 +157,29 @@ export const COST_KINDS = ["freight_international", "insurance", "bank_fees", "c
 export function unexplained(problems: ChecklistProblem[], reasons: Record<string, string>): string[] {
   return problems.filter((p) => !(reasons[p.code] ?? "").trim()).map((p) => p.code);
 }
+
+/** v0.10.0 profit bridge (reference ProFinance): planned profit → revenue variance → the variance of each cost group
+ * (a cost above plan lowers profit) → actual profit, in the deal currency; the steps add up exactly. The FX effect is
+ * already inside the actual lines (real rates against sheet rates), so it is reported beside the bridge, not as a bar
+ * that would count it twice. Groups with no variance are left out. `estimated` lists the steps with estimated parts. */
+export function profitBridge(p: Profit, label: (key: string) => string): { steps: { key: string; label: string; value: number; kind: "total" | "delta" }[]; estimated: string[] } | null {
+  const planned = p.profit.planned?.deal;
+  if (planned === null || planned === undefined) return null;
+  const n = (v: string | null | undefined) => (v === null || v === undefined || v === "" ? 0 : Number(v));
+  const steps: { key: string; label: string; value: number; kind: "total" | "delta" }[] = [{ key: "plan", label: label("plan"), value: n(planned), kind: "total" }];
+  const revenue = n(p.revenue.variance?.deal);
+  if (revenue !== 0) steps.push({ key: "revenue", label: label("revenue"), value: revenue, kind: "delta" });
+  const estimated: string[] = [];
+  for (const r of p.rows) {
+    const v = -n(r.variance?.deal);
+    if (v === 0) continue;
+    steps.push({ key: r.kind, label: label(r.kind), value: v, kind: "delta" });
+    if (r.estimated) estimated.push(r.kind);
+  }
+  const actual = n(p.profit.actual.deal);
+  const sum = steps.reduce((s, x) => s + (x.kind === "delta" ? x.value : 0), n(planned));
+  const rest = Math.round((actual - sum) * 100) / 100;
+  if (rest !== 0) steps.push({ key: "other", label: label("other"), value: rest, kind: "delta" });   // rounding or lines without a plan
+  steps.push({ key: "actual", label: label("actual"), value: actual, kind: "total" });
+  return { steps, estimated };
+}

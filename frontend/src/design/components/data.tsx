@@ -223,6 +223,7 @@ export function DatedTimeline({ items, label }: { items: TimelineItem[]; label?:
 /** The deal path: استعلام ← پیشنهاد ← سفارش ← حمل ← تحویل ← بستن. Each step shows a number or a tick and its name. */
 export function Stepper({ steps, label }: { steps: { key: string; label: ReactNode; state: TimelineState; hint?: ReactNode }[]; label: string }) {
   const { t } = useTranslation();
+  const f = useFormat();
   return (
     <ol aria-label={label} className="flex min-w-0 items-start overflow-x-auto" data-testid="stepper">
       {steps.map((step, i) => (
@@ -230,7 +231,7 @@ export function Stepper({ steps, label }: { steps: { key: string; label: ReactNo
           <span className="flex w-full items-center">
             <span aria-hidden className={`h-px flex-1 ${i === 0 ? "bg-transparent" : step.state === "upcoming" ? "bg-line-strong" : "bg-accent-bright"}`} />
             <span className={`flex size-7 shrink-0 items-center justify-center rounded-2xl border text-xs font-semibold tabular-nums ${step.state === "done" ? "border-accent-bright bg-accent-bright text-accent-fg" : step.state === "current" ? "border-accent-bright text-accent shadow-ring" : "border-line-strong text-muted"}`}>
-              {step.state === "done" ? <Icon name="check" size={13} title={t("ds.stepper.done")} /> : i + 1}
+              {step.state === "done" ? <Icon name="check" size={13} title={t("ds.stepper.done")} /> : f.num(i + 1)}
             </span>
             <span aria-hidden className={`h-px flex-1 ${i === steps.length - 1 ? "bg-transparent" : steps[i + 1].state === "upcoming" ? "bg-line-strong" : "bg-accent-bright"}`} />
           </span>

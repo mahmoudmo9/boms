@@ -126,8 +126,8 @@ export function Chip({ selected, onClick, onRemove, removeLabel, icon, children,
 }
 
 /** A keyboard key. */
-export function Kbd({ children }: { children: ReactNode }) {
-  return <kbd dir="ltr" className="inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-accent-line px-1.5 font-mono text-2xs text-accent">{children}</kbd>;
+export function Kbd({ children, onAccent }: { children: ReactNode; onAccent?: boolean }) {
+  return <kbd dir="ltr" className={`inline-flex h-5 min-w-5 items-center justify-center rounded-sm border px-1.5 font-mono text-2xs ${onAccent ? "border-accent-fg/40 text-accent-fg" : "border-accent-line text-accent"}`}>{children}</kbd>;
 }
 
 /** A record code (CS-1405-0003, PO-…) in the fixed-width face; one click copies it. */

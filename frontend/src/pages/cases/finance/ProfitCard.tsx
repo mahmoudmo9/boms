@@ -2,8 +2,8 @@
  * in rials; the FX effect, VAT summary, unrealized amounts and the cost of money as information lines. */
 import { useTranslation } from "react-i18next";
 
-import { Badge, Card, Stat } from "../../../design/components";
-import { profitLines, signed, varianceTone, type Profit } from "../../../lib/finance";
+import { Badge, Card, KpiTile, ProfitBridge, Stat } from "../../../design/components";
+import { profitBridge, profitLines, signed, varianceTone, type Profit } from "../../../lib/finance";
 import { useFormat } from "../../../lib/prefs";
 
 export function ProfitTable({ profit }: { profit: Profit }) {
@@ -48,6 +48,36 @@ export function ProfitTable({ profit }: { profit: Profit }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** v0.10.0 (ProFinance): the deal's figures as tiles and the bridge from planned to actual profit. */
+export function ProfitBridgeCard({ profit }: { profit: Profit }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const cur = profit.deal_currency;
+  const bridge = profitBridge(profit, (key) => (key === "plan" ? t("finance.bridge.plan") : key === "actual" ? t("finance.bridge.actual")
+    : key === "other" ? t("finance.bridge.other") : t(`finance.profit.lines.${key}`)));
+  const estimatedParts = profit.expected ? Number(profit.expected.estimated.goods) + Number(profit.expected.estimated.planned_costs) : 0;
+  return (
+    <section className="flex flex-col gap-4" data-testid="profit-overview">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiTile label={profit.frozen ? t("finance.profit.final") : t("finance.profit.soFar")} value={f.num(profit.profit.actual.deal, 0)} unit={<bdi dir="ltr">{cur}</bdi>}
+          tone={Number(profit.profit.actual.deal) < 0 ? "danger" : "neutral"} emphasis testId="tile-so-far"
+          note={profit.margin_percent.actual !== null ? t("finance.bridge.marginNote", { margin: f.num(profit.margin_percent.actual, 1), markup: f.num(profit.markup_percent.actual ?? "0", 1) }) : undefined} />
+        {profit.expected && <KpiTile label={t("finance.profit.expected")} value={f.num(profit.expected.profit, 0)} unit={<bdi dir="ltr">{cur}</bdi>} estimated={estimatedParts !== 0} testId="tile-expected"
+          note={profit.expected.margin_percent !== null ? t("finance.bridge.expectedNote", { margin: f.num(profit.expected.margin_percent, 1) }) : undefined} />}
+        <KpiTile label={t("finance.bridge.planned")} value={profit.profit.planned?.deal != null ? f.num(profit.profit.planned.deal, 0) : "—"} unit={<bdi dir="ltr">{cur}</bdi>}
+          note={profit.margin_percent.planned !== null ? t("finance.bridge.marginNote", { margin: f.num(profit.margin_percent.planned, 1), markup: f.num(profit.markup_percent.planned ?? "0", 1) }) : t("finance.profit.noPlan")} />
+        <KpiTile label={t("finance.profit.fxEffect")} value={signed(profit.fx_effect.base, (v) => f.num(v, 0))} unit={<bdi dir="ltr">{profit.base_currency}</bdi>}
+          tone={Number(profit.fx_effect.base) < 0 ? "danger" : Number(profit.fx_effect.base) > 0 ? "success" : "neutral"} note={t("finance.bridge.fxNote")} />
+      </div>
+      <Card title={t("finance.bridge.title")} subtitle={t("finance.bridge.subtitle", { cur })} testId="bridge-card">
+        {bridge ? (
+          <ProfitBridge label={t("finance.bridge.title")} steps={bridge.steps} estimated={bridge.estimated} format={(n) => f.num(Math.round(n), 0)} />
+        ) : <p className="text-sm text-muted">{t("finance.profit.noPlan")}</p>}
+      </Card>
+    </section>
   );
 }
 

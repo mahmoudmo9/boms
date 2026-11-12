@@ -1298,9 +1298,12 @@ export interface ProcessTemplateRow {
   id: string; deal_type: "import" | "export" | "domestic"; name: string; is_default: boolean; status: string;
   steps: { id: string; position: number; group: string | null; code: string; label_fa: string; label_en: string; reference_label: string | null; requires_document: boolean; default_offset_days: number | null }[];
 }
+/** v0.10.0: a recorded stop of a shipment (origin, a place an event happened, destination). */
+export interface RouteStopRow { role: "origin" | "via" | "destination"; location_id: string; code: string; name: string; name_fa: string | null; at: string | null; event: string | null;
+  state: "done" | "last" | "upcoming" }
 export interface ShipmentRow {
   code?: string | null;                          // v0.9.0
-  route?: { fa: string; en: string } | null;
+  route?: { fa: string; en: string; stops?: RouteStopRow[] } | null;
   id: string; case_id: string; direction: "inbound" | "outbound"; purchase_order_id: string | null; sales_order_id: string | null; mode: string;
   carrier_party_id: string | null; forwarder_party_id: string | null; transport_doc_kind: string | null; transport_doc_no: string | null;
   containers: string[]; vessel_or_flight: string | null; origin: string | null; destination: string | null; incoterm: string | null;

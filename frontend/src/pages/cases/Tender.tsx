@@ -5,15 +5,15 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../design/components";
-import { TimeLeftBadge } from "../../components/TimeLeft";
+import { Badge, Bdi, Button, Card, Checkbox, DatedTimeline, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, ProgressRing, Select, Textarea } from "../../design/components";
+import { TimeLeftBadge, useNow, useTimeLeftText } from "../../components/TimeLeft";
 import { api, ApiError } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
 import { blockerMessage, combineDateTime, nextGuaranteeSteps, parseReminderDays, progressText, stepper, timeOf } from "../../lib/tenders";
 import type { Blocker, CaseDetail, CompanyDocumentRow, EnvelopeItemRow, GuaranteeRow, ProposalRow, ResultReasonRow, TenderDetail, TenderStage } from "../../lib/types";
 import { PartyName } from "../parties/shared";
-import { CurrencySelect, Money } from "../sourcing/shared";
+import { Money, CurrencySelect } from "../sourcing/shared";
 
 type Body = Record<string, unknown>;
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -79,16 +79,17 @@ export function TenderTab({ caseData }: { caseData: CaseDetail }) {
   const run = (path: string, body?: Body, method: Method = "POST") => m.mutate({ path, body, method });
   return (
     <div className="flex flex-col gap-4" data-testid="tender-tab">
+      <TenderHero d={d} />
       <Overview d={d} run={run} />
       <ErrorNote error={m.error} />
       <SetadBanners d={d} run={run} />
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 2xl:grid-cols-2">
         <DatesCard d={d} run={run} />
         <AddendaCard d={d} run={run} />
       </div>
       <EnvelopesCard d={d} run={run} />
       <GuaranteesCard d={d} caseData={caseData} />
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 2xl:grid-cols-2">
         <CostsCard d={d} run={run} />
         <ProposalCard d={d} caseId={caseData.id} />
       </div>
@@ -98,6 +99,46 @@ export function TenderTab({ caseData }: { caseData: CaseDetail }) {
 }
 
 type Run = (path: string, body?: Body, method?: Method) => void;
+
+/** v0.10.0 (ProTender): the countdown to the proposal deadline and the tender's dates on one horizontal line. */
+const DEADLINE_KINDS = ["proposal_deadline", "opening", "documents_deadline"];
+function TenderHero({ d }: { d: TenderDetail }) {
+  const { t } = useTranslation();
+  const f = useFormat();
+  const now = useNow();
+  const left = useTimeLeftText();
+  const dates = [...d.dates].sort((a, b) => a.at.localeCompare(b.at));
+  const deadline = DEADLINE_KINDS.map((k) => dates.find((x) => x.kind === k)).find(Boolean) ?? d.next_date;
+  const label = (x: { kind: string; label: string | null }) => (x.kind === "other" ? x.label ?? "" : t(`tenders.dateKinds.${x.kind}`));
+  const nextId = dates.find((x) => new Date(x.at).getTime() >= now.getTime())?.id;
+  const text = deadline ? left(deadline.at, now)?.text ?? "" : "";
+  const passed = deadline ? new Date(deadline.at).getTime() < now.getTime() : false;
+  const pct = deadline ? Math.max(0, Math.min(100, ((new Date(deadline.at).getTime() - now.getTime()) / (14 * 86400_000)) * 100)) : 0;
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12" data-testid="tender-hero">
+      <article className="flex items-center gap-6 rounded-3xl border border-accent-line bg-linear-to-br from-card-accent-from to-card-accent-to p-6 lg:col-span-4">
+        {deadline ? (
+          <>
+            <ProgressRing value={pct} size={120} stroke={8} tone={passed ? "danger" : "accent"} label={`${label(deadline)}: ${text}`}>
+              <span className="max-w-20 text-center text-sm leading-tight text-title">{text}</span>
+            </ProgressRing>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <span className="text-xs tracking-wide text-accent">{label(deadline)}</span>
+              <span className="font-display text-xl font-semibold text-title tabular-nums">{f.date(deadline.at, true)}</span>
+              <span className="text-xs text-muted">{t("tenders.hero.window")}</span>
+            </div>
+          </>
+        ) : <p className="text-sm text-muted">{t("tenders.dates.none")}</p>}
+      </article>
+      <Card className="lg:col-span-8" title={t("tenders.dates.title")} subtitle={t("tenders.hero.count", { n: f.num(dates.length) })}>
+        {dates.length === 0 ? <p className="text-sm text-muted">{t("tenders.dates.none")}</p> : (
+          <DatedTimeline label={t("tenders.dates.title")} items={dates.map((x) => ({ key: x.id, title: label(x), when: f.date(x.at, true),
+            state: x.id === nextId ? "current" : new Date(x.at).getTime() < now.getTime() ? "done" : "upcoming" }))} />
+        )}
+      </Card>
+    </div>
+  );
+}
 
 // ---- overview: stepper, participation, mode ---------------------------------------------------------------------------
 
@@ -400,7 +441,7 @@ function EnvelopesCard({ d, run }: { d: TenderDetail; run: Run }) {
     <Card padded={false} title={<span className="flex items-center gap-2">{t("tenders.envelopes.title")}
       <EnvelopeProgressBadge p={d.envelope_progress.all} num={f.num} long /></span>}
       actions={<Button variant="ghost" onClick={() => run(`/api/tenders/${d.id}/envelope-items/from-template`, {})}>{t("tenders.envelopes.fromTemplate")}</Button>}>
-      <div className="flex flex-col divide-y divide-line" data-testid="envelopes">
+      <div className="@container"><div className="grid grid-cols-1 divide-y divide-line @5xl:grid-cols-3 @5xl:divide-x @5xl:divide-y-0 rtl:@5xl:divide-x-reverse" data-testid="envelopes">
         {(["A", "B", "C"] as const).map((env) => {
           const items = d.envelope_items.filter((i) => i.envelope === env);
           const move = (i: number, dir: -1 | 1) => {
@@ -410,10 +451,10 @@ function EnvelopesCard({ d, run }: { d: TenderDetail; run: Run }) {
           };
           return (
             <section key={env} data-testid={`envelope-${env}`} className="min-w-0">
-              <h3 className="flex items-center gap-2 px-4 pt-3 pb-1 text-sm font-medium">{t(`tenders.envelopes.names.${env}`)}
+              <h3 className="flex items-center gap-2 px-4 pt-4 pb-2 font-display text-lg font-semibold text-title">{t(`tenders.envelopes.names.${env}`)}
                 <EnvelopeProgressBadge p={d.envelope_progress[env]} num={f.num} /></h3>
               <ul className="divide-y divide-line">{items.map((it, i) => <EnvelopeItem key={it.id} item={it} run={run} first={i === 0} last={i === items.length - 1} onMove={(dir) => move(i, dir)} />)}</ul>
-              <div className="flex max-w-xl gap-1.5 px-4 py-2">
+              <div className="flex gap-1.5 px-4 py-3">
                 <Input dir="auto" aria-label={t("tenders.envelopes.newItem")} placeholder={t("tenders.envelopes.newItem")} value={title[env] ?? ""}
                   onChange={(e) => setTitle({ ...title, [env]: e.target.value })} />
                 <Button disabled={!(title[env] ?? "").trim()} onClick={() => { run(`/api/tenders/${d.id}/envelope-items`, { envelope: env, title: title[env].trim() }); setTitle({ ...title, [env]: "" }); }}>{t("common.add")}</Button>
@@ -421,7 +462,7 @@ function EnvelopesCard({ d, run }: { d: TenderDetail; run: Run }) {
             </section>
           );
         })}
-      </div>
+      </div></div>
     </Card>
   );
 }
@@ -638,7 +679,7 @@ function SubmitAndResult({ d, run }: { d: TenderDetail; run: Run }) {
     our_rank: d.our_rank ? String(d.our_rank) : "", result_note: d.result_note ?? "", case_status: "" });
   const blocked = d.blockers.length > 0;
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid gap-4 2xl:grid-cols-2">
       <Card title={<span className="flex items-center gap-2">{t("tenders.submit.title")}{d.submitted_at && <Badge tone="success">{t("tenders.submit.done", { at: f.date(d.submitted_at, true) })}</Badge>}</span>}>
         <BlockerList blockers={d.blockers} />
         {!d.submitted_at && !d.result && <div className="flex flex-col gap-2">

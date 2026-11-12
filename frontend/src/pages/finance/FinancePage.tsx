@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
-import { Badge, Bdi, Card, DateInput, EmptyState, ErrorNote, Field, Loading, PageHeader, Select } from "../../design/components";
+import { Badge, Bdi, Button, ButtonLink, Card, DateInput, EmptyState, ErrorNote, Field, Loading, Menu, PageHeader, Select, Tabs } from "../../design/components";
 import { api } from "../../lib/api";
 import { AGING_BUCKETS, MOADIAN_TONE, PAYMENT_TONE } from "../../lib/finance";
 import { toDateString } from "../../lib/followups";
@@ -26,10 +26,10 @@ function Table({ head, rows, testid }: { head: string[]; rows: React.ReactNode[]
   const { t } = useTranslation();
   if (!rows.length) return <EmptyState>{t("finance.none")}</EmptyState>;
   return (
-    <div className="max-h-[36rem] overflow-auto">
+    <div className="max-h-[36rem] overflow-auto" tabIndex={0} role="region" aria-label={head[0]}>
       <table className="w-full text-sm" data-testid={testid}>
-        <thead className="sticky top-0 bg-surface text-xs text-muted"><tr>{head.map((h, i) => <th key={i} className="px-2 py-1.5 text-start">{h}</th>)}</tr></thead>
-        <tbody className="divide-y divide-line">{rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className="px-2 py-1.5">{c}</td>)}</tr>)}</tbody>
+        <thead className="sticky top-0 z-(--z-sticky) bg-surface-2 text-xs text-muted"><tr>{head.map((h, i) => <th key={i} scope="col" className="h-10 border-b border-line px-3.5 text-start font-medium whitespace-nowrap">{h}</th>)}</tr></thead>
+        <tbody>{rows.map((r, i) => <tr key={i} className="border-b border-line transition-colors duration-150 last:border-b-0 hover:bg-hover">{r.map((c, j) => <td key={j} className="h-11 px-3.5 tabular-nums">{c}</td>)}</tr>)}</tbody>
       </table>
     </div>
   );
@@ -171,24 +171,19 @@ export function FinancePage() {
   const range = { from: from ? toDateString(from) : "", to: to ? toDateString(to) : "" };
   const qs = new URLSearchParams(Object.entries({ date_from: range.from, date_to: range.to }).filter(([, v]) => v)).toString();
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader title={t("nav.finance")} subtitle={t("finance.ws.subtitle")} />
-      <div className="flex flex-wrap items-end gap-3">
+    <div className="flex flex-col gap-5" data-testid="finance-desk">
+      <PageHeader title={t("nav.finance")} subtitle={t("finance.ws.subtitle")}
+        actions={<>
+          <Menu label={t("finance.ws.exportsLabel")} testId="exports" trigger={(p) => <Button icon="download" iconEnd="chevronDown" data-testid="exports" {...p}>{t("finance.ws.exportsLabel")}</Button>}
+            items={EXPORTS.map((e) => ({ key: e, label: t(`finance.ws.exports.${e}`), icon: "file", onSelect: () => { window.location.href = `/api/finance/exports/${e}.csv${qs ? `?${qs}` : ""}`; } }))} />
+          <ButtonLink variant="primary" icon="download" data-testid="export-all" href={`/api/finance/exports/all.zip${qs ? `?${qs}` : ""}`} download>{t("finance.ws.exportAll")}</ButtonLink>
+        </>} />
+      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface px-5 py-4" data-testid="fin-range">
         <Field label={t("finance.ws.from")} htmlFor="fin-from"><DateInput id="fin-from" value={from} onChange={setFrom} /></Field>
         <Field label={t("finance.ws.to")} htmlFor="fin-to"><DateInput id="fin-to" value={to} onChange={setTo} /></Field>
-        <span className="flex flex-wrap items-center gap-1.5" data-testid="exports">
-          {EXPORTS.map((e) => <a key={e} className="inline-flex h-8 items-center rounded-md border border-line-strong px-2.5 text-sm hover:bg-surface-2"
-            href={`/api/finance/exports/${e}.csv${qs ? `?${qs}` : ""}`} download>{t(`finance.ws.exports.${e}`)}</a>)}
-          <a className="inline-flex h-8 items-center rounded-md bg-accent-bright px-3 text-sm text-accent-fg hover:brightness-105" data-testid="export-all"
-            href={`/api/finance/exports/all.zip${qs ? `?${qs}` : ""}`} download>{t("finance.ws.exportAll")}</a>
-        </span>
       </div>
-      <div className="flex gap-1 overflow-x-auto border-b border-line">
-        {TABS.map((key) => (
-          <button key={key} type="button" onClick={() => setParams({ tab: key }, { replace: true })} data-testid={`fin-tab-${key}`}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap ${key === tab ? "border-accent font-medium text-accent" : "border-transparent text-muted hover:text-fg"}`}>
-            {t(`finance.ws.tabs.${key}`)}</button>))}
-      </div>
+      <Tabs label={t("nav.finance")} active={tab} onSelect={(key) => setParams({ tab: key }, { replace: true })} panelId="fin-tab"
+        tabs={TABS.map((key) => ({ key, label: t(`finance.ws.tabs.${key}`), testId: `fin-tab-${key}` }))} />
       {tab === "receivables" && <Receivables />}
       {tab === "payables" && <Payables />}
       {tab === "invoices" && <Invoices {...range} />}

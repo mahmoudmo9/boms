@@ -9,6 +9,15 @@ from app.modules.sourcing.items import register_closed_check
 register_closed_check(closing.closed_check)                         # items closed with the deal, derived on reopen
 register_case_status_guard(closing.status_guard)                    # close / reopen through the checklist
 register_section("finance", dashboard.summary)                      # command center «مالی»
+
+
+def _overview(db, today):
+    from app.modules.finance import overview
+
+    return overview.summary(db, today)
+
+
+register_section("overview", _overview)       # v0.10.0: the figures of the command center (ProToday)
 register_case_cleanup(0, cleanup.cleanup_case)                      # before execution (1)
 register_suggestion_extra("rating", ratings.supplier_averages)      # the average next to each suggested supplier
 guard.install()                                                     # a closed deal is read-only

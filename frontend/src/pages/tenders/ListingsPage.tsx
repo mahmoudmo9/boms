@@ -3,9 +3,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 
-import { Badge, Bdi, Button, Checkbox, EmptyState, ErrorNote, Input, Modal, Select, useToast } from "../../design/components";
+import { Badge, Bdi, Button, buttonClass, Checkbox, Chip, EmptyState, ErrorNote, Icon, Input, Modal, Select, Status, useToast } from "../../design/components";
 import { TimeLeftBadge } from "../../components/TimeLeft";
 import { api, apiBlob } from "../../lib/api";
 import {
@@ -163,10 +163,9 @@ export function ListingsPage() {
   });
   const tender = filters.source === "setad_tender";
   const chip = (key: string, label: string, n: number | undefined, active: boolean, onClick: () => void) => (
-    <button key={key} type="button" aria-pressed={active} onClick={onClick} data-testid={`chip-${key}`}
-      className={`inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-sm ${active ? "border-accent bg-accent-soft text-accent" : "border-line hover:bg-surface-2"}`}>
-      {label}{n !== undefined && <span className="text-xs tabular-nums text-muted">{f.num(n)}</span>}
-    </button>
+    <span key={key} data-testid={`chip-${key}`} className="contents"><Chip selected={active} onClick={onClick} className="shrink-0">
+      {label}{n !== undefined && <span className="tabular-nums opacity-75">{f.num(n)}</span>}
+    </Chip></span>
   );
   const pageIds = (data?.items ?? []).map((r) => r.id);
   const allOnPage = pageIds.length > 0 && pageIds.every((id) => isSelected(selection, id));
@@ -213,18 +212,20 @@ export function ListingsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2" data-testid="screening-workspace">
-      <div className="flex shrink-0 flex-wrap items-end gap-x-4 gap-y-1 border-b border-line">
-        <h1 className="pb-2 text-lg font-semibold">{t("nav.tenders")}</h1>
-        <div className="flex gap-1" role="tablist">
+      <header className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2" data-testid="listings-header">
+        <h1 className="font-display text-3xl font-semibold text-title">{t("nav.tenders")}</h1>
+        <span className="text-sm text-muted" data-testid="listing-counts">{t("listings.headerCounts", { open: f.num(counts?.all ?? 0), fresh: f.num(counts?.new ?? 0) })}</span>
+        <div className="flex gap-0.5 rounded-xl border border-line-strong bg-sunken p-0.5" role="tablist" aria-label={t("listings.sourcesLabel")}>
           {(["setad_purchase", "setad_tender"] as const).map((src) => (
-            <button key={src} type="button" role="tab" aria-selected={filters.source === src} data-testid={`tab-${src}`}
-              onClick={() => switchTab(src)}
-              className={`-mb-px border-b-2 px-3 py-2 text-sm ${filters.source === src ? "border-accent font-medium text-accent" : "border-transparent text-muted hover:text-fg"}`}>
+            <button key={src} type="button" role="tab" aria-selected={filters.source === src} data-testid={`tab-${src}`} onClick={() => switchTab(src)}
+              className={`h-9 cursor-pointer rounded-lg px-4 text-sm transition-colors duration-150 ${filters.source === src ? "bg-accent-bright font-semibold text-accent-fg" : "text-fg-2 hover:bg-hover hover:text-fg"}`}>
               {t(`listings.sources.${src}`)}
             </button>
           ))}
         </div>
-      </div>
+        <Link to={`/tenders/triage?${filtersToParams(filters).toString()}`} className={buttonClass("secondary", "md", "ms-auto")} data-testid="open-triage">
+          <Icon name="zap" size={15} />{t("triage.open")}</Link>
+      </header>
       <div className="shrink-0"><ConnectionBar source={filters.source} /></div>
 
       <div className="flex shrink-0 items-center gap-2 overflow-x-auto pb-0.5" data-testid="filters">
@@ -263,7 +264,7 @@ export function ListingsPage() {
       </div>
 
       {selectionCount(selection) > 0 && (
-        <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-md border border-accent bg-accent-soft px-3 py-1.5 text-sm" data-testid="bulk-bar">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-xl border border-accent-line bg-accent-soft px-3.5 py-2 text-sm" data-testid="bulk-bar">
           <span>{t("listings.selected", { n: f.num(selectionCount(selection)) })}</span>
           {selection.mode === "ids" && allOnPage && total > pageIds.length && (
             <button type="button" className="text-accent hover:underline" data-testid="select-all-results"
@@ -282,7 +283,7 @@ export function ListingsPage() {
       )}
 
       <div className="relative flex min-h-0 flex-1 gap-3">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-md border border-line bg-surface" data-testid="table-area">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-surface" data-testid="table-area">
           <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line px-3 py-1.5 text-sm">
             <span className="text-muted" data-testid="listing-total">{t("listings.total", { n: f.num(total) })}</span>
             <span className="ms-auto flex items-center gap-1">
@@ -292,7 +293,7 @@ export function ListingsPage() {
               <span className="relative">
                 <Button variant="ghost" onClick={() => setChooser(!chooser)} data-testid="column-chooser">{t("listings.columns")}</Button>
                 {chooser && (
-                  <div className="absolute end-0 z-30 mt-1 w-52 rounded-md border border-line bg-surface p-2 shadow-lg">
+                  <div className="absolute end-0 z-(--z-popover) mt-1 w-56 rounded-xl border border-line-strong bg-surface-3 p-2 shadow-md">
                     {COLUMNS.map((c) => (
                       <Checkbox key={c} label={t(`listings.cols.${c}`)} checked={columns.includes(c)} disabled={c === "title"}
                         onChange={() => { const next = toggleColumn(columns, c); setColumns(next); save(`boms.listings.columns.${filters.source}`, JSON.stringify(next)); }} />
@@ -307,11 +308,11 @@ export function ListingsPage() {
             {data && data.items.length === 0 ? <EmptyState>{t("listings.empty")}</EmptyState> : (
               <table className="w-full text-sm" data-testid="listing-table">
                 <thead className="sticky top-0 z-10"><tr className="border-b border-line bg-surface-2 text-xs text-muted">
-                  <th className="w-8 bg-surface-2 p-2"><input type="checkbox" aria-label={t("listings.selectPage")} className="h-4 w-4 accent-[var(--accent)]" checked={allOnPage}
+                  <th className="w-10 bg-surface-2 px-3 py-2.5"><input type="checkbox" aria-label={t("listings.selectPage")} className="size-4 cursor-pointer accent-accent-bright" checked={allOnPage}
                     onChange={(e) => setSelection(e.target.checked ? { mode: "ids", ids: new Set(pageIds) } : EMPTY_SELECTION)} /></th>
                   {columns.map((c) => (
-                    <th key={c} className="bg-surface-2 p-2 text-start whitespace-nowrap">
-                      {SORT_OF[c] ? <button type="button" className="hover:text-fg" onClick={() => setSortKey(SORT_OF[c]!)}>
+                    <th key={c} scope="col" aria-sort={SORT_OF[c] && sort.key === SORT_OF[c] ? (sort.dir === "asc" ? "ascending" : "descending") : undefined} className="bg-surface-2 px-3 py-2.5 text-start font-medium whitespace-nowrap">
+                      {SORT_OF[c] ? <button type="button" className="relative cursor-pointer after:absolute after:-inset-2 hover:text-fg" onClick={() => setSortKey(SORT_OF[c]!)}>
                         {t(`listings.cols.${c}`)}{sort.key === SORT_OF[c] ? (sort.dir === "asc" ? " ▲" : " ▼") : ""}</button> : t(`listings.cols.${c}`)}
                     </th>
                   ))}
@@ -428,15 +429,15 @@ function Row({ row, n, columns, active, checked, comfortable, job, jobKind, onCh
       case "documents": return docs === "empty" ? <span className="text-xs text-muted">—</span>
         : <span className="flex items-center gap-1 whitespace-nowrap text-xs"><Badge tone={docs === "complete" ? "success" : "warning"}>{t(`listings.docs.${docs}`)}</Badge>
           {docs === "partial" && <span className="tabular-nums text-muted">{t("listings.docsOf", { n: f.num(row.documents.downloaded), total: f.num(row.documents.total) })}</span>}</span>;
-      case "status": return <span className="flex items-center gap-1 whitespace-nowrap text-xs"><Badge tone={row.status === "converted" ? "success" : row.status === "starred" ? "warning" : row.status === "dismissed" ? "neutral" : "accent"}>{t(`listings.status.${row.status}`)}</Badge>
+      case "status": return <span className="flex items-center gap-1 whitespace-nowrap text-xs"><Status tone={row.status === "converted" ? "success" : row.status === "starred" ? "warning" : row.status === "dismissed" ? "neutral" : "info"} icon={row.status === "starred" ? "star" : undefined}>{t(`listings.status.${row.status}`)}</Status>
         {row.in_my_calls && <span className={`max-w-[8rem] text-muted ${clip}`}>{row.site_state_name || t("listings.inMyCalls")}</span>}</span>;
     }
   };
   return (
-    <tr className={`border-b border-line ${comfortable ? "align-top" : "h-10 align-middle"} ${active ? "bg-accent-soft" : "hover:bg-surface-2"}`} data-listing={row.id}
+    <tr className={`border-b border-line transition-colors duration-150 ${comfortable ? "align-top" : "h-11 align-middle"} ${active ? "bg-accent-soft " : "hover:bg-hover"}`} data-listing={row.id}
       aria-selected={active}>
-      <td className="px-2 py-1"><input type="checkbox" aria-label={row.external_no} className="h-4 w-4 accent-[var(--accent)]" checked={checked} onChange={onCheck} /></td>
-      {columns.map((c) => <td key={c} className={`px-2 ${comfortable ? "py-2" : "py-1 whitespace-nowrap"}`}>{cell(c)}</td>)}
+      <td className="px-3 py-1"><input type="checkbox" aria-label={row.external_no} className="size-4 cursor-pointer accent-accent-bright" checked={checked} onChange={onCheck} /></td>
+      {columns.map((c) => <td key={c} className={`px-3 ${comfortable ? "py-2.5" : "py-1 whitespace-nowrap"}`}>{cell(c)}</td>)}
     </tr>
   );
 }

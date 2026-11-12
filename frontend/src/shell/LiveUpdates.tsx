@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { api } from "../lib/api";
-import { afterStreamError, type Batch, jobStates, matches, type Notice, POLL_MS, rootsFor, Seen, type Transport } from "../lib/live";
+import { afterStreamError, type Batch, jobStates, matches, type Notice, POLL_MS, refreshAll, rootsFor, Seen, type Transport } from "../lib/live";
 
 type JobNotice = Notice & { kind: "job" };
 type AgentNotice = Notice & { kind: "agent" };
@@ -20,12 +20,18 @@ export function LiveUpdatesProvider({ children, enabled = true }: { children: Re
   const seen = useRef(new Seen());
   const cursor = useRef<string | null>(null);
 
+  const lastRefresh = useRef(0);
   const apply = useCallback((batch: Batch) => {
     cursor.current = batch.cursor;
     const fresh = seen.current.fresh(batch.notices);
+    const all = refreshAll(batch, lastRefresh.current, Date.now());
+    if (all) {                                 // more changed than the notices name: refresh everything shown
+      lastRefresh.current = Date.now();
+      void qc.invalidateQueries({ refetchType: "active" });
+    }
     if (fresh.length === 0) return;
     const roots = rootsFor(fresh);
-    void qc.invalidateQueries({ predicate: (q) => matches(q.queryKey, roots), refetchType: "active" });
+    if (!all) void qc.invalidateQueries({ predicate: (q) => matches(q.queryKey, roots), refetchType: "active" });
     const agent = [...fresh].reverse().find((n): n is AgentNotice => n.kind === "agent") ?? null;
     setState((s) => ({ ...s, jobs: jobStates(s.jobs, fresh), agent: agent ?? s.agent, lastAt: Date.now() }));
   }, [qc]);

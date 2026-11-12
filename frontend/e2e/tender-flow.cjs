@@ -305,8 +305,12 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       for (const fmt of ['PDF', 'Word']) {
         step = `${lang} output ${fmt}`;
         const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 90000 }), prop.getByRole('button', { name: fmt, exact: true }).click()]);
-        const name = dl.suggestedFilename();
-        check(`${fmt} file name`, name.includes(inq.external_no) && name.includes('proposal-v') && !name.includes('DRAFT'), name);
+        // headless Chromium names any non-ASCII file «download»; read the RFC 5987 name the server sends instead
+        const cd = (await page.request.get(dl.url())).headers()['content-disposition'] ?? '';
+        const star = /filename\*=utf-8''([^;]+)/i.exec(cd);
+        const name = star ? decodeURIComponent(star[1]) : dl.suggestedFilename();
+        // v0.9.0 names: <number>_<document type>_<party>_<date> (see documents/naming.py)
+        check(`${fmt} file name`, /^TDR-\d{4}-\d{4}_/.test(name) && !name.includes('DRAFT'), name);
         await dl.saveAs(`${OUT}/${lang}-${name}`);
         const head = fs.readFileSync(`${OUT}/${lang}-${name}`).subarray(0, 4).toString('latin1');
         check(`${fmt} file content`, fmt === 'PDF' ? head === '%PDF' : head.startsWith('PK'), head);
