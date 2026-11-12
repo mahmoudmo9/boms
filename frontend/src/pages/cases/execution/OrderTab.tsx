@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Badge, Bdi, Button, Card, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Stat, Textarea } from "../../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Stat, Textarea } from "../../../design/components";
 import { cashRows, itemProgress, SO_TONE } from "../../../lib/execution";
 import { toDateString } from "../../../lib/followups";
 import { useFormat } from "../../../lib/prefs";
@@ -118,7 +118,7 @@ function ConfirmDialog({ so, onClose, run }: { so: SalesOrderRow; onClose: () =>
         onClick={() => run(`/api/sales-orders/${so.id}/confirm`, doc ? { signed_document_id: doc } : { no_document_reason: reason.trim() }).then(onClose, setError)}>{t("execution.order.confirm")}</Button></>}>
       <div className="flex flex-col gap-3" data-testid="confirm-dialog">
         <Field label={t("execution.order.signedDocument")} htmlFor="so-signed"><FilePick id="so-signed" value={doc} onChange={setDoc} /></Field>
-        {!doc && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={without} onChange={(e) => setWithout(e.target.checked)} /> {t("execution.order.withoutDocument")}</label>}
+        {!doc && <Checkbox label={t("execution.order.withoutDocument")} checked={without} onChange={setWithout} />}
         {!doc && without && <Field label={t("execution.order.withoutReason")} htmlFor="so-reason"><Input id="so-reason" dir="auto" value={reason} onChange={(e) => setReason(e.target.value)} /></Field>}
         <ErrorNote error={error} />
       </div>

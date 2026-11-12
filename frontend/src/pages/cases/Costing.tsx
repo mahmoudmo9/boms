@@ -5,7 +5,7 @@ import { type KeyboardEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { Badge, Bdi, Button, Card, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../design/components";
 import { api } from "../../lib/api";
 import { gateChecklist, gridTarget, marginMarkupView } from "../../lib/costing";
 import { fromDateString, toDateString } from "../../lib/followups";
@@ -208,8 +208,8 @@ function LineRow({ line, index, rows, sheet, editable, params, onChanged }: {
         ) : <span className="text-xs text-muted">{line.scope === "item" ? t("costing.lines.itemLine") : t("costing.lines.perItem")}</span>}
       </td>
       <td className="p-1.5 text-center">
-        <input type="checkbox" aria-label={t("costing.lines.paidBefore")} className="h-4 w-4 accent-[var(--accent)]" checked={line.paid_before_receipt}
-          disabled={!editable || line.kind === "purchase"} onChange={(e) => patch({ paid_before_receipt: e.target.checked })} />
+        <Checkbox label={<span className="sr-only">{t("costing.lines.paidBefore")}</span>} checked={line.paid_before_receipt}
+          disabled={!editable || line.kind === "purchase"} onChange={(v) => patch({ paid_before_receipt: v })} />
       </td>
       <td className="p-1.5 text-end" title={tip}>{computed ? <Money amount={computed.total} currency={sheet.pricing_currency} /> : "—"}
         {computed?.vat && <div className="text-xs text-muted">{t("costing.lines.vatSeparate")}</div>}</td>

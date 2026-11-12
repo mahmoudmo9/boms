@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
-import { Badge, Button, Card, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, PageHeader, Select } from "../../design/components";
+import { Badge, Button, Card, DateInput, EmptyState, ErrorNote, Field, FileDrop, Input, Loading, Modal, PageHeader, Select } from "../../design/components";
 import { api, ApiError } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
@@ -41,7 +41,7 @@ function DocDialog({ doc, initial, onClose, onSaved }: { doc: CompanyDocumentRow
           <Field label={t("tenders.library.expires")} htmlFor="cd-expires"><DateInput id="cd-expires" value={form.expires_on ? fromDateString(form.expires_on) : null} onChange={(d) => setForm({ ...form, expires_on: d ? toDateString(d) : null })} /></Field>
         </div>
         <Field label={t("tenders.library.file")} htmlFor="cd-file">
-          <span className="flex flex-wrap items-center gap-2"><input id="cd-file" type="file" className="text-sm" onChange={(e) => e.target.files?.[0] && upload.mutate(e.target.files[0])} />
+          <span className="flex flex-wrap items-center gap-2"><FileDrop compact id="cd-file" multiple={false} busy={upload.isPending} onFiles={(files) => files[0] && upload.mutate(files[0])} />
             {form.document_id && <Link className="text-xs text-accent hover:underline" to={`/documents/${form.document_id}`}>{t("tenders.library.fileSet")}</Link>}</span>
         </Field>
         <Field label={t("tenders.library.note")} htmlFor="cd-note"><Input id="cd-note" dir="auto" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></Field>

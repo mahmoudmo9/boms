@@ -3854,7 +3854,8 @@
       "unit": "Unit"
     },
     "fileDrop": {
-      "label": "Drop files here or click to choose"
+      "label": "Drop files here or click to choose",
+      "compact": "Choose a file"
     },
     "error": {
       "title": "This part did not load",

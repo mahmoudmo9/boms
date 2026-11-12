@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, Modal, Select } from "../../../design/components";
+import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, Modal, RadioGroup, Select } from "../../../design/components";
 import { api, ApiError } from "../../../lib/api";
 import { MOADIAN_TONE, PAYMENT_TONE, type SalesInvoice } from "../../../lib/finance";
 import { useFormat } from "../../../lib/prefs";
@@ -120,9 +120,9 @@ function VatDecisionDialog({ caseId, invoiceId, rate, onClose }: { caseId: strin
           ...(mode === "zero" ? { vat_reason: reason.trim() } : {}) } }).then(onClose)}>{t("finance.invoices.issue")}</Button></>}>
       <div className="flex flex-col gap-3 text-sm" data-testid="vat-decision">
         <p>{t("finance.vatDecision.text")}</p>
-        <label className="flex items-center gap-2"><input type="radio" checked={mode === "apply"} disabled={!rate} onChange={() => setMode("apply")} />
-          {rate ? t("finance.vatDecision.apply", { rate: f.num(rate) }) : t("finance.vatDecision.noParameter")}</label>
-        <label className="flex items-center gap-2"><input type="radio" checked={mode === "zero"} onChange={() => setMode("zero")} />{t("finance.vatDecision.zero")}</label>
+        <RadioGroup label={t("finance.vatDecision.title")} inline={false} value={mode} onChange={setMode} options={[
+          { value: "apply", disabled: !rate, label: rate ? t("finance.vatDecision.apply", { rate: f.num(rate) }) : t("finance.vatDecision.noParameter") },
+          { value: "zero", label: t("finance.vatDecision.zero") }]} />
         {mode === "zero" && <Field label={t("finance.reason")} htmlFor="vat-zero-reason"><Input id="vat-zero-reason" dir="auto" value={reason} onChange={(e) => setReason(e.target.value)} /></Field>}
         <p className="text-xs text-muted">{t("finance.vatDecision.becomesDefault")}</p>
         <ErrorNote error={run.error} />

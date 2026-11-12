@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { Badge, Bdi, Button, Card, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Input, Loading, Modal, Select, Textarea } from "../../../design/components";
 import { ApiError } from "../../../lib/api";
 import { manualPoSteps, PO_TONE } from "../../../lib/execution";
 import { toDateString } from "../../../lib/followups";
@@ -178,8 +178,8 @@ function PoCard({ po, caseId, receipts }: { po: PurchaseOrderRow; caseId: string
             {draft ? <DateInput id={`po-rd-${po.id}`} value={dateOrNull(po.ready_due_on)} onChange={(d) => patch({ ready_due_on: d ? toDateString(d) : null })} />
               : <span className="text-sm tabular-nums">{po.ready_due_on ? f.day(po.ready_due_on) : "—"}</span>}
             {!draft && !["cancelled", "superseded", "received", "closed"].includes(po.status) && <Button variant="ghost" onClick={() => setDialog("ready")} data-testid="po-move-ready">{t("execution.purchase.moveReady")}</Button>}</span></Field>
-          <Field label={t("execution.purchase.directToCustomer")} htmlFor={`po-direct-${po.id}`}><label className="flex items-center gap-2 text-sm">
-            <input id={`po-direct-${po.id}`} type="checkbox" checked={po.direct_to_customer} onChange={(e) => patch({ direct_to_customer: e.target.checked })} /> {t("execution.purchase.directHint")}</label></Field>
+          <Field label={t("execution.purchase.directToCustomer")} htmlFor={`po-direct-${po.id}`}>
+            <Checkbox id={`po-direct-${po.id}`} label={t("execution.purchase.directHint")} checked={po.direct_to_customer} onChange={(v) => patch({ direct_to_customer: v })} /></Field>
         </div>
         {po.supplier_ref && <p className="text-sm">{t("execution.purchase.supplierRef")}: <Bdi ltr>{po.supplier_ref}</Bdi>{po.confirmed_ready_on && <> · {t("execution.purchase.confirmedReady")}: <span className="tabular-nums">{f.day(po.confirmed_ready_on)}</span></>}</p>}
         <div className="overflow-x-auto"><table className="w-full text-sm" data-testid="po-items">

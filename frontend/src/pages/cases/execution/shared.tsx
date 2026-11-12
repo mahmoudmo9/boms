@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Button, Card, DateInput, EmptyState, ErrorNote, Field, Input, Modal, Select } from "../../../design/components";
+import { Badge, Button, Card, DateInput, EmptyState, ErrorNote, Field, FileDrop, Input, Modal, Select } from "../../../design/components";
 import { api, ApiError } from "../../../lib/api";
 import { MILESTONE_TONE } from "../../../lib/execution";
 import { fromDateString, toDateString } from "../../../lib/followups";
@@ -57,8 +57,7 @@ export function FilePick({ id, value, onChange, label }: { id: string; value: st
   });
   return (
     <span className="flex flex-wrap items-center gap-2">
-      <input id={id} type="file" aria-label={label} className="max-w-56 text-xs" onChange={(e) => e.target.files?.[0] && upload.mutate(e.target.files[0])} />
-      {upload.isPending && <span className="text-xs text-muted">…</span>}
+      <FileDrop compact id={id} multiple={false} ariaLabel={label} busy={upload.isPending} onFiles={(files) => files[0] && upload.mutate(files[0])} />
       {value && <Link className="text-xs text-accent hover:underline" to={`/documents/${value}`} data-testid={`${id}-set`}>{t("execution.fileSet")}</Link>}
       <ErrorNote error={upload.error} />
     </span>

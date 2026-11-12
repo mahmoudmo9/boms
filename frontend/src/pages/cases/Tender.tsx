@@ -240,8 +240,8 @@ function RefreshDialog({ d, onClose, run }: { d: TenderDetail; onClose: () => vo
           <th className="text-start">{t("tenders.setad.current")}</th><th className="text-start">{t("tenders.setad.onSetad")}</th></tr></thead>
           <tbody>{preview.data.changes.map((c) => (
             <tr key={c.field} className="border-t border-line">
-              <td className="p-1"><input type="checkbox" aria-label={label(c.field)} className="h-4 w-4 accent-[var(--accent)]" checked={chosen.includes(c.field)}
-                onChange={(e) => setChosen(e.target.checked ? [...chosen, c.field] : chosen.filter((x) => x !== c.field))} /></td>
+              <td className="p-1"><Checkbox label={<span className="sr-only">{label(c.field)}</span>} checked={chosen.includes(c.field)}
+                onChange={(v) => setChosen(v ? [...chosen, c.field] : chosen.filter((x) => x !== c.field))} /></td>
               <td className="p-1">{label(c.field)}</td><td className="p-1 tabular-nums" dir="auto">{show(c.field, c.current)}</td>
               <td className="p-1 tabular-nums" dir="auto">{show(c.field, c.setad)}</td></tr>))}</tbody></table>
       ))}

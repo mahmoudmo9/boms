@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button, Card, ErrorNote, Field, Input, Loading, PageHeader, Select } from "../../design/components";
+import { Button, Card, ErrorNote, Field, FileDrop, Input, Loading, PageHeader, Select } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 
@@ -54,7 +54,7 @@ export function ReferenceDataPage() {
             </Select>
           </Field>
           <Field label={t("reference.release")} htmlFor="ref-rel"><Input id="ref-rel" dir="ltr" className="w-32" value={release} onChange={(e) => setRelease(e.target.value)} placeholder="2024-2" /></Field>
-          <Field label={t("reference.file")} htmlFor="ref-file"><input id="ref-file" type="file" accept=".csv,.gz,.zip,.txt" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></Field>
+          <Field label={t("reference.file")} htmlFor="ref-file"><FileDrop compact id="ref-file" multiple={false} accept=".csv,.gz,.zip,.txt" label={file?.name} onFiles={(files) => setFile(files[0] ?? null)} /></Field>
           <Button variant="primary" disabled={!file} busy={run.isPending} onClick={() => run.mutate()}>{t("reference.import")}</Button>
         </div>
         <p className="mt-2 text-xs text-muted">{t("reference.importHint")}</p>

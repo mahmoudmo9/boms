@@ -345,8 +345,10 @@ export function QuantityInput({ id, amount, unit, onChange, units, disabled, inv
 // ---- files -------------------------------------------------------------------------------------------------------------
 
 /** Drop files here or choose them; works with the keyboard (it is a button) and shows the dragging and busy states. */
-export function FileDrop({ onFiles, accept, multiple = true, label, hint, busy, disabled, testId }: {
-  onFiles: (files: File[]) => void; accept?: string; multiple?: boolean; label?: ReactNode; hint?: ReactNode; busy?: boolean; disabled?: boolean; testId?: string }) {
+export function FileDrop({ onFiles, accept, multiple = true, label, hint, busy, disabled, testId, id, compact, ariaLabel }: {
+  onFiles: (files: File[]) => void; accept?: string; multiple?: boolean; label?: ReactNode; hint?: ReactNode; busy?: boolean; disabled?: boolean; testId?: string;
+  /** On the file input, so a form label (and a test) can reach it. */ id?: string;
+  /** One line, for table rows and dense forms. */ compact?: boolean; ariaLabel?: string }) {
   const { t } = useTranslation();
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
@@ -355,14 +357,16 @@ export function FileDrop({ onFiles, accept, multiple = true, label, hint, busy, 
     <div data-testid={testId} data-over={over || undefined}
       onDragOver={(e) => { if (off) return; e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
       onDrop={(e) => { e.preventDefault(); setOver(false); if (!off && e.dataTransfer.files.length) onFiles([...e.dataTransfer.files]); }}
-      className={`rounded-xl border border-dashed transition-colors duration-150 ${over ? "border-accent bg-accent-soft" : "border-accent-line bg-transparent"} ${off ? "opacity-60" : ""}`}>
-      <button type="button" disabled={off} aria-busy={busy || undefined} onClick={() => input.current?.click()}
-        className="flex min-h-24 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl px-4 py-5 text-center disabled:cursor-not-allowed">
-        <Icon name="upload" size={22} className="text-accent" />
-        <span className="text-sm text-accent">{label ?? t("ds.fileDrop.label")}</span>
-        {hint && <span className="text-xs text-muted">{hint}</span>}
+      className={`${compact ? "inline-flex rounded-lg" : "rounded-xl"} border border-dashed transition-colors duration-150 ${over ? "border-accent bg-accent-soft" : "border-accent-line bg-transparent"} ${off ? "opacity-60" : ""}`}>
+      <button type="button" disabled={off} aria-busy={busy || undefined} aria-label={ariaLabel} onClick={() => input.current?.click()}
+        className={compact
+          ? "inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm text-accent disabled:cursor-not-allowed"
+          : "flex min-h-24 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl px-4 py-5 text-center disabled:cursor-not-allowed"}>
+        <Icon name="upload" size={compact ? 15 : 22} className="text-accent" />
+        <span className={compact ? "" : "text-sm text-accent"}>{label ?? t(compact ? "ds.fileDrop.compact" : "ds.fileDrop.label")}</span>
+        {hint && !compact && <span className="text-xs text-muted">{hint}</span>}
       </button>
-      <input ref={input} type="file" hidden tabIndex={-1} accept={accept} multiple={multiple}
+      <input ref={input} id={id} type="file" hidden tabIndex={-1} accept={accept} multiple={multiple}
         onChange={(e) => { if (e.target.files?.length) onFiles([...e.target.files]); e.target.value = ""; }} />
     </div>
   );

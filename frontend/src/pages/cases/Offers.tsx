@@ -5,7 +5,7 @@ import { type KeyboardEvent, Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, Icon, Input, Modal, Select, SuggestedValue, Textarea } from "../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, DateInput, EmptyState, ErrorNote, Field, FileDrop, Icon, Input, Modal, Select, SuggestedValue, Textarea } from "../../design/components";
 import { api, ApiError } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
@@ -216,7 +216,7 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
         <Field label={t("sourcing.offer.compliance")} htmlFor="of-comp"><Input id="of-comp" dir="auto" value={header.compliance_notes} onChange={(e) => setHeader({ ...header, compliance_notes: e.target.value })} /></Field>
         <Field label={t("sourcing.offer.rawText")} htmlFor="of-raw" hint={t("sourcing.inquiry.rawTextHint")}><Textarea id="of-raw" dir="auto" rows={4} value={header.raw_text} onChange={(e) => setHeader({ ...header, raw_text: e.target.value })} /></Field>
         <Field label={t("sourcing.offer.files")} htmlFor="of-files">
-          <input id="of-files" type="file" multiple className="text-sm" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+          <FileDrop id="of-files" onFiles={setFiles} hint={files.length ? files.map((x) => x.name).join("، ") : undefined} testId="of-files-drop" />
         </Field>
         <fieldset className="rounded-md border border-line p-3">
           <legend className="px-1 text-sm font-semibold">{t("quicklog.nextAction")} *</legend>

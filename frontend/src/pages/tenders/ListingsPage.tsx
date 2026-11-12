@@ -308,8 +308,8 @@ export function ListingsPage() {
             {data && data.items.length === 0 ? <EmptyState>{t("listings.empty")}</EmptyState> : (
               <table className="w-full text-sm" data-testid="listing-table">
                 <thead className="sticky top-0 z-10"><tr className="border-b border-line bg-surface-2 text-xs text-muted">
-                  <th className="w-10 bg-surface-2 px-3 py-2.5"><input type="checkbox" aria-label={t("listings.selectPage")} className="size-4 cursor-pointer accent-accent-bright" checked={allOnPage}
-                    onChange={(e) => setSelection(e.target.checked ? { mode: "ids", ids: new Set(pageIds) } : EMPTY_SELECTION)} /></th>
+                  <th className="w-10 bg-surface-2 px-3 py-2.5"><Checkbox label={<span className="sr-only">{t("listings.selectPage")}</span>} checked={allOnPage}
+                    onChange={(v) => setSelection(v ? { mode: "ids", ids: new Set(pageIds) } : EMPTY_SELECTION)} /></th>
                   {columns.map((c) => (
                     <th key={c} scope="col" aria-sort={SORT_OF[c] && sort.key === SORT_OF[c] ? (sort.dir === "asc" ? "ascending" : "descending") : undefined} className="bg-surface-2 px-3 py-2.5 text-start font-medium whitespace-nowrap">
                       {SORT_OF[c] ? <button type="button" className="relative cursor-pointer after:absolute after:-inset-2 hover:text-fg" onClick={() => setSortKey(SORT_OF[c]!)}>
@@ -436,7 +436,7 @@ function Row({ row, n, columns, active, checked, comfortable, job, jobKind, onCh
   return (
     <tr className={`border-b border-line transition-colors duration-150 ${comfortable ? "align-top" : "h-11 align-middle"} ${active ? "bg-accent-soft " : "hover:bg-hover"}`} data-listing={row.id}
       aria-selected={active}>
-      <td className="px-3 py-1"><input type="checkbox" aria-label={row.external_no} className="size-4 cursor-pointer accent-accent-bright" checked={checked} onChange={onCheck} /></td>
+      <td className="px-3 py-1"><Checkbox label={<span className="sr-only">{row.external_no}</span>} checked={checked} onChange={() => onCheck()} /></td>
       {columns.map((c) => <td key={c} className={`px-3 ${comfortable ? "py-2.5" : "py-1 whitespace-nowrap"}`}>{cell(c)}</td>)}
     </tr>
   );
