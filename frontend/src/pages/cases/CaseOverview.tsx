@@ -5,7 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Card, DescriptionList, EmptyState, ProgressRing, RouteLine, Stepper, Timeline } from "../../design/components";
+
+import { Card, DescriptionList, EmptyState, ProgressRing, Stepper, Timeline } from "../../design/components";
+import { RouteLine } from "../../design/components/charts";
 import { api, type Page } from "../../lib/api";
 import { pathPercent, pathSteps } from "../../lib/dealPath";
 import { useFormat } from "../../lib/prefs";

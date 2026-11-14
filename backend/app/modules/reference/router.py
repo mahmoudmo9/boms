@@ -1,11 +1,13 @@
 """Reference data API (v0.9.0): Settings → «داده‌های مرجع» (summary, import from a file) and the lists the forms
 pick from (locations, containers, Incoterms, transport modes, legal forms). Nothing is fetched from the internet."""
 import shutil
+import uuid
 import tempfile
 from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
@@ -35,12 +37,69 @@ def summary(_: CurrentUser, db: Db):
     return {"datasets": service.summary(db), "importable": list(importer.DATASETS)}
 
 
+# ---- v0.10.1: imports with a preview, as background jobs ----------------------------------------------------------------
+
+@router.post("/imports", status_code=201)
+async def start_import(request: Request, user: CurrentUser, db: Db, file: Annotated[UploadFile, File()],
+                       dataset: Annotated[str | None, Form()] = None):
+    """Upload an official file (UN/LOCODE release zip or parts, GLEIF ELF CSV). BOMS recognises the format and runs a
+    preview; nothing changes until ``confirm``."""
+    from app.modules.reference import imports
+
+    data = await file.read()
+    run = imports.start(db, file.filename or "upload.csv", data, dataset, user.username, request_source(request))
+    db.commit()
+    return imports.run_out(run)
+
+
+@router.get("/imports")
+def list_imports(_: CurrentUser, db: Db, limit: Annotated[int, Query(le=50)] = 10):
+    from app.modules.reference import imports
+    from app.modules.reference.models import ImportRun
+
+    rows = db.scalars(select(ImportRun).order_by(ImportRun.created_at.desc()).limit(limit))
+    return [imports.run_out(r) for r in rows]
+
+
+@router.get("/imports/{run_id}")
+def get_import(run_id: uuid.UUID, _: CurrentUser, db: Db):
+    from app.modules.reference import imports
+
+    return imports.run_out(imports.get(db, run_id))
+
+
+class ConfirmIn(BaseModel):
+    release: Annotated[str | None, Field(max_length=40)] = None
+
+
+@router.post("/imports/{run_id}/confirm")
+def confirm_import(run_id: uuid.UUID, body: ConfirmIn, request: Request, user: CurrentUser, db: Db):
+    from app.modules.reference import imports
+
+    run = imports.confirm(db, run_id, body.release, user.username, request_source(request))
+    db.commit()
+    return imports.run_out(run)
+
+
+@router.post("/imports/{run_id}/cancel")
+def cancel_import(run_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+    from app.modules.reference import imports
+
+    run = imports.cancel(db, run_id, user.username, request_source(request))
+    db.commit()
+    return imports.run_out(run)
+
+
 @router.post("/import")
 def import_file(request: Request, user: CurrentUser, db: Db, file: Annotated[UploadFile, File()],
                 dataset: Annotated[str, Form()], release: Annotated[str | None, Form(max_length=40)] = None):
     """Load a dataset from a file the owner downloaded (CSV, .gz or a zip of CSV parts)."""
     if dataset not in importer.DATASETS:
         raise AppError("unknown_dataset", "Unknown dataset", {"datasets": list(importer.DATASETS)}, status=422)
+    if dataset not in (*importer.OFFICIAL, "airports"):
+        # v0.10.1: the curated sets ship with BOMS; an official file uploaded as one was rejected row by row
+        raise AppError("curated_dataset", "This dataset ships with BOMS; upload the official file (UN/LOCODE or ELF) instead",
+                       {"official": list(importer.OFFICIAL)}, status=422)
     suffix = "".join(Path(file.filename or "data.csv").suffixes[-2:]) or ".csv"
     with tempfile.TemporaryDirectory(prefix="boms-ref-") as tmp:
         path = Path(tmp) / f"upload{suffix}"

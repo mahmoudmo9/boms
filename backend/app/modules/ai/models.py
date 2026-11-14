@@ -29,6 +29,7 @@ class Provider(Timestamps, Base):
     status_detail: Mapped[str | None] = mapped_column(Text)
     last_checked_at: Mapped[datetime | None] = mapped_column(TZ)
     last_latency_ms: Mapped[int | None] = mapped_column(Integer)
+    model_info: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)      # v0.10.1: /api/tags facts per model
 
 
 class Price(Timestamps, Base):
@@ -53,6 +54,7 @@ class Route(Timestamps, Base):
     fallback_provider_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     fallback_model: Mapped[str | None] = mapped_column(Text)
     privacy: Mapped[str] = mapped_column(Text, default="cloud_redacted")
+    think: Mapped[bool | None] = mapped_column(Boolean)                          # v0.10.1: None = the task's default
 
 
 class Call(Timestamps, Base):

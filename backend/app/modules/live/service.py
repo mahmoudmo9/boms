@@ -55,6 +55,12 @@ def changes(db: Session, since: datetime | None) -> dict[str, Any]:
     for r in read("SELECT id, status, updated_at FROM ext.harvest_run WHERE updated_at > :s ORDER BY updated_at DESC LIMIT :n"):
         notices.append({"kind": "record", "key": f"harvest:{r.id}:{r.status}:{_iso(r.updated_at)}", "entity_type": "harvest_run",
                         "entity_id": str(r.id), "action": r.status, "at": _iso(r.updated_at)})
+    for r in read("SELECT id, dataset, status, stage, rows_read, rows_total, updated_at FROM ref.import_run "
+                  "WHERE updated_at > :s ORDER BY updated_at DESC LIMIT :n"):
+        # v0.10.1: a reference import's progress (stage and rows read) reaches the page while it runs
+        notices.append({"kind": "record", "key": f"import:{r.id}:{r.stage}:{r.rows_read}:{_iso(r.updated_at)}",
+                        "entity_type": "reference_import", "entity_id": str(r.id), "action": r.status, "dataset": r.dataset,
+                        "stage": r.stage, "rows_read": r.rows_read, "rows_total": r.rows_total, "at": _iso(r.updated_at)})
     for r in db.execute(text(
             "SELECT command, listing_id, files_done, files_total, pages_done, pages_total, connected, updated_at "
             "FROM ext.agent_status WHERE updated_at > :s LIMIT 1"), {"s": start}):

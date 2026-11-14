@@ -44,6 +44,7 @@ class Party(Timestamps, Base):
     kind: Mapped[str] = mapped_column(Text, default="company")
     country_iso2: Mapped[str | None] = mapped_column(Text)
     website: Mapped[str | None] = mapped_column(Text)
+    tracking_url_template: Mapped[str | None] = mapped_column(Text)     # v0.10.1: a carrier's tracking page, {number}
     notes: Mapped[str | None] = mapped_column(Text)
     do_not_contact: Mapped[bool] = mapped_column(Boolean, default=False)
     do_not_contact_reason: Mapped[str | None] = mapped_column(Text)

@@ -6,7 +6,8 @@ import { useTranslation } from "react-i18next";
 
 import { Badge, Button, Card, Checkbox, EmptyState, ErrorNote, ErrorState, Field, Input, Loading, PageGrid, PageHeader, ProgressRing, Select, Stat, Status } from "../../design/components";
 import { api } from "../../lib/api";
-import { capTone, inputDescription, signInView, type CallRow, type ClaudeStatus, type Provider, type Route, type Usage } from "../../lib/ai";
+import { capTone, inputDescription, signInView, type CallRow, type ClaudeStatus, type Provider, type Route, type TestResult, type Usage } from "../../lib/ai";
+import { OllamaSection } from "./OllamaSection";
 import { useFormat } from "../../lib/prefs";
 
 function CapCard() {
@@ -108,7 +109,7 @@ function ProviderRow({ p, onChanged }: { p: Provider; onChanged: () => void }) {
   const [key, setKey] = useState("");
   const [prices, setPrices] = useState<Record<string, { input: string; output: string }>>({});
   const patch = useMutation({ mutationFn: (body: Record<string, unknown>) => api(`/api/ai/providers/${p.id}`, { method: "PATCH", body }), onSuccess: onChanged });
-  const test = useMutation({ mutationFn: () => api<{ status: string; detail: string; latency_ms: number }>(`/api/ai/providers/${p.id}/test`, { method: "POST" }), onSuccess: onChanged });
+  const test = useMutation({ mutationFn: () => api<TestResult>(`/api/ai/providers/${p.id}/test`, { method: "POST" }), onSuccess: onChanged });
   const saveKey = useMutation({ mutationFn: () => api(`/api/ai/providers/${p.id}/key`, { method: "PUT", body: { value: key || null } }), onSuccess: () => { setKey(""); onChanged(); } });
   const savePrice = useMutation({
     mutationFn: (model: string) => api("/api/ai/prices", { method: "PUT", body: { provider_id: p.id, model, input_per_mtok: prices[model].input, output_per_mtok: prices[model].output } }),
@@ -130,6 +131,7 @@ function ProviderRow({ p, onChanged }: { p: Provider; onChanged: () => void }) {
       </div>
       {p.status_detail && <p className="text-xs text-muted"><bdi>{p.status_detail}</bdi></p>}
       {p.kind === "claude_subscription" && <ClaudeSignIn onChanged={onChanged} />}
+      {p.kind === "ollama" && <OllamaSection p={p} placement={test.data?.placement} onChanged={onChanged} />}
       {(p.kind === "ollama" || p.kind === "openai_compatible") && !p.local && (
         <p className="text-xs text-warning" data-testid="ai-cloud-note">{t("ai.settings.cloudNote")}</p>
       )}

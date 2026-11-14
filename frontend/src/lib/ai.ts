@@ -33,13 +33,30 @@ export type Draft = {
 
 export type Provider = { id: string; kind: string; label: string; enabled: boolean; base_url: string | null; models: string[]; secret_name: string | null;
   has_key: boolean; status: "unknown" | "ok" | "error"; status_detail: string | null; last_checked_at: string | null; last_latency_ms: number | null;
-  local: boolean; api: boolean; missing_prices: string[]; cli: { sdk: boolean; cli: string | null; steps: string | null; sdk_version?: string } | null };
+  local: boolean; api: boolean; missing_prices: string[]; cli: { sdk: boolean; cli: string | null; steps: string | null; sdk_version?: string } | null;
+  /** v0.10.1: local or cloud per model (Ollama serves cloud models through its local address) */
+  model_local?: Record<string, boolean>; model_info?: Record<string, OllamaModel> };
+
+/** One model of Ollama's own list (``/api/tags``). */
+export type OllamaModel = { name?: string; size: number | null; family: string | null; parameter_size?: string | null; quantization?: string | null;
+  remote_host?: string | null; cloud: boolean; local?: boolean };
+
+/** Where the loaded model sits after a test call (``/api/ps``). */
+export type Placement = { size: number; size_vram: number; gpu_share: number | null; fits: boolean; context_length?: number | null };
+export type TestResult = { status: string; detail: string; latency_ms: number; placement?: Placement | null; local?: boolean };
+
+/** «۱۰۰٪ GPU» when the whole model is in GPU memory, else the split; null when the model was not loaded. */
+export function placementView(p: Placement | null | undefined): { gpu: number; cpu: number; fits: boolean } | null {
+  if (!p || p.gpu_share === null || p.gpu_share === undefined) return null;
+  const gpu = Math.round(p.gpu_share * 100);
+  return { gpu, cpu: 100 - gpu, fits: p.fits };
+}
 
 export type Usage = { spent_usd: string; cap_usd: string; percent: number; warning: 50 | 80 | null; reached: boolean; api_fallback_enabled: boolean;
   subscription_calls: number; configured: boolean };
 
 export type Route = { id: string; task: string; primary_provider_id: string | null; primary_model: string | null; fallback_provider_id: string | null;
-  fallback_model: string | null; privacy: "cloud" | "cloud_redacted" | "local_only" };
+  fallback_model: string | null; privacy: "cloud" | "cloud_redacted" | "local_only"; think?: boolean | null; think_default?: boolean };
 
 export type CallRow = { id: string; at: string; task: string; entity_type: string | null; case_id: string | null; provider: string | null; provider_kind: string | null;
   model: string | null; prompt_version: string | null; input: Record<string, unknown>; redactions: Record<string, number>; privacy: string | null;

@@ -142,55 +142,6 @@ def _locations_curated(db: Session, text: str, report: Report, release: str) -> 
     _deactivate(db, Location, CURATED, keep, report)      # a curated code corrected in a later release (IRCHB -> IRZBR)
 
 
-def _unlocode(db: Session, text: str, report: Report, release: str) -> None:
-    """The official UNECE CSV (columns: Change, Country, Location, Name, NameWoDiacritics, Subdivision, Status,
-    Function, Date, IATA, Coordinates, Remarks; no header). Country header rows (no location) are skipped; ``X`` (to
-    be removed) rows deactivate."""
-    seen: set = set()
-    matched, mismatches = 0, []
-    curated = _curated_rows()        # from the shipped file, not the table: the same answer on every import
-    for n, cols in enumerate(csv.reader(io.StringIO(text)), start=1):
-        if len(cols) < 11 or not cols[2].strip() or cols[1].strip() == "Country":      # country rows, a header row
-            continue
-        change, country, loc = cols[0].strip(), cols[1].strip().upper(), cols[2].strip().upper()
-        if not re.fullmatch(r"[A-Z]{2}", country) or not re.fullmatch(r"[A-Z2-9]{3}", loc):
-            report.reject(n, f"bad code {country}{loc}")
-            continue
-        code = country + loc
-        existing = db.scalar(select(Location).where(Location.unlocode == code))
-        lat, lon = _coordinates(cols[10])
-        values = {"country_iso2": country, "code": loc, "name": cols[3].strip(), "name_ascii": cols[4].strip() or ascii_name(cols[3]),
-                  "subdivision": cols[5].strip() or None, "functions": cols[7].strip() or None,
-                  "iata": cols[9].strip().upper() or None, "latitude": lat, "longitude": lon,
-                  "active": change != "X", "verified": True, "source": "unece", "release": release,
-                  **_flags_from_function(cols[7].strip())}
-        if existing is not None and existing.name_fa:
-            values["name_fa"] = existing.name_fa       # the curated Persian name stays
-        mine = curated.get(code)
-        if mine is not None:
-            matched += 1
-            mismatches += _curated_mismatches(code, mine, values)
-            for flag in SHORT_FLAGS.values():          # a use the curated row records (CNSHA as a port) is kept
-                values[flag] = values[flag] or mine[flag]
-            values["iata"] = values["iata"] or mine["iata"]
-            values["name_fa"] = values.get("name_fa") or mine["name_fa"]
-        row = _upsert(db, Location, {"unlocode": code}, values, report)
-        seen.add(code)
-        db.flush()
-        if row.iata:
-            for airport in db.scalars(select(Airport).where(Airport.iata == row.iata, Airport.location_id.is_(None))):
-                airport.location_id = row.id
-    unmatched = [r.unlocode for r in db.scalars(select(Location).where(Location.source == CURATED, Location.active.is_(True)))
-                 if r.unlocode not in seen]
-    # the official release comes as several files: the counts add up, the unmatched list is what is left at the end
-    report.notes["curated_matched"] = report.notes.get("curated_matched", 0) + matched
-    if mismatches:
-        report.notes["curated_mismatches"] = (report.notes.get("curated_mismatches", []) + mismatches)[:500]
-    report.notes.pop("curated_not_in_file", None)
-    if unmatched:
-        report.notes["curated_not_in_file"] = unmatched[:200]     # reported, not a rejection: they stay unverified
-
-
 def _name_key(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", ascii_name(name or "").lower()).strip()
 
@@ -269,44 +220,6 @@ def _legal_forms_curated(db: Session, text: str, report: Report, release: str) -
             "curated": True, "active": True, "source": CURATED, "release": release}, report)
 
 
-def _elf(db: Session, text: str, report: Report, release: str) -> None:
-    """The GLEIF ISO 20275 CSV (header row; columns found by name)."""
-    reader = csv.DictReader(io.StringIO(text))
-    cols = {name.lower(): name for name in (reader.fieldnames or [])}
-
-    def col(*words: str) -> str | None:
-        for low, name in cols.items():
-            if all(w in low for w in words):
-                return name
-        return None
-
-    c_code, c_country = col("elf code"), col("country code")
-    c_local, c_trans = col("local name"), col("transliterated name")
-    c_abbr, c_status = col("abbreviations local"), col("status")
-    if not (c_code and c_country and c_local):
-        report.reject(1, "not an ELF code list (missing columns)")
-        return
-    keep = set()
-    for n, r in enumerate(reader, start=2):
-        elf = (r.get(c_code) or "").strip().upper()
-        if not re.fullmatch(r"[A-Z0-9]{4}", elf):
-            report.reject(n, f"bad ELF code {elf!r}")
-            continue
-        code = f"ELF-{elf}"
-        if code in keep:
-            continue           # one row per code (the list repeats a code per language)
-        row = _upsert(db, LegalForm, {"code": code}, {
-            "elf_code": elf, "country_iso2": (r.get(c_country) or "").strip()[:2].upper() or "XX",
-            "local_name": (r.get(c_local) or "").strip() or elf, "transliterated": (r.get(c_trans) or "").strip() or None if c_trans else None,
-            "abbreviations": [a.strip() for a in re.split(r"[;,]", r.get(c_abbr) or "") if a.strip()] if c_abbr else [],
-            "curated": False, "active": (r.get(c_status) or "ACTV").strip().upper() != "INAC" if c_status else True,
-            "source": "gleif", "release": release}, report)
-        keep.add(code)
-        db.flush()
-        keep.add(row.id)
-    _deactivate(db, LegalForm, "gleif", {k for k in keep if not isinstance(k, str)}, report)
-
-
 def _simple(model, key: str, convert):
     def run(db: Session, text: str, report: Report, release: str) -> None:
         keep = set()
@@ -362,8 +275,9 @@ def _units(db: Session, text: str, report: Report, release: str) -> None:
             report.unchanged += 1
 
 
-RUNNERS = {"locations": _locations_curated, "unlocode": _unlocode, "airports": _airports, "legal_forms": _legal_forms_curated,
-           "elf": _elf, "containers": _containers, "transport_modes": _modes, "incoterms": _incoterms, "units": _units}
+RUNNERS = {"locations": _locations_curated, "airports": _airports, "legal_forms": _legal_forms_curated,
+           "containers": _containers, "transport_modes": _modes, "incoterms": _incoterms, "units": _units}
+OFFICIAL = ("unlocode", "elf")      # v0.10.1: the official files go through bulk.py (preview, COPY, set-based merge)
 RELEASES = {"locations": "boms-2026.11", "airports": "ourairports-2026-11-09", "legal_forms": "boms-2026.11",
             "containers": "ISO 6346:2022", "transport_modes": "UNECE Rec 19", "incoterms": "Incoterms 2020",
             "units": "UNECE Rec 20 rev 17"}
@@ -394,6 +308,8 @@ def _texts(dataset: str, path: Path | None) -> tuple[list[str], str, str | None]
 
 def run(db: Session, dataset: str, path: str | Path | None = None, release: str | None = None,
         source_ev: str = "script", actor: str | None = None) -> dict:
+    if dataset in OFFICIAL:
+        return _run_official(db, dataset, Path(path) if path else None, release, source_ev, actor)
     if dataset not in RUNNERS:
         raise ValueError(f"unknown dataset {dataset!r}; one of {', '.join(DATASETS)}")
     texts, source, digest = _texts(dataset, Path(path) if path else None)
@@ -446,3 +362,25 @@ def restore_archived(db: Session) -> int:
         db.execute(text("UPDATE sys.downgrade_archive SET restored_at = now() WHERE id = :i"), {"i": archive_id})
         done += 1
     return done
+
+
+def _run_official(db: Session, dataset: str, path: Path | None, release: str | None, source_ev: str, actor: str | None) -> dict:
+    """``reference-import unlocode|elf --file …``: the same set-based import as the page, without the preview step."""
+    from app.modules.reference import imports
+
+    if path is None:
+        raise FileNotFoundError(f"{dataset}: no file is shipped; pass --file with the official CSV")
+    out = imports.run_sync(db, dataset, path, release)
+    restored = restore_archived(db)
+    report = {"dataset": dataset, "release": out["release"], "source": "file", "inserted": out["inserted"],
+              "updated": out["updated"], "deactivated": out["deactivated"], "unchanged": out["unchanged"],
+              "rejected": out["rejected"], "rejections": out["examples"], "reasons": out["reasons"],
+              "encodings": out["encodings"], "complete": out["complete"], "warnings": out["warnings"],
+              "seconds": out["seconds"], "restored_links": restored, **({"notes": out["notes"]} if out["notes"] else {})}
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    db.add(DatasetImport(dataset=dataset, release=report["release"], source="file", file_sha256=digest,
+                         report=jsonable(report), imported_at=clock.now()))
+    db.flush()
+    events.record(db, "reference", None, "import", jsonable({k: v for k, v in report.items() if k not in ("rejections", "notes")}),
+                  source_ev, actor=actor)
+    return report

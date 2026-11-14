@@ -10,3 +10,6 @@ dev-data/
 tsconfig.tsbuildinfo
 frontend/tsconfig.tsbuildinfo
 dist/
+
+# v0.10.1: review screenshots ship as screens-<version>.zip beside the release, never in git
+docs/screens/

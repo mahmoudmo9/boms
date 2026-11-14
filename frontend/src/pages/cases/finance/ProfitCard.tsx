@@ -2,7 +2,8 @@
  * in rials; the FX effect, VAT summary, unrealized amounts and the cost of money as information lines. */
 import { useTranslation } from "react-i18next";
 
-import { Badge, Card, EmptyState, KpiTile, ProfitBridge, Stat } from "../../../design/components";
+import { Badge, Card, EmptyState, KpiTile, Stat } from "../../../design/components";
+import { ProfitBridge } from "../../../design/components/charts";
 import { profitBridge, profitLines, signed, varianceTone, type Profit } from "../../../lib/finance";
 import { useFormat } from "../../../lib/prefs";
 

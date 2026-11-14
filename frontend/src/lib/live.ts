@@ -31,6 +31,7 @@ const CASE = ["case", "cases", "command-center", "case-tasks", "tasks", "events"
 export const RECORD_ROOTS: Record<string, string[]> = {
   listing: LISTING,
   harvest_run: ["listings", "setad-run", "setad-agent", "command-center"],
+  reference_import: ["reference"],                       // v0.10.1: progress and the end of a reference import
   setad_agent: ["setad-agent", "listings"],
   party: ["parties", "party", "contacts", "funnel", "interactions", "command-center", "party-finance", "party-execution", "ratings"],
   contact: ["contacts", "party", "parties"],

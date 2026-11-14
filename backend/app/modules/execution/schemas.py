@@ -327,6 +327,7 @@ class ShipmentBase(InputModel):
     forwarder_party_id: uuid.UUID | None = None
     transport_doc_kind: DocKind | None = None
     transport_doc_no: Text300 | None = None
+    tracking_number: Text300 | None = None          # v0.10.1: empty = the transport document number
     containers: Annotated[list[Annotated[str, Field(max_length=40)]], Field(max_length=200)] | None = None
     # v0.9.0: ISO 6346 numbers (check digit validated) with their size/type code; the plain list above stays
     container_units: Annotated[list["ContainerIn"], Field(max_length=200)] | None = None

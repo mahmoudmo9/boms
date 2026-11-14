@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Card, CashFlow, EmptyState, Segmented, Status } from "../../../design/components";
+import { Card, EmptyState, Segmented, Status } from "../../../design/components";
+import { CashFlow } from "../../../design/components/charts";
 import { calendarMonth, dealCashFlow } from "../../../lib/dealCash";
 import { toDateString } from "../../../lib/followups";
 import { useFormat } from "../../../lib/prefs";

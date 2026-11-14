@@ -287,6 +287,7 @@ class Shipment(Timestamps, Base):
     forwarder_party_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     transport_doc_kind: Mapped[str | None] = mapped_column(Text)
     transport_doc_no: Mapped[str | None] = mapped_column(Text)
+    tracking_number: Mapped[str | None] = mapped_column(Text)           # v0.10.1: empty = the transport document number
     containers: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
     vessel_or_flight: Mapped[str | None] = mapped_column(Text)
     origin: Mapped[str | None] = mapped_column(Text)

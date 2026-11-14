@@ -32,7 +32,7 @@ from app.modules.system import settings
 SHIPMENT_FIELDS = ("mode", "carrier_party_id", "forwarder_party_id", "transport_doc_kind", "transport_doc_no", "containers",
                    "vessel_or_flight", "origin", "destination", "incoterm", "etd", "eta", "atd", "ata", "status",
                    "insurer_party_id", "policy_no", "insured_amount", "insured_amount_currency", "notes",
-                   "origin_location_id", "destination_location_id")
+                   "origin_location_id", "destination_location_id", "tracking_number")
 EVENT_SUGGESTIONS = ("booked", "loaded", "departed", "transshipment", "arrived", "customs_entry", "released", "delivered",
                      "delay", "other")
 STATUS_EVENT = {"booked": "booked", "in_transit": "departed", "arrived": "arrived", "at_customs": "customs_entry",
@@ -354,7 +354,24 @@ def shipment_out(db: Session, s: Shipment) -> dict:
     return jsonable({**row_snapshot(s), "items": [row_snapshot(i) for i in shipment_items(db, s.id)],
                      "events": [row_snapshot(e) for e in shipment_events(db, s.id)],
                      "documents": [row_snapshot(d) for d in shipment_documents(db, s.id)],
-                     "container_units": [row_snapshot(c) for c in shipment_containers(db, s.id)], "route": route_out(db, s)})
+                     "container_units": [row_snapshot(c) for c in shipment_containers(db, s.id)], "route": route_out(db, s),
+                     "tracking": tracking(db, s)})
+
+
+def tracking(db: Session, s: Shipment) -> dict | None:
+    """v0.10.1: the carrier's tracking link for this shipment's number. BOMS builds the link and never fetches it; the
+    owner opens it in the default browser."""
+    from urllib.parse import quote
+
+    from app.modules.parties.models import Party
+
+    number = (s.tracking_number or s.transport_doc_no or "").strip()
+    carrier = db.get(Party, s.carrier_party_id) if s.carrier_party_id else None
+    template = carrier.tracking_url_template if carrier else None
+    if not number and not template:
+        return None
+    url = template.replace("{number}", quote(number, safe="")) if (template and number) else None
+    return {"number": number or None, "url": url, "carrier_has_template": bool(template)}
 
 
 # ---- inspections ------------------------------------------------------------------------------------------------------

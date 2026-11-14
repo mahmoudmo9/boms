@@ -86,3 +86,12 @@ describe("source of the field in focus (v0.10.0)", () => {
     expect(sourceFocus(null, 0).active).toBe(false);
   });
 });
+
+describe("Ollama placement (v0.10.1)", () => {
+  it("says all on the GPU, or the split", async () => {
+    const { placementView } = await import("./ai");
+    expect(placementView({ size: 5, size_vram: 5, gpu_share: 1, fits: true })).toEqual({ gpu: 100, cpu: 0, fits: true });
+    expect(placementView({ size: 10, size_vram: 6.5, gpu_share: 0.65, fits: false })).toEqual({ gpu: 65, cpu: 35, fits: false });
+    expect(placementView(null)).toBeNull();
+  });
+});

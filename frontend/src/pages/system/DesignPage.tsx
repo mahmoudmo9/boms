@@ -5,20 +5,12 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Badge, Bars, Button, Card, CashFlow, Checkbox, Chip, CodeChip, Combobox, ConfirmDialog, DataTable, DatedTimeline, DatePicker, DescriptionList, Drawer, EmptyState,
-  ErrorState, Field, FileDrop, Icon, ICON_NAMES, IconButton, InlineAlert, Input, Kbd, KpiTile, Loading, Menu, Modal, MoneyInput, PageHeader, Pagination, Popover, ProfitBridge,
-  ProgressBar, ProgressRing, QuantityInput, RadioGroup, RouteLine, Section, Segmented, Select, Skeleton, SourceChip, Sparkline, Spinner, Stat, Status, Stepper, Switch, Tabs,
-  Textarea, TextLink, Timeline, Tooltip, useToast, ValidatedInput } from "../../design/components";
+import { Badge, Button, Card, Checkbox, Chip, CodeChip, Combobox, ConfirmDialog, DataTable, DatedTimeline, DatePicker, DescriptionList, Drawer, EmptyState, ErrorState, Field, FileDrop, Icon, ICON_NAMES, IconButton, InlineAlert, Input, Kbd, KpiTile, Loading, Menu, Modal, MoneyInput, PageHeader, Pagination, Popover, ProgressBar, ProgressRing, QuantityInput, RadioGroup, Section, Segmented, Select, Skeleton, SourceChip, Spinner, Stat, Status, Stepper, Switch, Tabs, Textarea, TextLink, Timeline, Tooltip, useToast, ValidatedInput } from "../../design/components";
+import { Bars, CashFlow, ProfitBridge, RouteLine, Sparkline } from "../../design/components/charts";
 import tokensCss from "../../design/tokens.css?raw";
 import { contrastTable, readTheme } from "../../design/tokens";
 
-const DEV_KEY = "boms.dev";
-export function devMode(): boolean {
-  try { return localStorage.getItem(DEV_KEY) === "1"; } catch { return false; }
-}
-export function setDevMode(on: boolean): void {
-  try { if (on) localStorage.setItem(DEV_KEY, "1"); else localStorage.removeItem(DEV_KEY); } catch { /* per-browser convenience only */ }
-}
+export { devMode, setDevMode } from "./devMode";  // kept for any older import
 
 const CURRENCIES = ["USD", "EUR", "AED", "CNY", "IRR"].map((c) => ({ value: c, label: c, code: c }));
 const UNITS = [{ value: "pc", label: "عدد / piece", code: "H87" }, { value: "kg", label: "کیلوگرم / kilogram", code: "KGM" }, { value: "set", label: "ست / set", code: "SET" }];

@@ -27,8 +27,16 @@ class Fake:
     def __init__(self):
         self.requests: list[httpx.Request] = []
         self.answers: list = []          # queue of (status, body) or callables
+        # v0.10.1: Ollama's model list and loaded models, like the real server (metadata reads are kept apart)
+        self.meta: list[httpx.Request] = []
+        self.ollama_tags = [{"name": n, "size": 4_700_000_000, "details": {"family": "qwen2", "parameter_size": "7B"}}
+                            for n in ("qwen2.5:latest", "qwen2.5-vl:latest", "llama3.2:latest")]
+        self.ollama_ps: list[dict] = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
+        if request.method == "GET" and request.url.path in ("/api/tags", "/api/ps"):
+            self.meta.append(request)
+            return httpx.Response(200, json={"models": self.ollama_tags if request.url.path == "/api/tags" else self.ollama_ps})
         self.requests.append(request)
         answer = self.answers.pop(0) if self.answers else (200, None)
         if callable(answer):

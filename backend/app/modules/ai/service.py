@@ -64,12 +64,43 @@ def endpoint_is_local(base_url: str | None) -> bool:
     return any(ip in net for net in LOCAL_NETS if net.version == ip.version)
 
 
-def is_local(provider: Provider) -> bool:
-    """Local is decided by where the provider's endpoint is, not by its kind (v0.10.0 section 0.2.1): an ``ollama``
-    or ``openai_compatible`` provider at a public address is cloud. The hosted APIs and the subscription are cloud."""
+def is_local(provider: Provider, model: str | None = None) -> bool:
+    """Local is decided by where the endpoint is (v0.10.0 section 0.2.1) AND by the model (v0.10.1 section 0.1.1):
+    Ollama serves cloud models (``…:cloud``, ``…-cloud``, a remote host in ``/api/tags``) through its local address.
+    Fail-safe: an Ollama model its cached model list does not show as local is cloud. Without a model, the provider
+    is local only when every model it offers is. The hosted APIs and the subscription are cloud."""
+    from app.modules.ai import ollama
+
     if provider.kind not in ("ollama", "openai_compatible"):
         return False
-    return endpoint_is_local(provider.base_url or adapters.DEFAULT_URLS.get(provider.kind))
+    if not endpoint_is_local(provider.base_url or adapters.DEFAULT_URLS.get(provider.kind)):
+        return False
+    models = [model] if model is not None else list(provider.models or [])
+    if provider.kind == "ollama":
+        return bool(models) and all(ollama.model_is_local(m, provider.model_info) for m in models)
+    return all(not ollama.is_cloud_name(m) for m in models)      # no model list API: the name rule only
+
+
+def refresh_models(db: Session, provider: Provider) -> dict:
+    """Read Ollama's ``/api/tags`` and keep it on the provider (size, family, cloud). Errors leave the old list."""
+    from app.modules.ai import ollama
+
+    info = ollama.list_models(provider.base_url or adapters.DEFAULT_URLS["ollama"])
+    provider.model_info = info
+    db.flush()
+    return info
+
+
+def ensure_model_facts(db: Session, provider: Provider, model: str) -> None:
+    """Before an Ollama call: a model the cached list does not know yet is looked up once (a fresh ``ollama pull``).
+    When the list cannot be read the cache stays as it is, and the model counts as cloud."""
+    if provider.kind != "ollama" or not model or model in (provider.model_info or {}) \
+            or not endpoint_is_local(provider.base_url or adapters.DEFAULT_URLS["ollama"]):
+        return
+    try:
+        refresh_models(db, provider)
+    except ProviderError:
+        pass
 
 
 def case_local_only(db: Session, case_id) -> bool:
@@ -148,6 +179,7 @@ def estimate(db: Session, provider: Provider, model: str, chars: int, images: in
 class Candidate:
     provider: Provider
     model: str
+    think: bool | None = None
 
 
 def candidates(db: Session, task: str) -> tuple[list[Candidate], str]:
@@ -158,7 +190,7 @@ def candidates(db: Session, task: str) -> tuple[list[Candidate], str]:
     for pid, model in ((route.primary_provider_id, route.primary_model), (route.fallback_provider_id, route.fallback_model)):
         provider = db.get(Provider, pid) if pid else None
         if provider is not None:
-            out.append(Candidate(provider, model or (provider.models[0] if provider.models else "")))
+            out.append(Candidate(provider, model or (provider.models[0] if provider.models else ""), route.think))
     return out, route.privacy
 
 
@@ -208,7 +240,9 @@ def run(db: Session, task: str, *, text: str, images: list[Attachment] | None = 
                     provider_id=provider.id, provider_kind=provider.kind, model=cand.model, prompt_version=prompt.version,
                     input=describe, privacy=privacy, attempt=attempt, fallback_of_id=previous.id if previous else None,
                     job_id=job_id)
-        if privacy == "local_only" and not is_local(provider):
+        ensure_model_facts(db, provider, cand.model)
+        local = is_local(provider, cand.model)
+        if privacy == "local_only" and not local:
             previous = _log(db, **base, status="skipped", error="local_only: cloud provider not allowed")
             attempts.append(previous)
             continue
@@ -222,13 +256,15 @@ def run(db: Session, task: str, *, text: str, images: list[Attachment] | None = 
                 attempts.append(previous)
                 continue
         redactor = redact.for_context(db, case_id, party_ids, private_prices) if privacy == "cloud_redacted" \
-            and not is_local(provider) else redact.Redactor(patterns=False)
+            and not local else redact.Redactor(patterns=False)
         user_text = prompt.render(input=text, examples=examples, **(prompt_values or {}))
         sent = redactor.redact(user_text)
         base["redactions"] = redactor.summary()
         req = Request(task, cand.model, prompt.system, sent, images, schema, max_tokens)
         adapter = adapters.for_provider(provider.kind, provider.base_url, api_key(provider))
         try:
+            if provider.kind == "ollama":
+                ollama_options(db, req, task, cand.think)
             result, data = _generate_valid(adapter, req, schema)
         except ProviderError as exc:
             previous = _log(db, **base, status="error", error=f"{exc.kind}: {exc}"[:2000])
@@ -287,6 +323,17 @@ def _generate_valid(adapter, req: Request, schema: dict | None):
 
 # ---- providers -------------------------------------------------------------------------------------------------------
 
+def ollama_options(db: Session, req: Request, task: str, route_think: bool | None) -> None:
+    """v0.10.1 section 0.1.2: num_ctx sized to this prompt (capped by «حداکثر طول متن»), think per route, keep_alive."""
+    from app.modules.ai import ollama
+    from app.modules.system import settings
+
+    req.num_ctx, req.max_tokens = ollama.num_ctx(len(req.system) + len(req.text), len(req.images), req.max_tokens,
+                                                 int(settings.get(db, "ai.ollama.max_context")))
+    req.think = ollama.think_for(task, route_think)
+    req.keep_alive = f"{int(settings.get(db, 'ai.ollama.keep_alive_minutes'))}m"
+
+
 def test_connection(db: Session, provider_id: uuid.UUID) -> dict:
     """«Test connection»: a tiny prompt, shown with its latency; the provider's status is saved."""
     from app.core.time import utcnow
@@ -295,14 +342,24 @@ def test_connection(db: Session, provider_id: uuid.UUID) -> dict:
     model = provider.models[0] if provider.models else ""
     prompt = prompts.load("ping")
     adapter = adapters.for_provider(provider.kind, provider.base_url, api_key(provider))
-    status, detail, latency = "ok", None, None
+    status, detail, latency, where = "ok", None, None, None
     try:
         if not model and provider.kind != "claude_subscription":
             raise ProviderError("not_configured", "add at least one model")
-        result = adapter.generate(Request("ping", model, prompt.system, prompt.render(), [], None, 16))
+        req = Request("ping", model, prompt.system, prompt.render(), [], None, 16)
+        if provider.kind == "ollama":
+            refresh_models(db, provider)
+            ollama_options(db, req, "ping", None)
+        result = adapter.generate(req)
         latency = result.duration_ms
         detail = (result.text or "").strip()[:60]
         tokens = (result.tokens_in, result.tokens_out)
+        if provider.kind == "ollama":                  # v0.10.1: where the model ran (share of it in GPU memory)
+            from app.modules.ai import ollama
+            try:
+                where = ollama.placement(provider.base_url or adapters.DEFAULT_URLS["ollama"], model)
+            except ProviderError:
+                where = None
     except ProviderError as exc:
         status, detail, tokens = "error", f"{exc.kind}: {exc}"[:300], (None, None)
     provider.status, provider.status_detail, provider.last_checked_at, provider.last_latency_ms = status, detail, utcnow(), latency
@@ -312,7 +369,8 @@ def test_connection(db: Session, provider_id: uuid.UUID) -> dict:
          subscription=provider.kind == "claude_subscription",
          cost_usd=None if provider.kind == "claude_subscription" else cost(price_of(db, provider.id, model), *tokens))
     db.flush()
-    return {"status": status, "detail": detail, "latency_ms": latency}
+    return {"status": status, "detail": detail, "latency_ms": latency, "placement": where,
+            "local": is_local(provider, model) if model else False}
 
 
 def get_provider(db: Session, provider_id) -> Provider:

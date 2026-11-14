@@ -6,7 +6,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { Badge, Bdi, Button, buttonClass, Card, DataTable, ErrorNote, PageHeader, Pagination, Stat, Switch, useToast } from "../../design/components";
-import { devMode, setDevMode } from "./DesignPage";
+import { devMode, setDevMode } from "./devMode";
 import { useJobRunner } from "../../shell/LiveUpdates";
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";

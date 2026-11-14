@@ -1,6 +1,7 @@
 /** Case tab «لجستیک» (v0.7.0): the process checklist(s) with references, dates, documents and reminders; shipments with
  * their events and documents and the delay warnings; inspections. */
-import { Badge, Bdi, Button, Card, CodeChip, DateInput, EmptyState, ErrorNote, ErrorState, Field, Icon, Input, Loading, LookupField, Modal, RouteLine, Select, Stat, ValidatedInput } from "../../../design/components";
+import { Badge, Bdi, Button, Card, CodeChip, DateInput, EmptyState, ErrorNote, ErrorState, Field, Icon, Input, Loading, LookupField, Modal, Select, Stat, ValidatedInput } from "../../../design/components";
+import { RouteLine } from "../../../design/components/charts";
 import type { LookupItem } from "../../../lib/smart";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";

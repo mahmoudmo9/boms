@@ -140,6 +140,15 @@ def create_party(body: PartyCreate, request: Request, response: Response, user: 
     return {"created": True, "possible_duplicates": dup_out, "party": party_detail(db, party.id)}
 
 
+@parties_router.get("/{party_id}/scorecard")
+def party_scorecard(party_id: uuid.UUID, _: CurrentUser, db: Db):
+    """v0.10.1: on time, inspection, response time and price position, each with its sample size (read-only)."""
+    from app.modules.parties import scorecard
+
+    service.get_party(db, party_id)
+    return scorecard.scorecard(db, party_id)
+
+
 @parties_router.get("/{party_id}")
 def get_party(party_id: uuid.UUID, _: CurrentUser, db: Db):
     return party_detail(db, party_id)

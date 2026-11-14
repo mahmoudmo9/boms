@@ -76,6 +76,7 @@ class LegalForm(Timestamps, Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     source: Mapped[str] = mapped_column(Text)
     release: Mapped[str | None] = mapped_column(Text)
+    names: Mapped[list[dict]] = mapped_column(JSONB, default=list)        # v0.10.1: ELF names per language
 
 
 class ContainerType(Timestamps, Base):
@@ -133,3 +134,27 @@ class DatasetImport(Timestamps, Base):
     file_sha256: Mapped[str | None] = mapped_column(Text)
     report: Mapped[dict[str, Any]] = mapped_column(JSONB)
     imported_at: Mapped[datetime] = mapped_column(TZ)
+
+
+class ImportRun(Timestamps, Base):
+    """v0.10.1 section 0.2: one reference import — preview (dry run), progress for the event stream, cancel, report."""
+    __tablename__ = "import_run"
+    __table_args__ = {"schema": "ref"}
+
+    id: Mapped[uuid.UUID] = _id()
+    dataset: Mapped[str] = mapped_column(Text)
+    file_name: Mapped[str] = mapped_column(Text)
+    file_path: Mapped[str] = mapped_column(Text)
+    file_sha256: Mapped[str] = mapped_column(Text)
+    release: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, default="previewing")
+    stage: Mapped[str | None] = mapped_column(Text)
+    rows_read: Mapped[int] = mapped_column(Integer, default=0)
+    rows_total: Mapped[int | None] = mapped_column(Integer)
+    started_at: Mapped[datetime | None] = mapped_column(TZ)
+    preview: Mapped[dict | None] = mapped_column(JSONB)
+    report: Mapped[dict | None] = mapped_column(JSONB)
+    error: Mapped[str | None] = mapped_column(Text)
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    job_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
+    actor: Mapped[str | None] = mapped_column(Text)

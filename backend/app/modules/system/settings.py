@@ -274,6 +274,8 @@ def _money_cap(value: Any) -> float:
 DEFINITIONS.update({
     # v0.9.0: AI layer (section 1.2); 0 disables the API fallback (subscription and local tasks continue)
     "ai.monthly_cap_usd": (20, _money_cap),
+    "ai.ollama.max_context": (8192, _int_range(2048, 262144)),      # v0.10.1: «حداکثر طول متن» (tokens, num_ctx cap)
+    "ai.ollama.keep_alive_minutes": (10, _int_range(0, 1440)),      # v0.10.1: how long Ollama keeps the model loaded
     "ai.log_retention_days": (365, _int_range(7, 3650)),
     "ai.correspondence_language": ("en", _choice("en", "fa")),
 })

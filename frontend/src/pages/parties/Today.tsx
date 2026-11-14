@@ -7,7 +7,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { useNow, useTimeLeftText } from "../../components/TimeLeft";
-import { Bars, buttonClass, Card, CashFlow, Chip, DatedTimeline, EmptyState, Icon, KpiTile, ProgressBar, ProgressRing, Segmented, Status } from "../../design/components";
+import { buttonClass, Card, Chip, DatedTimeline, EmptyState, Icon, KpiTile, ProgressBar, ProgressRing, Segmented, Status } from "../../design/components";
+import { Bars, CashFlow } from "../../design/components/charts";
 import { capTone } from "../../lib/ai";
 import { useAuth } from "../../lib/auth";
 import { useFormat } from "../../lib/prefs";

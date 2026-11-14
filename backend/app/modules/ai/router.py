@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.errors import AppError
 from app.core.web import request_source
-from app.modules.ai import adapters, drafts, service
+from app.modules.ai import adapters, drafts, service, ollama
 from app.modules.ai.models import Call, Price, Provider, Route
 from app.modules.events import service as events
 from app.core.schemas import InputModel
@@ -34,6 +34,9 @@ def provider_out(db: Session, p: Provider) -> dict:
                      "models": p.models, "secret_name": p.secret_name, "has_key": has_key, "status": p.status,
                      "status_detail": p.status_detail, "last_checked_at": p.last_checked_at,
                      "last_latency_ms": p.last_latency_ms, "local": service.is_local(p),
+                     # v0.10.1: local or cloud per model (Ollama serves cloud models through a local address)
+                     "model_local": {m: service.is_local(p, m) for m in (p.models or [])},
+                     "model_info": p.model_info or {},
                      "api": p.kind in adapters.API_KINDS, "missing_prices": service.missing_prices(db, p),
                      "cli": adapters.cli_status() if p.kind == "claude_subscription" else None})
 
@@ -69,6 +72,7 @@ class RoutePatch(InputModel):
     fallback_provider_id: uuid.UUID | None = None
     fallback_model: ModelId | None = None
     privacy: Literal["cloud", "cloud_redacted", "local_only"] | None = None
+    think: bool | None = None                   # v0.10.1 (Ollama); null = the task's default
 
 
 class PrivacyIn(InputModel):
@@ -123,6 +127,12 @@ def patch_provider(provider_id: uuid.UUID, body: ProviderPatch, request: Request
     if p.kind in adapters.API_KINDS and p.enabled and "models" in changes and service.missing_prices(db, p):
         raise AppError("prices_required", "Enter the prices of every model of an enabled API provider",
                        {"models": service.missing_prices(db, p)}, status=422)
+    if p.kind == "ollama" and ({"models", "base_url"} & changes.keys()):
+        # v0.10.1: read Ollama's model list now, so the card says at once which models are local and which cloud
+        try:
+            service.refresh_models(db, p)
+        except adapters.ProviderError:
+            pass                                    # Ollama not running: the models count as cloud until it answers
     db.flush()
     events.record(db, "ai_provider", p.id, "update", jsonable(changes), request_source(request), actor=user.username)
     db.commit()
@@ -186,6 +196,20 @@ def set_key(provider_id: uuid.UUID, body: KeyIn, request: Request, user: Current
     return provider_out(db, p)
 
 
+@router.post("/providers/{provider_id}/models/refresh")
+def refresh_models(provider_id: uuid.UUID, _: CurrentUser, db: Db):
+    """v0.10.1: the models installed in Ollama (``/api/tags``) with size, family and local/cloud, to pick from."""
+    provider = service.get_provider(db, provider_id)
+    if provider.kind != "ollama":
+        raise AppError("not_supported", "Only an Ollama provider lists its installed models", status=422)
+    try:
+        info = service.refresh_models(db, provider)
+    except adapters.ProviderError as exc:
+        raise AppError("ollama_unreachable", "Ollama did not answer; is it running?", {"detail": str(exc)[:300]}, status=502)
+    db.commit()
+    return jsonable([{"name": name, **facts, "local": service.is_local(provider, name)} for name, facts in sorted(info.items())])
+
+
 @router.post("/providers/{provider_id}/test")
 def test_provider(provider_id: uuid.UUID, _: CurrentUser, db: Db):
     result = service.test_connection(db, provider_id)
@@ -220,7 +244,8 @@ def set_price(body: PriceIn, request: Request, user: CurrentUser, db: Db):
 def list_routes(_: CurrentUser, db: Db):
     return jsonable([{"id": r.id, "task": r.task, "primary_provider_id": r.primary_provider_id,
                       "primary_model": r.primary_model, "fallback_provider_id": r.fallback_provider_id,
-                      "fallback_model": r.fallback_model, "privacy": r.privacy}
+                      "fallback_model": r.fallback_model, "privacy": r.privacy, "think": r.think,
+                      "think_default": ollama.think_for(r.task, None)}
                      for r in db.scalars(select(Route).order_by(Route.task))])
 
 

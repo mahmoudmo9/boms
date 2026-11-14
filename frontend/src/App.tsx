@@ -1,45 +1,55 @@
+import { type ComponentType, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, Route, Routes } from "react-router";
 
 import { Loading } from "./design/components";
 import { useAuth } from "./lib/auth";
 import { WORKSPACES } from "./lib/nav";
-import { BaseDataPage } from "./pages/basedata/BaseDataPage";
-import { DocumentDetailPage } from "./pages/documents/DocumentDetailPage";
-import { DocumentsPage } from "./pages/documents/DocumentsPage";
-import { EventLogPage } from "./pages/events/EventLogPage";
 import { LockScreen, LoginPage, NoUserPage } from "./pages/LoginPage";
-import { CommandCenterPage } from "./pages/parties/CommandCenterPage";
-import { FunnelsPage } from "./pages/parties/FunnelsPage";
-import { PartiesPage } from "./pages/parties/PartiesPage";
-import { PartyDetailPage } from "./pages/parties/PartyDetailPage";
-import { CaseDetailPage } from "./pages/cases/CaseDetailPage";
-import { CasesPage } from "./pages/cases/CasesPage";
 import { NotFoundPage, PlaceholderPage } from "./pages/PlaceholderPage";
-import { SettingsPage } from "./pages/settings/SettingsPage";
-import { CostingSettingsPage } from "./pages/settings/CostingSettingsPage";
-import { LetterheadPage } from "./pages/settings/LetterheadPage";
-import { SetadSettingsPage } from "./pages/settings/SetadSettingsPage";
-import { TendersSettingsPage } from "./pages/settings/TendersSettingsPage";
-import { CompanyDocumentsPage } from "./pages/settings/CompanyDocumentsPage";
-import { ExecutionSettingsPage } from "./pages/settings/ExecutionSettingsPage";
-import { AiSettingsPage } from "./pages/settings/AiSettingsPage";
-import { CodingSettingsPage } from "./pages/settings/CodingSettingsPage";
-import { ReferenceDataPage } from "./pages/settings/ReferenceDataPage";
-import { VerifyDocumentPage } from "./pages/documents/VerifyDocumentPage";
-import { ExecutionPage } from "./pages/cases/ExecutionPage";
-import { GuaranteesPage } from "./pages/cases/GuaranteesPage";
-import { CatalogPage, ProductPage } from "./pages/sourcing/CatalogPage";
-import { InquiriesPage } from "./pages/sourcing/InquiriesPage";
-import { InquiryDetailPage } from "./pages/sourcing/InquiryDetailPage";
-import { TemplatesPage } from "./pages/sourcing/TemplatesPage";
-import { SystemPage } from "./pages/system/SystemPage";
-import { DesignPage, devMode } from "./pages/system/DesignPage";
-import { ListingsPage } from "./pages/tenders/ListingsPage";
-import { TriagePage } from "./pages/tenders/TriagePage";
-import { TasksPage } from "./pages/tasks/TasksPage";
-import { FinancePage } from "./pages/finance/FinancePage";
+import { devMode } from "./pages/system/devMode";
 import { AppShell } from "./shell/AppShell";
+
+/** v0.10.1 section 0.3.4: every page is its own chunk, loaded when its route is opened (the login, lock and shell
+ * stay in the first load). */
+function page<K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) {
+  return lazy(() => load().then((m) => ({ default: m[name] })));
+}
+const BaseDataPage = page(() => import("./pages/basedata/BaseDataPage"), "BaseDataPage");
+const DocumentDetailPage = page(() => import("./pages/documents/DocumentDetailPage"), "DocumentDetailPage");
+const DocumentsPage = page(() => import("./pages/documents/DocumentsPage"), "DocumentsPage");
+const EventLogPage = page(() => import("./pages/events/EventLogPage"), "EventLogPage");
+const CommandCenterPage = page(() => import("./pages/parties/CommandCenterPage"), "CommandCenterPage");
+const FunnelsPage = page(() => import("./pages/parties/FunnelsPage"), "FunnelsPage");
+const PartiesPage = page(() => import("./pages/parties/PartiesPage"), "PartiesPage");
+const PartyDetailPage = page(() => import("./pages/parties/PartyDetailPage"), "PartyDetailPage");
+const CaseDetailPage = page(() => import("./pages/cases/CaseDetailPage"), "CaseDetailPage");
+const CasesPage = page(() => import("./pages/cases/CasesPage"), "CasesPage");
+const SettingsPage = page(() => import("./pages/settings/SettingsPage"), "SettingsPage");
+const CostingSettingsPage = page(() => import("./pages/settings/CostingSettingsPage"), "CostingSettingsPage");
+const LetterheadPage = page(() => import("./pages/settings/LetterheadPage"), "LetterheadPage");
+const SetadSettingsPage = page(() => import("./pages/settings/SetadSettingsPage"), "SetadSettingsPage");
+const TendersSettingsPage = page(() => import("./pages/settings/TendersSettingsPage"), "TendersSettingsPage");
+const CompanyDocumentsPage = page(() => import("./pages/settings/CompanyDocumentsPage"), "CompanyDocumentsPage");
+const ExecutionSettingsPage = page(() => import("./pages/settings/ExecutionSettingsPage"), "ExecutionSettingsPage");
+const AiSettingsPage = page(() => import("./pages/settings/AiSettingsPage"), "AiSettingsPage");
+const CodingSettingsPage = page(() => import("./pages/settings/CodingSettingsPage"), "CodingSettingsPage");
+const ReferenceDataPage = page(() => import("./pages/settings/ReferenceDataPage"), "ReferenceDataPage");
+const VerifyDocumentPage = page(() => import("./pages/documents/VerifyDocumentPage"), "VerifyDocumentPage");
+const ExecutionPage = page(() => import("./pages/cases/ExecutionPage"), "ExecutionPage");
+const GuaranteesPage = page(() => import("./pages/cases/GuaranteesPage"), "GuaranteesPage");
+const CatalogPage = page(() => import("./pages/sourcing/CatalogPage"), "CatalogPage");
+const ProductPage = page(() => import("./pages/sourcing/CatalogPage"), "ProductPage");
+const InquiriesPage = page(() => import("./pages/sourcing/InquiriesPage"), "InquiriesPage");
+const InquiryDetailPage = page(() => import("./pages/sourcing/InquiryDetailPage"), "InquiryDetailPage");
+const TemplatesPage = page(() => import("./pages/sourcing/TemplatesPage"), "TemplatesPage");
+const SystemPage = page(() => import("./pages/system/SystemPage"), "SystemPage");
+const DesignPage = page(() => import("./pages/system/DesignPage"), "DesignPage");
+const ListingsPage = page(() => import("./pages/tenders/ListingsPage"), "ListingsPage");
+const TriagePage = page(() => import("./pages/tenders/TriagePage"), "TriagePage");
+const TasksPage = page(() => import("./pages/tasks/TasksPage"), "TasksPage");
+const FinancePage = page(() => import("./pages/finance/FinancePage"), "FinancePage");
+
 
 /** `/design` exists only in developer mode (Settings → System); the switch is read when the route renders. */
 function DesignRoute() {
@@ -55,6 +65,7 @@ export function App() {
   if (status === "locked") return <LockScreen />;
 
   return (
+    <Suspense fallback={<Loading />}>
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<Navigate to="/documents" replace />} />
@@ -99,6 +110,7 @@ export function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
+    </Suspense>
   );
 }
 

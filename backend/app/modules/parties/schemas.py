@@ -43,6 +43,8 @@ class PartyCreate(_Names):
     kind: Kind = "company"
     country_iso2: Iso2 | None = None
     website: ShortText | None = None
+    # v0.10.1: a carrier's public tracking page, {number} where the B/L, AWB or CMR number goes
+    tracking_url_template: Annotated[str, Field(max_length=500, pattern=r"^https?://\S*\{number\}\S*$")] | None = None
     notes: LongText | None = None
     national_id: ShortText | None = None       # v0.8.0: required on a domestic invoice to this buyer
     economic_code: ShortText | None = None
@@ -63,6 +65,8 @@ class PartyPatch(_Names):
     kind: Kind | None = None
     country_iso2: Iso2 | None = None
     website: ShortText | None = None
+    # v0.10.1: a carrier's public tracking page, {number} where the B/L, AWB or CMR number goes
+    tracking_url_template: Annotated[str, Field(max_length=500, pattern=r"^https?://\S*\{number\}\S*$")] | None = None
     notes: LongText | None = None
     national_id: ShortText | None = None       # v0.8.0: required on a domestic invoice to this buyer
     economic_code: ShortText | None = None
@@ -100,6 +104,7 @@ class PartyOut(ApiModel):
     kind: str
     country_iso2: str | None
     website: str | None
+    tracking_url_template: str | None = None
     notes: str | None
     do_not_contact: bool
     do_not_contact_reason: str | None

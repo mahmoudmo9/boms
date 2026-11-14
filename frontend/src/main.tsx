@@ -11,7 +11,7 @@ import { ToastProvider } from "./design/components";
 import { ApiError } from "./lib/api";
 import { AuthProvider } from "./lib/auth";
 import { applyLanguage, applyTheme, storedTheme } from "./lib/prefs";
-import { storedLanguage } from "./i18n";
+import { i18nReady, storedLanguage } from "./i18n";
 
 applyLanguage(storedLanguage());
 applyTheme(storedTheme());
@@ -25,7 +25,7 @@ const queryClient = new QueryClient({
   },
 });
 
-createRoot(document.getElementById("root")!).render(
+void i18nReady.then(() => createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
@@ -37,4 +37,4 @@ createRoot(document.getElementById("root")!).render(
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,
-);
+));

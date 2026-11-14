@@ -48,7 +48,8 @@ class ProviderError(Exception):
 
     @property
     def may_fall_back(self) -> bool:
-        return self.kind in ("timeout", "rate_limit", "quota", "unavailable", "server", "auth", "not_configured")
+        return self.kind in ("timeout", "rate_limit", "quota", "unavailable", "server", "auth", "not_configured",
+                             "context_too_long")
 
 
 @dataclass
@@ -67,6 +68,9 @@ class Request:
     images: list[Attachment] = field(default_factory=list)
     schema: dict | None = None
     max_tokens: int = 4096
+    num_ctx: int | None = None                  # v0.10.1 (Ollama): the context window for this request
+    think: bool | None = None                   # v0.10.1 (Ollama): thinking on/off for this task
+    keep_alive: str | None = None               # v0.10.1 (Ollama): how long the model stays loaded, e.g. "10m"
 
 
 @dataclass
@@ -221,8 +225,15 @@ class Ollama(Adapter):
         user: dict = {"role": "user", "content": req.text}
         if req.images:
             user["images"] = [_b64(a.data) for a in req.images]
-        payload: dict = {"model": req.model, "stream": False, "options": {"num_predict": req.max_tokens},
+        options: dict = {"num_predict": req.max_tokens}
+        if req.num_ctx:
+            options["num_ctx"] = req.num_ctx          # never the server default (4096), which truncates silently
+        payload: dict = {"model": req.model, "stream": False, "options": options,
                          "messages": [{"role": "system", "content": _instructions(req)}, user]}
+        if req.think is not None:
+            payload["think"] = req.think
+        if req.keep_alive:
+            payload["keep_alive"] = req.keep_alive
         if req.schema:
             payload["format"] = req.schema
         start = time.monotonic()

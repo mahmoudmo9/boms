@@ -19,6 +19,9 @@ class Recorder:
         self.answers: list[dict] = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":          # v0.10.1: Ollama's model list (the local models are listed, as on a real PC)
+            return httpx.Response(200, json={"models": [{"name": n, "details": {"family": "qwen2"}}
+                                                        for n in ("qwen2.5:latest", "qwen2.5-vl:latest")]})
         body = json.loads(request.content)
         self.bodies.append(body)
         answer = self.answers.pop(0)

@@ -3657,7 +3657,29 @@
       "draftLanguage": "Message language",
       "listingPrefilled": "{{count}} items from the AI proposal are used in the conversion."
     },
-    "caseLocalOnly": "Local only (no cloud AI)"
+    "caseLocalOnly": "Local only (no cloud AI)",
+    "ollama": {
+      "installed": "Models installed in Ollama",
+      "readList": "Read the model list",
+      "noList": "The model list has not been read yet; start Ollama and press «Read the model list».",
+      "cloudChosen": "One of the chosen models is a cloud model: text is redacted before it is sent and no local-only work goes to it.",
+      "ranOn": "The test ran on:",
+      "allGpu": "{{n}}% GPU",
+      "split": "{{gpu}}% GPU · {{cpu}}% CPU",
+      "doesNotFit": "The model did not fit in the graphics card's memory and runs slowly; lower the maximum text length or choose a smaller model.",
+      "maxContext": "Maximum text length (tokens)",
+      "maxContextHint": "Each request's context is sized to that request and never exceeds this number.",
+      "keepAlive": "Keep the model loaded (minutes)",
+      "helpTitle": "Installing Ollama",
+      "help": {
+        "install": "Install Ollama for Windows from ollama.com and start it.",
+        "pull": "In a command prompt: ollama pull qwen3.5:4b",
+        "run": "Keep the address http://127.0.0.1:11434 and keep Ollama running.",
+        "list": "Press «Read the model list» here, choose the model, then «Test connection»."
+      },
+      "recommend": "For an 8 GB graphics card (RTX 4060) the recommended model is qwen3.5:4b.",
+      "cloudWarning": "Models whose name ends in :cloud or -cloud run on ollama.com's servers; do not choose them for private work."
+    }
   },
   "codes": {
     "kinds": {
@@ -3709,10 +3731,7 @@
     "subtitle": "Standard lists with the code next to the name; nothing is read from the internet.",
     "datasets": "Datasets",
     "importTitle": "Import from a file",
-    "dataset": "Dataset",
     "release": "Release",
-    "file": "File",
-    "import": "Import",
     "importHint": "Get the official file from its publisher (UN/LOCODE from UNECE, ELF from GLEIF) and upload it here. Importing again repeats nothing.",
     "report": "{{inserted}} new, {{updated}} updated, {{deactivated}} deactivated, {{rejected}} rejected",
     "verified": "{{count}} verified against the official file",
@@ -3733,6 +3752,74 @@
       "units": "Units (Rec 20)",
       "unlocode": "UN/LOCODE (official file)",
       "elf": "ELF (official GLEIF file)"
+    },
+    "dropLabel": "Drop the official file here or choose it",
+    "dropHint": "UN/LOCODE (the full release zip or one part) or the GLEIF ELF list; BOMS recognises the file from its content.",
+    "progress": "Import progress",
+    "rowsRead": "{{n}} of {{total}} rows read",
+    "timeLeft": "about {{s}} s left",
+    "cancelling": "Cancelling…",
+    "detected": "This file is «{{dataset}}» and was checked as such.",
+    "mostlyRejected": "Most rows would be rejected ({{n}} of {{total}}); look at the reasons before going on.",
+    "partial": "This is not a complete release (parts 1 to 3 are not all there): new and changed rows are imported, nothing is deactivated.",
+    "preview": {
+      "insert": "New",
+      "update": "Updated",
+      "deactivate": "Deactivated",
+      "unchanged": "Unchanged",
+      "rejected": "Rejected"
+    },
+    "encoding": "File encoding",
+    "parts": "Parts",
+    "reasonsTitle": "Reasons for rejection",
+    "examples": "The first {{n}} examples",
+    "releaseFromName": "Read from the file name",
+    "confirm": "Confirm and import",
+    "discard": "Discard",
+    "newImport": "Import another file",
+    "took": "Imported in {{s}} s.",
+    "curatedMatched": "{{n}} rows of BOMS's curated list were matched with the official file and verified.",
+    "mismatches": "{{n}} mismatches with the official file",
+    "notInFile": "These curated codes are not in this file:",
+    "mismatch": {
+      "code": "Code",
+      "field": "Field",
+      "curated": "BOMS list",
+      "official": "Official file",
+      "fields": {
+        "name": "Name",
+        "functions": "Functions",
+        "iata": "IATA code"
+      }
+    },
+    "status": {
+      "previewing": "Checking",
+      "preview_ready": "Preview ready",
+      "preview_failed": "Check failed",
+      "importing": "Importing",
+      "done": "Done",
+      "failed": "Failed — nothing changed",
+      "cancelled": "Cancelled — nothing changed",
+      "discarded": "Discarded"
+    },
+    "stage": {
+      "queued": "Queued",
+      "reading": "Reading the file",
+      "checking": "Comparing with the current data",
+      "loading": "Loading rows",
+      "merging": "Saving the changes",
+      "ready": "Ready",
+      "done": "Done",
+      "cancelled": "Cancelled",
+      "failed": "Failed"
+    },
+    "reasons": {
+      "column": "column {{name}} not found",
+      "badCode": "bad code",
+      "badElf": "bad ELF code",
+      "noCountry": "no country code",
+      "repeated": "code repeated in the file",
+      "columns": "fewer than 11 columns"
     }
   },
   "verify": {

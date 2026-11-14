@@ -5,14 +5,16 @@
  * - DraftMessageButton: the RFQ message or the PO cover message in the chosen language.
  * With no provider connected each one says how to connect one; manual entry always works. */
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../lib/api";
 import type { Draft, Usage } from "../lib/ai";
 import type { LookupItem } from "../lib/smart";
-import { DraftReview } from "./DraftReview";
 import { Button, Checkbox, ErrorNote, Field, LookupField, Modal, Select, Textarea } from "../design/components";
+
+// The review screen (and its PDF page viewer) loads only when a draft is opened.
+const DraftReview = lazy(() => import("./DraftReview").then((m) => ({ default: m.DraftReview })));
 
 export function useAiConfigured(): boolean {
   const usage = useQuery({ queryKey: ["ai", "usage"], queryFn: () => api<Usage>("/api/ai/usage", { background: true }), staleTime: 30_000 });
@@ -67,8 +69,8 @@ export function ExtractButton({ target, targetId, documents = [], label, onCommi
           <ErrorNote error={start.error} />
         </div>
       </Modal>
-      <DraftReview draftId={draftId} open={Boolean(draftId)} onClose={() => setDraftId(null)}
-        onCommitted={(r) => { onCommitted?.(r); setDraftId(null); }} />
+      {draftId && <Suspense fallback={null}><DraftReview draftId={draftId} open onClose={() => setDraftId(null)}
+        onCommitted={(r) => { onCommitted?.(r); setDraftId(null); }} /></Suspense>}
     </>
   );
 }
@@ -95,8 +97,8 @@ export function PartyParseButton({ roles = [], onCommitted }: { roles?: string[]
         </Field>
         <ErrorNote error={start.error} />
       </Modal>
-      <DraftReview draftId={draftId} open={Boolean(draftId)} onClose={() => setDraftId(null)}
-        onCommitted={(r) => { onCommitted?.(r); setDraftId(null); }} />
+      {draftId && <Suspense fallback={null}><DraftReview draftId={draftId} open onClose={() => setDraftId(null)}
+        onCommitted={(r) => { onCommitted?.(r); setDraftId(null); }} /></Suspense>}
     </>
   );
 }
@@ -126,8 +128,8 @@ export function DraftMessageButton({ target, targetId, onCommitted }: { target: 
         </Field>
         <ErrorNote error={start.error} />
       </Modal>
-      <DraftReview draftId={draftId} open={Boolean(draftId)} onClose={() => setDraftId(null)}
-        onCommitted={(r) => { onCommitted?.(r); setDraftId(null); }} />
+      {draftId && <Suspense fallback={null}><DraftReview draftId={draftId} open onClose={() => setDraftId(null)}
+        onCommitted={(r) => { onCommitted?.(r); setDraftId(null); }} /></Suspense>}
     </>
   );
 }

@@ -8,8 +8,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Bars, Button, CashFlow, DataTable, DatedTimeline, DescriptionList, EmptyState, ErrorNote, ErrorState, InlineAlert, KpiTile, Loading, PageHeader, Pagination,
-  ProfitBridge, ProgressBar, ProgressRing, RouteLine, Skeleton, type SortState, Sparkline, Stat, Stepper, Timeline } from ".";
+import { Button, DataTable, DatedTimeline, DescriptionList, EmptyState, ErrorNote, ErrorState, InlineAlert, KpiTile, Loading, PageHeader, Pagination, ProgressBar, ProgressRing, Skeleton, type SortState, Stat, Stepper, Timeline } from ".";
+import { Bars, CashFlow, ProfitBridge, RouteLine, Sparkline } from "./charts";
 import { renderDs } from "./testing";
 
 vi.mock("../../lib/auth", () => ({ useAuth: () => ({ user: (globalThis as { __user?: unknown }).__user }) }));
