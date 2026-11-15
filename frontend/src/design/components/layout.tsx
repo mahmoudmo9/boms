@@ -1,12 +1,12 @@
 /** Page patterns of the design system (v0.10.0 section 3): the page header (breadcrumb, display title, code chip,
  * status, primary action, secondary actions in a menu) and the page grid with a side column. */
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Menu, type MenuItem } from "./containers";
+import { Drawer, Menu, type MenuItem } from "./containers";
 import { Icon } from "./Icon";
-import { CodeChip, IconButton } from "./primitives";
+import { Button, CodeChip, IconButton } from "./primitives";
 
 export type Crumb = { label: ReactNode; to?: string };
 
@@ -61,11 +61,37 @@ export function PageHeader({ title, subtitle, actions, breadcrumb, code, status,
 }
 
 /** The main column with a side column; the side column moves under the main one below 1280 px. */
-export function PageGrid({ children, side, sideWidth = "xl:grid-cols-[minmax(0,1fr)_22rem]" }: { children: ReactNode; side: ReactNode; sideWidth?: string }) {
+export function PageGrid({ children, side, sideWidth = "xl:grid-cols-[minmax(0,1fr)_22rem]", sideLabel }: {
+  children: ReactNode; side: ReactNode; sideWidth?: string;
+  /** v0.10.1: with a label, below 1280 px the side column is a drawer opened from a button (never a block pushed to
+   * the bottom of the page); from 1280 px it sits beside the content. */
+  sideLabel?: string }) {
+  const wide = useMinWidth("(min-width: 80rem)");
+  const [open, setOpen] = useState(false);
+  const drawer = Boolean(sideLabel) && !wide;
+  // one tree for both layouts: crossing 1280 px must not remount the content (an open dialog in it would close)
   return (
-    <div className={`grid grid-cols-1 gap-5 ${sideWidth}`}>
-      <div className="flex min-w-0 flex-col gap-5">{children}</div>
-      <aside className="flex min-w-0 flex-col gap-5">{side}</aside>
+    <div className={`grid grid-cols-1 gap-5 ${drawer ? "" : sideWidth}`}>
+      <div className="flex min-w-0 flex-col gap-5">
+        {drawer && <div className="flex justify-end"><Button icon="panel" onClick={() => setOpen(true)} data-testid="side-drawer-open">{sideLabel}</Button></div>}
+        {children}
+      </div>
+      {drawer
+        ? <Drawer open={open} title={sideLabel} onClose={() => setOpen(false)} testId="side-drawer">{side}</Drawer>
+        : <aside className="flex min-w-0 flex-col gap-5">{side}</aside>}
     </div>
   );
+}
+
+function useMinWidth(query: string): boolean {
+  const get = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(query).matches;
+  const [on, setOn] = useState(get);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const m = window.matchMedia(query);
+    const set = () => setOn(m.matches);
+    m.addEventListener("change", set);
+    return () => m.removeEventListener("change", set);
+  }, [query]);
+  return on;
 }

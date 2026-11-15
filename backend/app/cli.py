@@ -209,6 +209,7 @@ def cmd_demo_seed(args: argparse.Namespace) -> None:
         out = demo.Demo(api).run(new_session)
     finally:
         api.close()
+    demo.backdate_events(conninfo, config.db_name)
     print(f"Demo data ready in {config.db_name}: {out}")
 
 

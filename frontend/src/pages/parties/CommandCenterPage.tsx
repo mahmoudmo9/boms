@@ -12,7 +12,7 @@ import type { CommandCenter, ExecutionSummary, FollowupRow, SetadSummary, Sourci
 import { useQuickLog } from "./QuickLog";
 import { FollowupActions, PartyName, stageLabel } from "./shared";
 import { TaskList } from "../tasks/TaskList";
-import { TodayTop } from "./Today";
+import { CommandHeaderFacts, TodayTop } from "./Today";
 
 const FUNNELS = ["buyer", "supplier"] as const;
 
@@ -214,27 +214,6 @@ export function ExecutionSection({ s }: { s: ExecutionSummary }) {
   );
 }
 
-/** v0.8.0: «کارها», the owner's internal tasks overdue and due today or tomorrow (not follow-ups with a party). */
-function TasksSection({ s }: { s: NonNullable<CommandCenter["tasks"]> }) {
-  const { t } = useTranslation();
-  const f = useFormat();
-  const card = (key: "overdue" | "today" | "tomorrow") => (
-    <Card key={key} padded={false} className={key === "overdue" && s.overdue.length ? "border-danger" : ""}
-      title={<span className="flex items-center gap-2">{t(`cc.tasks.${key}`)} <Badge tone={key === "overdue" && s[key].length ? "danger" : key === "today" ? "accent" : "neutral"}>{f.num(s[key].length)}</Badge></span>}>
-      <Capped rows={s[key]} to="/tasks" empty={<TaskList rows={[]} />} render={(rows) => <TaskList rows={rows} tone={key === "overdue" ? "danger" : undefined} />} />
-    </Card>
-  );
-  return (
-    <section className="flex flex-col gap-3" data-testid="cc-tasks">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-lg font-medium text-title">{t("cc.tasks.title")}</h2>
-        <Link to="/tasks" className="text-sm text-accent hover:underline">{t("cc.tasks.all")}</Link>
-      </div>
-      <div className="grid gap-4 xl:grid-cols-3">{card("overdue")}{card("today")}{card("tomorrow")}</div>
-    </section>
-  );
-}
-
 /** v0.8.0: «مالی» — receivables overdue, payables due, delivered not invoiced, received without a supplier invoice,
  * Moadian pending, payments without an FX rate, cases ready to close. */
 function FinanceSection({ s }: { s: NonNullable<CommandCenter["finance"]> }) {
@@ -286,19 +265,25 @@ export function CommandCenterPage() {
     <div className="flex flex-col gap-5" data-testid="command-center">
       <PageHeader
         title={t("nav.commandCenter")}
-        subtitle={t("cc.subtitle", { date: f.day(d.today_date) })}
+        subtitle={<CommandHeaderFacts />}
         actions={<Button variant="primary" icon="plus" onClick={() => quickLog.open()}>{t("quicklog.button")}</Button>}
       />
       <TodayTop cc={d} />
+      {/* v0.10.1 (4.1): two named lists — tasks and follow-ups — overdue first, each capped at 8 */}
       <h2 className="mt-4 font-display text-xl font-semibold text-title">{t("cc.attention")}</h2>
+      <div className="grid gap-4 xl:grid-cols-2" data-testid="cc-attention">
+        <Card padded={false} testId="cc-attention-tasks"
+          title={<span className="flex items-center gap-2">{t("cc.attentionTasks")} <Badge tone={d.tasks?.overdue.length ? "danger" : "accent"}>{f.num((d.tasks?.overdue.length ?? 0) + (d.tasks?.today.length ?? 0))}</Badge></span>}
+          actions={<Link to="/tasks" className="text-sm text-accent hover:underline">{t("cc.tasks.all")}</Link>}>
+          <Capped rows={[...(d.tasks?.overdue ?? []), ...(d.tasks?.today ?? [])]} to="/tasks" empty={<TaskList rows={[]} />}
+            render={(rows) => <TaskList rows={rows} />} />
+        </Card>
+        <Card padded={false} testId="cc-attention-followups"
+          title={<span className="flex items-center gap-2">{t("cc.attentionFollowups")} <Badge tone={d.overdue_count ? "danger" : "accent"}>{f.num(d.overdue.length + d.today.length)}</Badge></span>}>
+          <FollowupList rows={[...d.overdue, ...d.today]} />
+        </Card>
+      </div>
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card padded={false} className={d.overdue_count ? "border-danger" : ""}
-          title={<span className={`flex items-center gap-2 ${d.overdue_count ? "text-danger" : ""}`}>{t("cc.overdue")} <Badge tone={d.overdue_count ? "danger" : "neutral"}>{f.num(d.overdue_count)}</Badge></span>}>
-          <FollowupList rows={d.overdue} tone="danger" />
-        </Card>
-        <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.today")} <Badge tone="accent">{f.num(d.today.length)}</Badge></span>}>
-          <FollowupList rows={d.today} />
-        </Card>
         <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.upcoming")} <Badge>{f.num(d.upcoming_7_days.length)}</Badge></span>}>
           <FollowupList rows={d.upcoming_7_days} />
         </Card>
@@ -319,7 +304,6 @@ export function CommandCenterPage() {
           )} />
         </Card>
       </div>
-      {d.tasks && <TasksSection s={d.tasks} />}
       <SourcingSection s={d.sourcing} />
       {d.setad && <SetadSection s={d.setad} />}
       {d.tenders && <TendersSection s={d.tenders} />}

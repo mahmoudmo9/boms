@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import i18n from "../i18n";
 import { useAuth } from "./auth";
 import { fromDateString } from "./followups";
-import { type Calendar, compactParts, currencyName, type Digits, formatBytes, formatCompact, formatDate, formatNumber, moneyFraction } from "./format";
+import { type Calendar, compactParts, currencyName, type Digits, formatBytes, formatCompact, formatDate, formatLongDate, formatNumber, formatTime, moneyFraction } from "./format";
 import type { Language, Theme } from "./types";
 
 let mediaListener: ((e: MediaQueryListEvent) => void) | null = null;
@@ -65,6 +65,9 @@ export interface Formatters {
   compact: (value: number | string | null | undefined) => string;
   /** v0.10.1: compact with the currency — fa «۴٫۱ میلیارد ریال», en «IRR 4.1B» — and the full value for the tooltip. */
   compactMoney: (value: number | string | null | undefined, currency?: string | null) => { text: string; full: string; figure: string; unit: string };
+  /** v0.10.1: «شنبه ۲۴ آبان ۱۴۰۵» in the user's calendar, and «۱۹:۳۰». */
+  longDate: (date: Date) => string;
+  time: (date: Date) => string;
 }
 
 /** v0.9.0: digits follow the UI language everywhere in the UI (Persian digits in fa, Latin in en); the calendar stays
@@ -89,6 +92,8 @@ export function useFormat(): Formatters {
       day: (value) => (value ? formatDate(fromDateString(value).toISOString(), { calendar, digits }) : ""),
       money: (value, currency) => formatNumber(value, digits, moneyFraction(currency)),
       compact: (value) => formatCompact(value, digits),
+      longDate: (date) => formatLongDate(date, lang, calendar),
+      time: (date) => formatTime(date, lang),
       compactMoney: (value, currency) => {
         const name = currencyName(currency, lang);
         const full = formatNumber(value, digits, moneyFraction(currency));

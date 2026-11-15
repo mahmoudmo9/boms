@@ -1,24 +1,24 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 
-import { Bdi, Button, ErrorNote, ErrorState, Field, Input, Loading, Modal, PageGrid, PageHeader, ScrollTabs, Select, Textarea } from "../../design/components";
-import { CaseSide, DealPath } from "./CaseOverview";
+import { Button, ErrorNote, ErrorState, Field, Input, Loading, Modal, PageGrid, ScrollTabs, Select, Textarea } from "../../design/components";
+import { CaseRoute, DealPath } from "./CaseOverview";
+import { CaseFacts, CaseHero, CaseTrio, DealStoryRail, NextStepCard } from "./CaseStory";
 import { CaseFolderButton, CaseLocalOnly } from "../../components/CaseTools";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
-import type { CaseCosting, CaseDetail, CaseQuotes } from "../../lib/types";
-import { PartyName } from "../parties/shared";
+import type { CaseDetail } from "../../lib/types";
 import { ItemsCard } from "../sourcing/ItemsEditor";
-import { AttachedDocuments, CascadeDeleteCard, HistoryCard, Money, StatusBadge, useInvalidateSourcing, usePaymentTerms } from "../sourcing/shared";
+import { AttachedDocuments, CascadeDeleteCard, HistoryCard, useInvalidateSourcing, usePaymentTerms } from "../sourcing/shared";
 import { CASE_STATUSES } from "./CasesPage";
 import { CostingTab } from "./Costing";
 import { ComparisonTab, CoverageCard, OffersTab } from "./Offers";
 import { QuotesTab } from "./Quotes";
 import { RfqsTab } from "./Rfqs";
 import { TenderHeaderFacts, TenderTab } from "./Tender";
-import { DeliveryTab, ExecutionHeaderFacts, LogisticsTab, OrderTab, PurchaseTab } from "./execution";
+import { DeliveryTab, LogisticsTab, OrderTab, PurchaseTab } from "./execution";
 import { SetadOrigin } from "../tenders/SetadOrigin";
 import { CaseTasksTab } from "../tasks/CaseTasksTab";
 import { FinanceHeaderFacts, FinanceTab } from "./finance";
@@ -69,8 +69,6 @@ export function CaseDetailPage() {
   const [editing, setEditing] = useState(false);
   const tab = (TABS.includes(params.get("tab") as Tab) ? params.get("tab") : "items") as Tab;
   const caseQuery = useQuery({ queryKey: ["case", id], queryFn: () => api<CaseDetail>(`/api/cases/${id}`) });
-  const costing = useQuery({ queryKey: ["costing", id], queryFn: () => api<CaseCosting>(`/api/cases/${id}/costing`) });
-  const quotes = useQuery({ queryKey: ["case-quotes", id], queryFn: () => api<CaseQuotes>(`/api/cases/${id}/quotes`) });
   const refresh = () => { void caseQuery.refetch(); invalidate(); };
   const setStatus = useMutation({ mutationFn: (status: string) => api(`/api/cases/${id}`, { method: "PATCH", body: { status } }), onSuccess: refresh });
   const highlightItem = params.get("item");
@@ -83,33 +81,24 @@ export function CaseDetailPage() {
   const items = c.items.filter((i) => i.status !== "cancelled").length;
   return (
     <div className="flex flex-col gap-5" data-testid="case-page">
-      <PageHeader title={<bdi>{c.title}</bdi>} code={c.code} status={<StatusBadge group="case" status={c.status} />}
-        breadcrumb={[{ label: t("nav.cases"), to: "/cases" }, { label: c.code ?? c.title }]}
-        eyebrow={c.party_id ? <PartyName fa={c.party_name_fa ?? null} en={c.party_name_en ?? null} id={c.party_id} /> : undefined}
-        subtitle={<span className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          {c.inquiry_id && <Link to={`/sourcing/inquiries/${c.inquiry_id}`} className="text-accent hover:underline">{t("sourcing.case.fromInquiry")}</Link>}
-          {c.payment_term && <span>{t(`sourcing.paymentTerms.${c.payment_term}`)}</span>}
-          {c.exposure_estimate && <span>{t("sourcing.decision.exposure")}: <Money amount={c.exposure_estimate} currency={c.exposure_currency} /></span>}
-          {costing.data?.current?.exposure !== undefined && <span data-testid="computed-exposure">{t("costing.computedExposure")}: <Money amount={costing.data.current.exposure} currency={costing.data.current.currency} /></span>}
-          {costing.data?.current?.margin_percent && <span>{t("costing.pricing.margin")} <span className="tabular-nums">{f.num(costing.data.current.margin_percent)} %</span> · {t("costing.pricing.markup")} <span className="tabular-nums">{f.num(costing.data.current.markup_percent ?? "")} %</span></span>}
-          {quotes.data?.summary.latest && <span className="inline-flex items-center gap-1">{t("quotes.latest")}: <Bdi ltr>{quotes.data.summary.latest.number}</Bdi> <StatusBadge group="quote" status={quotes.data.summary.latest.status} /></span>}
-          <TenderHeaderFacts caseId={c.id} />
-          <ExecutionHeaderFacts caseId={c.id} />
-          <FinanceHeaderFacts caseId={c.id} />
-        </span>}
-        actions={<>
-          <Select className="w-40" aria-label={t("sourcing.status.label")} value={c.status} onChange={(e) => setStatus.mutate(e.target.value)}>
-            {CASE_STATUSES.map((s) => <option key={s} value={s}>{t(`sourcing.status.case.${s}`)}</option>)}
-          </Select>
-          <CaseLocalOnly caseId={c.id} />
-          <CaseFolderButton caseId={c.id} />
-          <Button icon="edit" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
-        </>}>
-        <DealPath c={c} />
-      </PageHeader>
+      {/* v0.10.1 (4.2): story first — hero, facts as chips, the deal path, the next step, the route, the trio —
+          then the tabs; the deal story rail beside it from 1280 px (a drawer below) */}
+      <PageGrid side={<DealStoryRail c={c} />} sideLabel={t("case.side.story")} sideWidth="xl:grid-cols-[minmax(0,1fr)_21rem]">
+      <CaseHero c={c} actions={<>
+        <Select className="w-40" aria-label={t("sourcing.status.label")} value={c.status} onChange={(e) => setStatus.mutate(e.target.value)}>
+          {CASE_STATUSES.map((s) => <option key={s} value={s}>{t(`sourcing.status.case.${s}`)}</option>)}
+        </Select>
+        <Button icon="edit" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
+        <CaseFolderButton caseId={c.id} />
+        <CaseLocalOnly caseId={c.id} />
+      </>} />
+      <CaseFacts c={c}><TenderHeaderFacts caseId={c.id} /><FinanceHeaderFacts caseId={c.id} /></CaseFacts>
+      <DealPath c={c} rings={false} />
+      <NextStepCard c={c} />
+      <CaseRoute c={c} />
+      <CaseTrio c={c} />
       {c.inquiry_id && <SetadOrigin inquiryId={c.inquiry_id} />}
       <ErrorNote error={setStatus.error} />
-      <PageGrid side={<CaseSide c={c} />} sideWidth="2xl:grid-cols-[minmax(0,1fr)_22rem]">
       <ScrollTabs label={t("sourcing.case.tabsLabel")} active={tab} onSelect={(key) => setParams({ tab: key }, { replace: true })} panelId="case-tab"
         tabs={TABS.map((key) => ({ key, label: t(`sourcing.case.tabs.${key}`), count: key === "items" ? f.num(items) : undefined }))} />
       <div id="case-tab" role="tabpanel" className="flex min-w-0 flex-col gap-4">

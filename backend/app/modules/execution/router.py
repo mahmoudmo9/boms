@@ -383,6 +383,14 @@ def pt_delete(template_id: uuid.UUID, request: Request, user: CurrentUser, db: D
     return Response(status_code=204)
 
 
+@router.get("/cases/{case_id}/overview")
+def case_overview(case_id: uuid.UUID, _: CurrentUser, db: Db):
+    """v0.10.1 section 4.2 (read-only): next step, people, documents, money and the dated milestones ahead."""
+    from app.modules.execution.overview import case_overview as build
+
+    return build(db, case_id)
+
+
 @router.post("/cases/{case_id}/processes", status_code=201)
 def process_create(case_id: uuid.UUID, body: ProcessIn, request: Request, user: CurrentUser, db: Db):
     from app.modules.execution import process

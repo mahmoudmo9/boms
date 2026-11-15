@@ -15,6 +15,9 @@ def summary(db: Session, today: date) -> dict:
                            .order_by(Task.due_on, Task.priority.desc(), Task.created_at)))
     titles = {c.id: c.title for c in db.scalars(select(Case).where(Case.id.in_({r.case_id for r in rows if r.case_id})))} if rows else {}
     out = [task_out(r, titles) for r in rows]
-    return {"overdue": [r for r in out if r["due_on"] < today.isoformat()],
+    # v0.10.1 section 4.1: today's done tasks stay on the day's line, struck through
+    done = list(db.scalars(select(Task).where(Task.status == "done", Task.due_on == today).order_by(Task.due_at, Task.created_at)))
+    return {"done_today": [task_out(r, titles) for r in done],
+            "overdue": [r for r in out if r["due_on"] < today.isoformat()],
             "today": [r for r in out if r["due_on"] == today.isoformat()],
             "tomorrow": [r for r in out if r["due_on"] == (today + timedelta(days=1)).isoformat()]}

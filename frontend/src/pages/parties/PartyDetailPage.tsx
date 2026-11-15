@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Bdi, Button, Card, Checkbox, CodeChip, DateInput, EmptyState, errorMessage, ErrorNote, ErrorState, Field, Icon, IconButton, InlineAlert, Input, KpiTile, Loading, Modal, PageHeader, ProgressRing, Segmented, Select, Status, Tabs, Textarea, useToast, ValidatedInput } from "../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, CodeChip, DateInput, Drawer, EmptyState, errorMessage, ErrorNote, ErrorState, Field, Icon, IconButton, InlineAlert, Input, KpiTile, Loading, Modal, PageHeader, Segmented, Select, Status, Tabs, Textarea, useToast, ValidatedInput } from "../../design/components";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { PartyFinance } from "./PartyFinance";
+import { PartyAvatar, PartyContactsCard, PartyDeals, PartyDocumentsCard, PartyKpis, PartySince, PartyTimeline } from "./PartyStory";
 import { PhoneInput, usePhoneRegions } from "../../components/PhoneInput";
 import { api, ApiError, type Page } from "../../lib/api";
 import { defaultPhoneRegion, isPhoneType } from "../../lib/phone";
@@ -36,7 +37,9 @@ function useRefresh(id: string) {
 
 // ---- overview ----------------------------------------------------------------------------
 
-function Overview({ party }: { party: PartyDetail }) {
+/** The party's details, roles and archive/delete — opened from «ویرایش» in a drawer (v0.10.1 rule 2.1: a page opens on a
+ * read view, never on a form). */
+function PartyEdit({ party }: { party: PartyDetail }) {
   const { t } = useTranslation();
   const f = useFormat();
   const toast = useToast();
@@ -85,7 +88,7 @@ function Overview({ party }: { party: PartyDetail }) {
   const free = ROLES.filter((r) => !party.roles.some((x) => x.role === r));
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4">
         <Card title={t("parties.rolesAndStages")}>
           {party.roles.length === 0 && <p className="mb-3 text-sm text-muted">{t("parties.noRoles")}</p>}
@@ -110,10 +113,6 @@ function Overview({ party }: { party: PartyDetail }) {
           )}
           <ErrorNote error={addRole.error || removeRole.error} />
         </Card>
-        <Card title={t("parties.openFollowups")} padded={false}>
-          <FollowupRows rows={party.open_followups} />
-        </Card>
-        <CapabilitiesCard partyId={party.id} />
       </div>
       <Card title={<span className="flex items-center gap-2">{t("parties.details")} <CodeChip code={party.code} /></span>}>
         <form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={(e: FormEvent) => { e.preventDefault(); save.mutate(); }}>
@@ -155,6 +154,26 @@ function Overview({ party }: { party: PartyDetail }) {
         <ArchiveDialog count={party.open_followups.length} busy={archive.isPending} error={archive.error}
           onArchive={(mode) => archive.mutate(mode)} onClose={() => setArchiveAsk(false)} />
       )}
+    </div>
+  );
+}
+
+/** v0.10.1 section 4.6 (ProParty): the read view — timeline beside the deals, contacts and documents, then the open
+ * follow-ups and what the party can supply. */
+function Overview({ party, goTab }: { party: PartyDetail; goTab: (tab: Tab) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+      <PartyTimeline partyId={party.id} />
+      <div className="flex flex-col gap-4">
+        <PartyDeals partyId={party.id} />
+        <PartyContactsCard party={party} onOpen={() => goTab("contacts")} />
+        <PartyDocumentsCard party={party} onOpen={() => goTab("documents")} />
+        <Card title={t("parties.openFollowups")} padded={false}>
+          <FollowupRows rows={party.open_followups} />
+        </Card>
+        {party.roles.some((r) => r.role === "supplier") && <CapabilitiesCard partyId={party.id} />}
+      </div>
     </div>
   );
 }
@@ -680,33 +699,28 @@ function CountryName({ code }: { code: string }) {
   return <span className="inline-flex items-center gap-1"><Icon name="globe" size={13} />{c ? (f.lang === "fa" ? c.name_fa : c.name_en) : <bdi dir="ltr">{code}</bdi>}</span>;
 }
 
-/** v0.10.0 (ProParty): the party's scores, only from data BOMS has — the average of its ratings and its deals.
- * A tile with no data is not shown. On-time delivery, inspection results and RFQ response time are not computed
- * by BOMS yet, so they are not shown. */
-function PartyScores({ partyId }: { partyId: string }) {
+/** v0.10.1 (ProParty): the ratings ring and the four supplier tiles; a buyer without supplier data shows its order
+ * and claim counts instead. */
+function PartyScores({ party }: { party: PartyDetail }) {
   const { t } = useTranslation();
   const f = useFormat();
-  const fin = useQuery({ queryKey: ["party-finance", partyId], queryFn: () => api<{ ratings: { count: number; average: Record<string, number | null> } }>(`/api/parties/${partyId}/finance`) });
-  const ex = useQuery({ queryKey: ["party-execution", partyId], queryFn: () => api<{ sales_orders: unknown[]; purchase_orders: unknown[]; claims: { status: string }[] }>(`/api/parties/${partyId}/execution`) });
-  const avg = Object.entries(fin.data?.ratings.average ?? {}).filter(([, v]) => v !== null) as [string, number][];
-  const overall = avg.length ? avg.reduce((s, [, v]) => s + v, 0) / avg.length : null;
+  const fin = useQuery({ queryKey: ["party-finance", party.id], queryFn: () => api<{ ratings: { count: number; average: Record<string, number | null> } }>(`/api/parties/${party.id}/finance`) });
+  const ex = useQuery({ queryKey: ["party-execution", party.id], queryFn: () => api<{ sales_orders: unknown[]; purchase_orders: unknown[]; claims: { status: string }[] }>(`/api/parties/${party.id}/execution`) });
+  const avg = Object.values(fin.data?.ratings.average ?? {}).filter((v): v is number => v !== null);
+  const overall = avg.length ? avg.reduce((s, v) => s + v, 0) / avg.length : null;
+  const supplier = party.roles.some((r) => r.role === "supplier");
   const deals = (ex.data?.sales_orders.length ?? 0) + (ex.data?.purchase_orders.length ?? 0);
   const openClaims = ex.data?.claims.filter((c) => !["closed", "resolved", "rejected"].includes(c.status)).length ?? 0;
-  if (overall === null && deals === 0) return null;
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-testid="party-scores">
-      {overall !== null && (
-        <article className="flex items-center gap-4 rounded-2xl border border-accent-line bg-linear-to-br from-card-accent-from to-card-accent-to px-5 py-4 xl:col-span-2">
-          <ProgressRing value={(overall / 5) * 100} size={76} label={t("party.scores.overall")}><span className="text-lg text-title tabular-nums">{f.num(overall, 1)}</span></ProgressRing>
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-xs text-muted">{t("party.scores.overall")} · {t("party.scores.ratings", { n: f.num(fin.data!.ratings.count) })}</span>
-            <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">{avg.map(([k, v]) => <span key={k}>{t(`finance.ratings.criteria.${k}`)} <b className="tabular-nums text-title">{f.num(v, 1)}</b></span>)}</span>
-          </div>
-        </article>
+    <>
+      <PartyKpis party={party} ratings={{ average: overall, count: fin.data?.ratings.count ?? 0 }} />
+      {!supplier && deals > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-testid="party-buyer-tiles">
+          <KpiTile label={t("party.scores.deals")} value={f.num(deals)} note={t("party.scores.dealsNote", { so: f.num(ex.data!.sales_orders.length), po: f.num(ex.data!.purchase_orders.length) })} />
+          <KpiTile label={t("party.scores.claims")} value={f.num(openClaims)} tone={openClaims ? "warning" : "neutral"} note={t("party.scores.claimsNote", { n: f.num(ex.data!.claims.length) })} />
+        </div>
       )}
-      {deals > 0 && <KpiTile label={t("party.scores.deals")} value={f.num(deals)} note={t("party.scores.dealsNote", { so: f.num(ex.data!.sales_orders.length), po: f.num(ex.data!.purchase_orders.length) })} />}
-      {deals > 0 && <KpiTile label={t("party.scores.claims")} value={f.num(openClaims)} tone={openClaims ? "warning" : "neutral"} note={t("party.scores.claimsNote", { n: f.num(ex.data!.claims.length) })} />}
-    </div>
+    </>
   );
 }
 
@@ -718,6 +732,7 @@ export function PartyDetailPage() {
   const [params, setParams] = useSearchParams();
   const tab = (TABS.includes(params.get("tab") as Tab) ? params.get("tab") : "overview") as Tab;
   const party = useParty(id);
+  const [editing, setEditing] = useState(false);
   if (party.isLoading) return <Loading rows={8} />;
   if (party.error || !party.data) return <ErrorState error={party.error} onRetry={() => void party.refetch()} />;
   const p = party.data;
@@ -725,7 +740,7 @@ export function PartyDetailPage() {
   const subtitle: ReactNode = p.name_fa && p.name_en ? (f.lang === "fa" ? p.name_en : p.name_fa) : null;
   return (
     <div className="flex flex-col gap-5" data-testid="party-page">
-      <PageHeader title={<PartyName fa={p.name_fa} en={p.name_en} dnc={p.do_not_contact} />} code={p.code}
+      <PageHeader title={<span className="inline-flex items-center gap-4"><PartyAvatar name={p.name_en || p.name_fa} /><PartyName fa={p.name_fa} en={p.name_en} dnc={p.do_not_contact} /></span>} code={p.code}
         breadcrumb={[{ label: t("nav.parties"), to: "/parties" }, { label: p.code ?? (f.lang === "fa" ? p.name_fa || p.name_en : p.name_en || p.name_fa) ?? "" }]}
         status={<>{p.status === "archived" && <Status tone="neutral">{t("parties.archived")}</Status>}
           {p.roles.map((r) => <Badge key={r.role} tone="accent">{t(`parties.roles.${r.role}`)} · {stageLabel(t, r.role, r.stage)}</Badge>)}</>}
@@ -733,16 +748,20 @@ export function PartyDetailPage() {
           {subtitle && <Bdi>{subtitle}</Bdi>}
           {p.country_iso2 && <CountryName code={p.country_iso2} />}
           {p.website && <a href={p.website} target="_blank" rel="noreferrer" className="text-accent hover:underline"><bdi dir="ltr">{p.website.replace(/^https?:\/\//, "")}</bdi></a>}
+          <PartySince partyId={p.id} />
         </span>}
-        actions={<Button variant="primary" icon="plus" onClick={() => quickLog.open(p.id)}>{t("quicklog.button")}</Button>}>
+        actions={<>
+          <Button icon="edit" onClick={() => setEditing(true)} data-testid="party-edit">{t("common.edit")}</Button>
+          <Button variant="primary" icon="plus" onClick={() => quickLog.open(p.id)}>{t("quicklog.button")}</Button>
+        </>}>
         {p.do_not_contact && <InlineAlert tone="danger" title={t("parties.dncWarning")}>{p.do_not_contact_reason}</InlineAlert>}
-        <PartyScores partyId={p.id} />
+        <PartyScores party={p} />
       </PageHeader>
       <Tabs label={t("nav.parties")} active={tab} onSelect={(key) => setParams({ tab: key }, { replace: true })} panelId="party-tab"
         tabs={TABS.filter((key) => key !== "quotes" || p.roles.some((r) => r.role === "buyer")).map((key) => ({ key, label: t(`parties.tabs.${key}`),
           count: key === "contacts" ? f.num(p.contacts.filter((c) => c.status === "active").length) : undefined }))} />
       <div id="party-tab" role="tabpanel" aria-label={t(`parties.tabs.${tab}`)} className="flex flex-col gap-4">
-        {tab === "overview" && <Overview key={p.updated_at} party={p} />}
+        {tab === "overview" && <Overview party={p} goTab={(key) => setParams({ tab: key }, { replace: true })} />}
         {tab === "contacts" && <Contacts party={p} />}
         {tab === "interactions" && <Interactions party={p} highlight={params.get("interaction")} />}
         {tab === "documents" && <Documents party={p} />}
@@ -751,6 +770,9 @@ export function PartyDetailPage() {
         {tab === "finance" && <PartyFinance partyId={p.id} />}
         {tab === "history" && <History partyId={p.id} />}
       </div>
+      <Drawer open={editing} title={t("party.story.editTitle")} onClose={() => setEditing(false)} width="w-[min(44rem,100vw)]" testId="party-edit-drawer">
+        <PartyEdit key={p.updated_at} party={p} />
+      </Drawer>
     </div>
   );
 }

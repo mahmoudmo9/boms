@@ -36,6 +36,8 @@ export interface TasksSummary {
   overdue: TaskRow[];
   today: TaskRow[];
   tomorrow: TaskRow[];
+  /** v0.10.1: today's done tasks, struck through on the day's line. */
+  done_today?: TaskRow[];
 }
 
 /** Where a task's source lives in the case page (null when it has no case). */

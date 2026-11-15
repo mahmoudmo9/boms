@@ -214,3 +214,12 @@ describe("states and the page header", () => {
     expect(archive).toHaveBeenCalled();
   });
 });
+
+describe("DayLine label slots (v0.10.1 section 4.1)", () => {
+  it("keeps labels of one row apart and inside the track", async () => {
+    const { spreadLabels } = await import("./data");
+    const out = spreadLabels([0.3, 0.31, 0.32, 0.33, 0.34], 0.2);
+    for (const row of [[0, 2, 4], [1, 3]]) for (let k = 1; k < row.length; k++) expect(out[row[k]] - out[row[k - 1]]).toBeGreaterThanOrEqual(0.2 - 1e-9);
+    expect(Math.min(...out)).toBeGreaterThanOrEqual(0.1); expect(Math.max(...out)).toBeLessThanOrEqual(0.9);
+  });
+});

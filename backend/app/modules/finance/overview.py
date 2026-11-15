@@ -63,6 +63,38 @@ def _profit(db: Session, first: date, last: date) -> dict:
             "by_currency": [{"currency": c, "profit": str(v)} for c, v in sorted(per.items(), key=lambda x: -abs(x[1]))]}
 
 
+def _months_back(today: date, calendar: str, n: int = 6) -> list[tuple[date, date]]:
+    """The last ``n`` months (this one included) as (first, last) days, in the Gregorian or the Jalali calendar."""
+    out: list[tuple[date, date]] = []
+    if calendar == "jalali":
+        from app.connectors.setad.jalali import jalali_to_gregorian
+        from app.modules.sourcing.jalali import to_jalali
+
+        jy, jm, _ = to_jalali(today)
+        for back in range(n - 1, -1, -1):
+            y, m = jy, jm - back
+            while m < 1:
+                y, m = y - 1, m + 12
+            ny, nm = (y + 1, 1) if m == 12 else (y, m + 1)
+            out.append((date(*jalali_to_gregorian(y, m, 1)), date(*jalali_to_gregorian(ny, nm, 1)) - timedelta(days=1)))
+        return out
+    for back in range(n - 1, -1, -1):
+        y, m = today.year, today.month - back
+        while m < 1:
+            y, m = y - 1, m + 12
+        nxt = date(y + (m // 12), m % 12 + 1, 1)
+        out.append((date(y, m, 1), nxt - timedelta(days=1)))
+    return out
+
+
+def _profit_view(db: Session, first: date, last: date, prev_first: date, prev_last: date, today: date, calendar: str) -> dict:
+    """v0.10.1 section 4.1: this period, the previous one (for the change) and the last six months (the sparkline)."""
+    out = _profit(db, first, last)
+    out["previous"] = _profit(db, prev_first, prev_last)
+    out["months"] = [{"from": a.isoformat(), **_profit(db, a, b)} for a, b in _months_back(today, calendar)]
+    return out
+
+
 def _win_rate(db: Session, today: date) -> dict:
     from app.modules.quotes.models import Quote
 
@@ -177,7 +209,10 @@ def summary(db: Session, today: date) -> dict:
     q_first, q_last = _quarter(today)
     s_first, s_last, (jy, season) = _season(today)
     return {
-        "profit_quarter": {"gregorian": _profit(db, q_first, q_last), "jalali": {**_profit(db, s_first, s_last), "year": jy, "season": season}},
+        "profit_quarter": {
+            "gregorian": _profit_view(db, q_first, q_last, *_quarter(q_first - timedelta(days=1)), today, "gregorian"),
+            "jalali": {**_profit_view(db, s_first, s_last, *_season(s_first - timedelta(days=1))[:2], today, "jalali"),
+                       "year": jy, "season": season}},
         "win_rate": _win_rate(db, today),
         "tied_up": _tied_up(db),
         "setad_today": _setad_today(db, today),

@@ -86,3 +86,11 @@ describe("v0.10.1 numbers (sections 1.3, 1.5, 3.2, 3.3)", () => {
     expect(compactParts("-4130299990", "latin")).toEqual({ figure: "-4.1", magnitude: "B" });
   });
 });
+
+describe("long date (v0.10.1 section 4.1)", () => {
+  it("reads «weekday day month year» in Persian with the Jalali calendar", async () => {
+    const { formatLongDate } = await import("./format");
+    expect(formatLongDate(new Date(2026, 10, 15, 12), "fa", "jalali")).toBe("یکشنبه ۲۴ آبان ۱۴۰۵");
+    expect(formatLongDate(new Date(2026, 10, 15, 12), "en", "gregorian")).toBe("Sunday, November 15, 2026");
+  });
+});

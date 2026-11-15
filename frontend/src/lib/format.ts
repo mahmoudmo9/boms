@@ -136,3 +136,16 @@ export function formatBytes(bytes: number | null | undefined, digits: Digits, la
 export function toIsoUtc(date: Date): string {
   return date.toISOString();
 }
+
+/** v0.10.1: «شنبه ۲۴ آبان ۱۴۰۵» / «Saturday, November 14, 2026» in the user's calendar, and the time «۱۹:۳۰». */
+export function formatLongDate(date: Date, lang: string, calendar: Calendar): string {
+  const cal = calendar === "jalali" ? "persian" : "gregory";
+  const nf = new Intl.DateTimeFormat(`${lang === "fa" ? "fa-IR" : "en-US"}-u-ca-${cal}`, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  if (lang !== "fa") return nf.format(date).replace(/ AP$/, "");
+  const part = (type: string) => nf.formatToParts(date).find((p) => p.type === type)?.value ?? "";
+  return `${part("weekday")} ${part("day")} ${part("month")} ${part("year")}`;
+}
+
+export function formatTime(date: Date, lang: string): string {
+  return new Intl.DateTimeFormat(lang === "fa" ? "fa-IR" : "en-GB", { hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+}

@@ -859,11 +859,21 @@
         "followup": "پیگیری",
         "step": "مرحلهٔ اجرا",
         "quote": "پیش‌فاکتور"
+      },
+      "hoursLeft": "ساعت مانده",
+      "daysLeft": "روز مانده",
+      "passed": "گذشته",
+      "do": {
+        "task": "انجام شد",
+        "followup": "ثبت تعامل",
+        "tender": "ساخت برگهٔ پیشنهاد",
+        "step": "بارگذاری اسناد",
+        "quote": "پیگیری پیش‌فاکتور",
+        "setad": "بررسی فراخوان"
       }
     },
     "line": {
       "title": "نوار زمانی امروز",
-      "empty": "امروز موعدی ثبت نشده است.",
       "allDay": "امروز",
       "kinds": {
         "task_one": "{{n}} کار",
@@ -878,7 +888,14 @@
         "step_other": "{{n}} مرحلهٔ اجرا",
         "quote_one": "{{n}} پیش‌فاکتور",
         "quote_other": "{{n}} پیش‌فاکتور"
-      }
+      },
+      "now": "اکنون",
+      "emptyTimed": "برای امروز موعد ساعت‌دار ثبت نشده است.",
+      "more": "+{{n}}",
+      "untimed_one": "{{n}} بدون ساعت",
+      "untimed_other": "{{n}} بدون ساعت",
+      "overdue_one": "{{n}} عقب‌افتاده",
+      "overdue_other": "{{n}} عقب‌افتاده"
     },
     "kpi": {
       "title": "شاخص‌ها",
@@ -903,7 +920,9 @@
       "setadNone": "در برداشت آخر، فراخوان تازه‌ای با کلیدواژه‌ها جور نشد",
       "advance": "پیش‌دریافت",
       "tiedCases_one": "در {{n}} معاملهٔ باز",
-      "tiedCases_other": "در {{n}} معاملهٔ باز"
+      "tiedCases_other": "در {{n}} معاملهٔ باز",
+      "profitTrend": "سود ماه‌به‌ماه",
+      "vsPrevious": "{{pct}}٪ نسبت به فصل قبل"
     },
     "cash": {
       "title": "جریان نقدی ۹۰ روز آینده",
@@ -923,7 +942,15 @@
       "ofCap": "از سقف {{cap}} دلار",
       "none": "هنوز ارائه‌دهنده‌ای وصل نشده است.",
       "connect": "اتصال"
-    }
+    },
+    "backup": {
+      "ok": "بکاپ سالم",
+      "old": "بکاپ قدیمی",
+      "failed": "بکاپ ناموفق",
+      "none": "بدون بکاپ"
+    },
+    "attentionTasks": "کارها",
+    "attentionFollowups": "پیگیری‌ها"
   },
   "funnel": {
     "title": {
@@ -3152,7 +3179,24 @@
         "status_behind_dates": "وضعیت «{{status}}» با تاریخ‌های واقعی ثبت‌شده نمی‌خواند؛ تاریخ‌ها دست‌کم «{{suggested}}» را نشان می‌دهند.",
         "ata_before_atd": "تاریخ رسیدن (ATA) پیش از تاریخ حرکت (ATD) است.",
         "apply": "تغییر به «{{suggested}}»"
-      }
+      },
+      "track": "ردیابی در سایت حمل‌کننده",
+      "noTrackingTemplate": "نشانی ردیابی حمل‌کننده ثبت نشده است",
+      "recordEvent": "ثبت رویداد",
+      "plannedOnly": "مسیر برنامه‌ریزی‌شده؛ هنوز رویدادی با مکان ثبت نشده است.",
+      "noLocatedEvents": "هنوز رویدادی با مکان ثبت نشده است.",
+      "docMissing": "نرسیده",
+      "docStates": "اسناد حمل",
+      "delayTitle": "اثر تأخیر",
+      "delayed": "{{n}} روز دیرتر از برنامه: ETA از {{from}} به {{to}}",
+      "noDelay": "طبق برنامه؛ ETA جابه‌جا نشده است.",
+      "customerDue": "موعد تحویل به مشتری {{date}}",
+      "marginLeft": "{{n}} روز فاصله پس از رسیدن",
+      "marginLate": "{{n}} روز دیرتر از موعد تحویل",
+      "noCustomerDue": "موعد تحویل به مشتری ثبت نشده است.",
+      "containers_one": "{{n}} کانتینر",
+      "containers_other": "{{n}} کانتینر",
+      "stagesOf": "مراحل {{type}} {{done}} از {{total}}"
     },
     "warnings": {
       "eta_passed": "ETA گذشته و هنوز نرسیده ({{days}} روز)",
@@ -4271,6 +4315,54 @@
       "routeCaption": "از رویدادهای ثبت‌شده؛ موقعیت زندهٔ کشتی نیست.",
       "story": "داستان معامله",
       "noHistory": "هنوز رویدادی ثبت نشده است."
+    },
+    "type": {
+      "import": "واردات",
+      "export": "صادرات",
+      "domestic": "داخلی"
+    },
+    "next": {
+      "eyebrow": "قدم بعدی",
+      "allDone": "همهٔ مراحل انجام شده است",
+      "allDoneHint": "برای بستن پرونده، فهرست بستن را در زبانهٔ مالی ببینید.",
+      "stageHint": "مرحلهٔ بعدی مسیر معامله؛ کار بازی برای این مرحله ثبت نشده است.",
+      "taskReason": "نزدیک‌ترین کار باز این پرونده",
+      "needsDocument": "سند لازم است",
+      "needsReference": "{{label}} را ثبت کنید",
+      "due": "سررسید {{date}}",
+      "markDone": "انجام شد",
+      "openChecklist": "باز کردن فهرست مراحل",
+      "dropLabel": "فایل‌ها را این‌جا رها کن",
+      "dropHint": "سند به همین مرحله پیوست می‌شود و مرحله انجام‌شده علامت می‌خورد."
+    },
+    "trio": {
+      "people": "آدم‌های این معامله",
+      "noPeople": "هنوز طرفی به این پرونده وصل نشده است.",
+      "addParty": "ثبت پیشنهاد",
+      "roles": {
+        "buyer": "خریدار",
+        "supplier": "تأمین‌کننده",
+        "carrier": "حمل‌کننده",
+        "forwarder": "فورواردر",
+        "inspector": "بازرس"
+      },
+      "documents": "اسناد",
+      "docCount_one": "{{n}} سند",
+      "docCount_other": "{{n}} سند",
+      "moreMissing": "و {{n}} سند دیگر",
+      "noDocuments": "هنوز سندی پیوست نشده است.",
+      "money": "پول",
+      "received": "دریافت",
+      "paid": "پرداخت"
+    },
+    "story": {
+      "forecast": "پیش‌بینی",
+      "eta": "رسیدن محموله {{ref}}",
+      "invoiceDue": "سررسید صورتحساب {{ref}}",
+      "payment": {
+        "in": "دریافت {{amount}}",
+        "out": "پرداخت {{amount}}"
+      }
     }
   },
   "triage": {
@@ -4312,6 +4404,53 @@
       "dealsNote": "{{so}} سفارش فروش · {{po}} سفارش خرید",
       "claims": "ادعاهای باز",
       "claimsNote": "از {{n}} ادعا"
+    },
+    "story": {
+      "since": "همکاری از {{date}}",
+      "counts": "{{rfqs}} استعلام · {{orders}} سفارش · {{claims}} ادعا",
+      "timeline": "خط زمانی",
+      "noTimeline": "هنوز رویدادی با این طرف ثبت نشده است.",
+      "deals": "معاملات با این طرف",
+      "noDeals": "هنوز معامله‌ای با این طرف نیست.",
+      "profit": "سود ٪{{n}}",
+      "inProgress": "در راه",
+      "expected": "پیش‌بینی ٪{{n}}",
+      "planned": "برنامه ٪{{n}}",
+      "noContacts": "مخاطبی ثبت نشده است.",
+      "primary": "اصلی",
+      "all": "همه",
+      "editTitle": "ویرایش طرف",
+      "kind": {
+        "rfq_sent": "استعلام {{ref}} ارسال شد",
+        "offer": "پیشنهاد قیمت برای {{ref}} رسید",
+        "purchase_order": "سفارش خرید {{ref}}",
+        "sales_order": "سفارش فروش {{ref}}",
+        "payment_in": "دریافت {{ref}} · {{amount}}",
+        "payment_out": "پرداخت {{ref}} · {{amount}}",
+        "shipment": "محموله {{ref}}",
+        "claim": "ادعای {{claim}} · {{amount}}",
+        "followup_done": "{{ref}}"
+      }
+    },
+    "kpi": {
+      "onTime": "تحویل به‌موقع",
+      "inspection": "کیفیت در بازرسی",
+      "response": "میانگین زمان پاسخ",
+      "price": "قیمت در مقایسه",
+      "xOfY": "{{x}} از {{y}}",
+      "notEnough": "دادهٔ کافی نیست ({{n}} از حداقل {{min}})",
+      "avgLate": "میانگین تأخیر {{n}} روز",
+      "allOnTime": "همه به‌موقع",
+      "failed_one": "{{count}} مورد رد شد",
+      "failed_other": "{{count}} مورد رد شد",
+      "allPassed": "همه پذیرفته",
+      "days": "روز",
+      "hours": "ساعت",
+      "responseNote_one": "از {{count}} استعلام",
+      "responseNote_other": "از {{count}} استعلام",
+      "cheapest": "ارزان‌ترین",
+      "priceNote": "ارزان‌ترین در {{x}} از {{y}} قلم مقایسه‌شده",
+      "outOf5": "از ۵"
     }
   },
   "files": {

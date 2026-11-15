@@ -859,11 +859,21 @@
         "followup": "Follow-up",
         "step": "Execution step",
         "quote": "Quote"
+      },
+      "hoursLeft": "hours left",
+      "daysLeft": "days left",
+      "passed": "passed",
+      "do": {
+        "task": "Mark done",
+        "followup": "Log interaction",
+        "tender": "Build the proposal",
+        "step": "Upload documents",
+        "quote": "Chase the quote",
+        "setad": "Review the listing"
       }
     },
     "line": {
       "title": "Today's timeline",
-      "empty": "Nothing is due today.",
       "allDay": "today",
       "kinds": {
         "task_one": "{{n}} task",
@@ -878,7 +888,14 @@
         "step_other": "{{n}} execution steps",
         "quote_one": "{{n}} quote",
         "quote_other": "{{n}} quotes"
-      }
+      },
+      "now": "Now",
+      "emptyTimed": "Nothing with a time is due today.",
+      "more": "+{{n}}",
+      "untimed_one": "{{n}} without a time",
+      "untimed_other": "{{n}} without a time",
+      "overdue_one": "{{n}} overdue",
+      "overdue_other": "{{n}} overdue"
     },
     "kpi": {
       "title": "Figures",
@@ -903,7 +920,9 @@
       "setadNone": "No new listing of the last harvest matched the keywords",
       "advance": "Customer advance",
       "tiedCases_one": "in {{n}} open deal",
-      "tiedCases_other": "in {{n}} open deals"
+      "tiedCases_other": "in {{n}} open deals",
+      "profitTrend": "Profit by month",
+      "vsPrevious": "{{pct}}% vs the previous quarter"
     },
     "cash": {
       "title": "Cash flow, next 90 days",
@@ -923,7 +942,15 @@
       "ofCap": "of the {{cap}} USD cap",
       "none": "No provider is connected yet.",
       "connect": "Connect"
-    }
+    },
+    "backup": {
+      "ok": "Backup healthy",
+      "old": "Backup old",
+      "failed": "Backup failed",
+      "none": "No backup yet"
+    },
+    "attentionTasks": "Tasks",
+    "attentionFollowups": "Follow-ups"
   },
   "funnel": {
     "title": {
@@ -3152,7 +3179,24 @@
         "status_behind_dates": "The status «{{status}}» does not match the recorded actual dates; they show at least «{{suggested}}».",
         "ata_before_atd": "The arrival date (ATA) is before the departure date (ATD).",
         "apply": "Change to «{{suggested}}»"
-      }
+      },
+      "track": "Track on the carrier's site",
+      "noTrackingTemplate": "The carrier's tracking address is not recorded",
+      "recordEvent": "Record an event",
+      "plannedOnly": "Planned route; no event with a place recorded yet.",
+      "noLocatedEvents": "No event with a place recorded yet.",
+      "docMissing": "not received",
+      "docStates": "Shipping documents",
+      "delayTitle": "Effect of the delay",
+      "delayed": "{{n}} days later than planned: ETA moved from {{from}} to {{to}}",
+      "noDelay": "On plan; the ETA has not moved.",
+      "customerDue": "Customer delivery due {{date}}",
+      "marginLeft": "{{n}} days to spare after arrival",
+      "marginLate": "{{n}} days after the delivery date",
+      "noCustomerDue": "No customer delivery date recorded.",
+      "containers_one": "{{n}} container",
+      "containers_other": "{{n}} containers",
+      "stagesOf": "{{type}} steps {{done}} of {{total}}"
     },
     "warnings": {
       "eta_passed": "ETA passed without arrival ({{days}} days)",
@@ -4271,6 +4315,54 @@
       "routeCaption": "From recorded events; not a live vessel position.",
       "story": "Deal story",
       "noHistory": "Nothing recorded yet."
+    },
+    "type": {
+      "import": "Import",
+      "export": "Export",
+      "domestic": "Domestic"
+    },
+    "next": {
+      "eyebrow": "Next step",
+      "allDone": "Every step is done",
+      "allDoneHint": "To close the case, see the closing checklist on the finance tab.",
+      "stageHint": "The next stage of the deal path; no open task is recorded for it.",
+      "taskReason": "The earliest open task of this case",
+      "needsDocument": "a document is needed",
+      "needsReference": "record the {{label}}",
+      "due": "due {{date}}",
+      "markDone": "Mark done",
+      "openChecklist": "Open the checklist",
+      "dropLabel": "Drop the files here",
+      "dropHint": "They are filed to this step and the step is marked done."
+    },
+    "trio": {
+      "people": "People in this deal",
+      "noPeople": "No party is linked to this case yet.",
+      "addParty": "Record an offer",
+      "roles": {
+        "buyer": "Buyer",
+        "supplier": "Supplier",
+        "carrier": "Carrier",
+        "forwarder": "Forwarder",
+        "inspector": "Inspector"
+      },
+      "documents": "Documents",
+      "docCount_one": "{{n}} document",
+      "docCount_other": "{{n}} documents",
+      "moreMissing": "and {{n}} more",
+      "noDocuments": "No document attached yet.",
+      "money": "Money",
+      "received": "Received",
+      "paid": "Paid"
+    },
+    "story": {
+      "forecast": "Forecast",
+      "eta": "Shipment {{ref}} arrives",
+      "invoiceDue": "Invoice {{ref}} due",
+      "payment": {
+        "in": "Receive {{amount}}",
+        "out": "Pay {{amount}}"
+      }
     }
   },
   "triage": {
@@ -4312,6 +4404,53 @@
       "dealsNote": "{{so}} sales orders · {{po}} purchase orders",
       "claims": "Open claims",
       "claimsNote": "of {{n}} claims"
+    },
+    "story": {
+      "since": "Working together since {{date}}",
+      "counts": "{{rfqs}} RFQs · {{orders}} orders · {{claims}} claims",
+      "timeline": "Timeline",
+      "noTimeline": "Nothing has happened with this party yet.",
+      "deals": "Deals with this party",
+      "noDeals": "No deals with this party yet.",
+      "profit": "Profit {{n}}%",
+      "inProgress": "In progress",
+      "expected": "expected {{n}}%",
+      "planned": "planned {{n}}%",
+      "noContacts": "No contacts yet.",
+      "primary": "Primary",
+      "all": "All",
+      "editTitle": "Edit party",
+      "kind": {
+        "rfq_sent": "RFQ {{ref}} sent",
+        "offer": "Offer received for {{ref}}",
+        "purchase_order": "Purchase order {{ref}}",
+        "sales_order": "Sales order {{ref}}",
+        "payment_in": "Received {{ref}} · {{amount}}",
+        "payment_out": "Paid {{ref}} · {{amount}}",
+        "shipment": "Shipment {{ref}}",
+        "claim": "{{claim}} claim · {{amount}}",
+        "followup_done": "{{ref}}"
+      }
+    },
+    "kpi": {
+      "onTime": "On-time delivery",
+      "inspection": "Inspection quality",
+      "response": "Average response time",
+      "price": "Price position",
+      "xOfY": "{{x}} of {{y}}",
+      "notEnough": "Not enough data ({{n}} of at least {{min}})",
+      "avgLate": "{{n}} days late on average",
+      "allOnTime": "All on time",
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "allPassed": "All passed",
+      "days": "days",
+      "hours": "hours",
+      "responseNote_one": "from {{count}} RFQ",
+      "responseNote_other": "from {{count}} RFQs",
+      "cheapest": "Cheapest",
+      "priceNote": "Cheapest on {{x}} of {{y}} compared items",
+      "outOf5": "out of 5"
     }
   },
   "files": {

@@ -3,7 +3,7 @@
  * DescriptionList, Timeline (vertical) and DatedTimeline (horizontal), Stepper (the deal path), KpiTile, Stat,
  * ProgressBar, ProgressRing. */
 import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { type KeyboardEvent, type ReactNode, useRef } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useFormat } from "../../lib/prefs";
@@ -201,6 +201,69 @@ export function Timeline({ items, label }: { items: TimelineItem[]; label?: stri
 }
 
 /** A horizontal dated timeline (the tender page): equal steps on a line, the current one marked. */
+/** v0.10.1 (ProToday): a day's line placed by time of day. Items sit at ``position`` (0..1 along the inline axis, so
+ * the morning starts at the inline start: the right in Persian), labels alternate above and below, done items are
+ * struck through, «اکنون» is a marker. One line per label, truncated, the full text in the tooltip. */
+export type DayLineItem = { key: string; position: number; when: string; title: string; href?: string; done?: boolean; passed?: boolean; current?: boolean };
+
+/** Label slots for the day line: labels alternate between two rows; in a row each label keeps at least ``gap`` (a
+ * fraction of the track) from the previous one, so labels never overlap; the dots stay at their true times. */
+export function spreadLabels(positions: number[], gap: number): number[] {
+  const out = [...positions];
+  for (const row of [0, 1]) {
+    const idx = positions.map((_, i) => i).filter((i) => i % 2 === row);
+    let prev = -Infinity;
+    for (const i of idx) { out[i] = Math.max(positions[i], prev + gap); prev = out[i]; }
+    const over = idx.length ? out[idx[idx.length - 1]] - (1 - gap / 2) : 0;
+    if (over > 0) for (const i of idx) out[i] = Math.max(gap / 2, out[i] - over);
+    for (const i of idx) out[i] = Math.min(Math.max(out[i], gap / 2), 1 - gap / 2);
+  }
+  return out;
+}
+
+export function DayLine({ items, now, nowLabel, label, renderLink }: {
+  items: DayLineItem[]; now: number; nowLabel: string; label: string;
+  renderLink?: (item: DayLineItem, children: ReactNode) => ReactNode }) {
+  const pct = (v: number) => `${Math.round(Math.max(0, Math.min(1, v)) * 1000) / 10}%`;
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(640);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setWidth(el.clientWidth || 640));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const labelWidth = 152;   // the label (w-32, 128 px) plus a gutter
+  const slots = spreadLabels(items.map((i) => i.position), Math.min(0.5, labelWidth / Math.max(width, 1)));
+  return (
+    <div ref={ref} className="relative h-40" role="list" aria-label={label} data-testid="day-line">
+      <span aria-hidden className="absolute inset-x-0 top-1/2 h-px bg-line-strong" />
+      <span aria-hidden className="absolute top-1/2 h-10 w-0.5 -translate-y-1/2 rounded-full bg-accent" style={{ insetInlineStart: pct(now) }} data-testid="day-line-now" />
+      <span className="absolute bottom-0 -translate-x-1/2 text-xs whitespace-nowrap text-accent rtl:translate-x-1/2" style={{ insetInlineStart: pct(now) }}>{nowLabel}</span>
+      {items.map((item, i) => (
+        <span key={`dot-${item.key}`} aria-hidden className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 rtl:translate-x-1/2 ${item.current ? "size-4 border-accent bg-surface" : item.passed || item.done ? "size-3 border-fg-2 bg-fg-2" : "size-3 border-accent bg-surface"}`}
+          style={{ insetInlineStart: pct(item.position) }} data-index={i} />
+      ))}
+      {items.map((item, i) => {
+        const above = i % 2 === 0;
+        const text = (
+          <span className={`block w-full truncate text-sm ${item.done ? "text-muted line-through" : item.current ? "font-semibold text-title" : "text-fg"}`} title={item.title}><bdi>{item.title}</bdi></span>
+        );
+        const body = item.href && renderLink ? renderLink(item, text) : text;
+        return (
+          <div key={item.key} role="listitem" data-done={item.done || undefined}
+            className={`absolute w-32 -translate-x-1/2 text-center rtl:translate-x-1/2 ${above ? "bottom-1/2 mb-3" : "top-1/2 mt-3"}`} style={{ insetInlineStart: pct(slots[i]) }}>
+            <div className="flex w-full flex-col items-stretch gap-0.5">
+              {above ? <><span className="text-xs text-muted tabular-nums">{item.when}</span>{body}</> : <>{body}<span className="text-xs text-muted tabular-nums">{item.when}</span></>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function DatedTimeline({ items, label }: { items: TimelineItem[]; label?: string }) {
   return (
     <ol aria-label={label} className="flex min-w-0 overflow-x-auto pb-1">

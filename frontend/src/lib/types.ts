@@ -1314,6 +1314,9 @@ export interface RouteStopRow { role: "origin" | "via" | "destination"; location
 export interface EventDateChange { field: string; old: string | null; new: string | null }
 
 export interface ShipmentRow {
+  /** v0.10.1 section 0.3.2: the carrier's public tracking link for this shipment (BOMS never fetches it). */
+  tracking?: { number: string | null; url: string | null; carrier_has_template: boolean } | null;
+  container_units?: { id: string; number: string; container_type: string | null }[];
   /** v0.10.1 section 1.6: what the actual dates say about the status (old records are flagged, not changed). */
   date_rule?: { floor: string; suggested_status: string; conflicts: ("ata_before_atd" | "status_behind_dates")[] } | null;
   code?: string | null;                          // v0.9.0

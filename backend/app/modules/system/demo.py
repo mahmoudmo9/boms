@@ -5,7 +5,7 @@ record passes the same rules as real use; a few facts that only time produces (a
 an offer arrived) are then set on the demo database directly. Persian, realistic and clearly fictional: every
 company name is invented and marked «نمونه» / «Demo». BOMS shows «دادهٔ نمایشی» in the top bar while it runs on it.
 
-What it holds (section 5): 9 deals across all stages; a sea import CNSHA → AEJEA (transshipment) → IRBUZ with a
+What it holds (section 5): 9 deals across all stages; a sea import CNSHA → AEJEA (transshipment) → IRBND with a
 4-day delay; an air shipment PVG → IKA; payment milestones in IRR, USD and EUR over the next 90 days with one week
 below zero; deals closed this and last quarter with real profit; RFQs, offers, response times and inspections
 enough for every party KPI tile on two suppliers; a tender with envelopes and missing documents; Setad listings that
@@ -147,7 +147,7 @@ class Demo:
         self.contact(self.p["shanghai"], "Mr. Zhao", "Mr. Zhao", job_title="Sales manager")
 
     def locations(self) -> None:
-        for code in ("CNSHA", "AEJEA", "IRBUZ", "CNPVG", "IRIKA", "DEHAM", "TRIST"):
+        for code in ("CNSHA", "AEJEA", "IRBND", "CNPVG", "IRIKA", "DEHAM", "TRIST"):
             rows = self.api.get("/api/reference/locations", q=code)
             exact = [r for r in rows if (r.get("code") or "").replace(" ", "") == code] or rows
             if exact:
@@ -207,8 +207,10 @@ class Demo:
             quote = self.api.put(f"/api/quotes/{quote['id']}/outcomes", {"items": rows})
         return quote
 
-    def order(self, quote):
+    def order(self, quote, delivery_in: int | None = None):
         so = self.api.post("/api/sales-orders/from-quote", {"quote_id": quote["id"]})
+        if delivery_in is not None:
+            self.api.patch(f"/api/sales-orders/{so['id']}", {"delivery_due_on": day(delivery_in)})
         return self.api.post(f"/api/sales-orders/{so['id']}/confirm", {"no_document_reason": "قرارداد کاغذی در بایگانی"})
 
     def purchase_orders(self, so, ready_in=20, send=True):
@@ -234,6 +236,22 @@ class Demo:
             raise DemoError(f"upload {name} -> {r.status_code}: {r.text[:300]}")
         return r.json()
 
+    def complete_steps(self, case: dict, upto: int, start_days: int = -30, current_due: int = 1) -> None:
+        """The deal's checklist done through position ``upto`` (with a file where one is required); the next step is
+        in progress and due in ``current_due`` days."""
+        ex = self.api.get(f"/api/cases/{case['id']}/execution")
+        for proc in ex.get("processes", []):
+            for i, step in enumerate(sorted(proc["steps"], key=lambda x: x["position"])):
+                if step["position"] <= upto:
+                    body = {"status": "done", "done_on": day(start_days + 3 * i), "started_on": day(start_days + 3 * i - 1)}
+                    if step["requires_document"]:
+                        body["document_id"] = self.document(f"{step['label_fa']}.pdf", step["label_en"])["id"]
+                    if step.get("reference_label"):
+                        body["reference"] = f"DEMO-{step['code'].upper()[:6]}-{i + 1:03d}"
+                    self.api.patch(f"/api/process-steps/{step['id']}", body)
+                elif step["position"] == upto + 1:
+                    self.api.patch(f"/api/process-steps/{step['id']}", {"status": "in_progress", "started_on": day(-1), "due_on": day(current_due)})
+
     def milestone(self, ref: dict, direction: str, amount: str, currency: str, due: int, kind="balance", label=None, party=None):
         body = {"kind": kind, "amount": amount, "amount_currency": currency, "due_on": day(due)}
         if direction == "in":
@@ -249,7 +267,7 @@ class Demo:
 
     # ---- scenarios ------------------------------------------------------------------------------------------------------
     def sea_import(self) -> None:
-        """Deal 1: pumps and valves for the refinery, by sea CNSHA → AEJEA → IRBUZ, 4 days late, in transit."""
+        """Deal 1: pumps and valves for the refinery, by sea CNSHA → AEJEA → IRBND, 4 days late, in transit."""
         case, items = self.case("sea", "پمپ و شیرآلات واحد تقطیر — پتروپالایش", "petro", [
             {"name": "پمپ سانتریفیوژ ۷۵ کیلووات", "quantity": "4", "unit_code": "pc"},
             {"name": "شیر کشویی ۸ اینچ کلاس ۳۰۰", "quantity": "24", "unit_code": "pc"}])
@@ -262,7 +280,7 @@ class Demo:
         self.select({"items": [r for r in o2["items"] if r["line_item_id"] == items[1]["id"]]})
         self.sheet(case, {"USD": "820000", "EUR": "890000"})
         quote = self.quote(case, outcome="accepted")
-        so = self.order(quote)
+        so = self.order(quote, delivery_in=25)
         pos = self.purchase_orders(so, ready_in=-12)
         usd, eur = pos["USD"], pos["EUR"]
         self.api.post(f"/api/purchase-orders/{usd['id']}/status", {"status": "ready", "on_date": day(-10)})
@@ -275,7 +293,7 @@ class Demo:
             "purchase_order_id": usd["id"], "mode": "sea", "carrier_party_id": self.p["caspian"]["id"],
             "forwarder_party_id": self.p["forwarder"]["id"], "transport_doc_kind": "bl", "transport_doc_no": "CSLDEMO240917",
             "tracking_number": "CSLDEMO240917", "vessel_or_flight": "MV Caspian Pearl (نمونه)", "incoterm": "CFR",
-            "origin_location_id": self.loc.get("CNSHA", {}).get("id"), "destination_location_id": self.loc.get("IRBUZ", {}).get("id"),
+            "origin_location_id": self.loc.get("CNSHA", {}).get("id"), "destination_location_id": self.loc.get("IRBND", {}).get("id"),
             "etd": day(-9), "eta": day(8), "container_units": [{"number": "MSCU1234566", "container_type": "45G1"},
                                                              {"number": "TGHU7654320", "container_type": "45G1"}],
             "items": [{"purchase_order_item_id": i["id"], "quantity": i["quantity"]} for i in usd["items"]]})
@@ -296,6 +314,7 @@ class Demo:
         self.milestone(usd, "out", "20860", "USD", 6)
         self.milestone(eur, "out", "51800", "EUR", 9)
         self.milestone(so, "in", "38000000000", "IRR", 21)
+        self.complete_steps(case, 6, start_days=-34, current_due=1)
         self.cases["sea_so"], self.cases["sea_usd"] = so, usd
 
     def air_import(self) -> None:
@@ -310,7 +329,7 @@ class Demo:
                                     {"line_item_id": items[1]["id"], "unit_price": "2150"}], "USD")
         self.select(o)
         self.sheet(case, {"USD": "820000"}, freight="95000000", duty="60000000")
-        so = self.order(self.quote(case, outcome="accepted"))
+        so = self.order(self.quote(case, outcome="accepted"), delivery_in=10)
         po = self.purchase_orders(so, ready_in=-6)["USD"]
         self.api.post(f"/api/purchase-orders/{po['id']}/status", {"status": "ready", "on_date": day(-8)})
         self.api.post("/api/inspections", {"purchase_order_id": po["id"], "kind": "pre_shipment", "done_on": day(-7), "result": "pass"})
@@ -324,6 +343,7 @@ class Demo:
         self.pay(self.milestone(po, "out", "6000", "USD", -10, kind="prepayment"), "6000", -10, fx_rate_to_base="818000")
         self.milestone(po, "out", "13500", "USD", 4)
         self.milestone(so, "in", "21500000000", "IRR", 30)
+        self.complete_steps(case, 8, start_days=-30, current_due=2)
 
     def closed_deal(self, key: str, title: str, buyer: str, supplier: str, item: str, qty: str, price: str, rate: str,
                     closed_days_ago: int) -> None:
@@ -505,10 +525,10 @@ class Demo:
         for t in made[:3]:
             self.api.post(f"/api/tasks/{t['id']}/done", {"note": "انجام شد"})
         for i in range(10):
-            self.api.post("/api/tasks", {"title": f"پیگیری مدارک ترخیص — مرحلهٔ {i + 1}", "due_on": day(-1 - i),
+            self.api.post("/api/tasks", {"title": f"پیگیری مدارک ترخیص — مرحلهٔ {_fa(i + 1)}", "due_on": day(-1 - i),
                                          "case_id": cases[(i + 2) % len(cases)]["id"] if cases else None})
         for i in range(4):
-            self.api.post("/api/tasks", {"title": f"آماده‌سازی گزارش هفتگی {i + 1}", "due_on": day(1)})
+            self.api.post("/api/tasks", {"title": f"آماده‌سازی گزارش هفتگی {_fa(i + 1)}", "due_on": day(1)})
         for key, days, action in (("petro", -3, "پیگیری پاسخ به پیش‌فاکتور"), ("steel", -2, "هماهنگی زمان تحویل"),
                                   ("water", -1, "ارسال رزومه برای ارزیابی"), ("gulf", 0, "تماس دربارهٔ مشخصات فنی"),
                                   ("ningbo", 0, "پیگیری زمان آماده‌شدن"), ("hamburg", 0, "درخواست گواهی مبدأ"),
@@ -550,6 +570,32 @@ class Demo:
             self.backdate(db)
             db.commit()
         return {"cases": len([c for c in self.cases.values() if isinstance(c, dict) and "title" in c]), "parties": len(self.p)}
+
+
+EVENT_BACKDATE_SQL = """
+    WITH ranked AS (
+        SELECT id, row_number() OVER (PARTITION BY entity_id ORDER BY id) AS i, count(*) OVER (PARTITION BY entity_id) AS n
+        FROM core.event WHERE entity_type = 'case')
+    UPDATE core.event e SET occurred_at = now() - make_interval(days => (36 * (r.n - r.i) / greatest(r.n, 1))::int + 1)
+                                           - make_interval(hours => ((r.i * 3) % 9)::int)
+    FROM ranked r WHERE r.id = e.id"""
+
+
+def backdate_events(superuser_conninfo: dict, dbname: str) -> None:
+    """Each case's story spread over the weeks before today, in the order it happened. The event log is append-only
+    for the app's role, so this runs as the PostgreSQL superuser — on the demo database only."""
+    import psycopg
+
+    if not is_demo_database(dbname):
+        raise DemoError(f"refusing to rewrite events outside the demo database ({dbname})")
+    with psycopg.connect(**superuser_conninfo, dbname=dbname) as conn:
+        conn.execute("SET LOCAL session_replication_role = replica")   # the append-only trigger, for this statement only
+        conn.execute(EVENT_BACKDATE_SQL)
+        conn.commit()
+
+
+def _fa(n: int) -> str:
+    return str(n).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
 
 
 def _jalali(d: date) -> str:

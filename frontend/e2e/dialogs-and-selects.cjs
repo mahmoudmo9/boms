@@ -17,7 +17,9 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
   const problems = [];
   const expected = new Set(['409 DELETE /api/parties/:id', '404 GET /api/inquiries/:id', '404 GET /api/cases/:id',
     // v0.4.0: the case header also reads the costing and quote summaries of the case that was just deleted
-    '404 GET /api/cases/:id/costing', '404 GET /api/cases/:id/quotes']);
+    '404 GET /api/cases/:id/costing', '404 GET /api/cases/:id/quotes',
+    // v0.10.1: and its story view (4.2)
+    '404 GET /api/cases/:id/overview']);
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
   page.on('response', (r) => {
     const key = `${r.status()} ${r.request().method()} ${r.url().replace(BASE, '').split('?')[0].replace(/[0-9a-f-]{36}/g, ':id')}`;
@@ -209,6 +211,8 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
     } else focusResults[`${lang} cancel follow-up note`] = 'not found';
 
     // --- delete a supplier that has RFQs: 409 with counts, no 500 (change 3) --------------------------
+    // v0.10.1 (4.6): the party page opens on its read view; the form and danger zone are in the «ویرایش» drawer
+    await page.getByTestId('party-edit').click(); await page.waitForSelector('[data-testid=party-edit-drawer]');
     await typeCheck(`${lang} party danger zone`, '#pd-purge', `Alpha Valves ${tag}`);
     await page.getByRole('button', { name: t('delete.cascadeButton') }).click();
     await page.waitForSelector('[role=alert]');
