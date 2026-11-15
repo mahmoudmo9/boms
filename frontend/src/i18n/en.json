@@ -4246,7 +4246,9 @@
       "offline": "Live updates disconnected"
     },
     "pin": "Pin the menu open",
-    "unpin": "Unpin the menu"
+    "unpin": "Unpin the menu",
+    "demo": "Demo data",
+    "demoHint": "BOMS is running on the demo database boms_demo; every name is fictional."
   },
   "case": {
     "path": {

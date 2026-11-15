@@ -54,7 +54,11 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": VERSION}
+        from app.core.config import get_config
+        from app.modules.system.demo import is_demo_database
+
+        # v0.10.1: «دادهٔ نمایشی» in the top bar while BOMS runs on the demo database
+        return {"status": "ok", "version": VERSION, "demo": is_demo_database(get_config().db_name)}
 
     mount_frontend(app)
     return app

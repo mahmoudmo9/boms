@@ -8,6 +8,7 @@
     python -m app.cli backup --kind pre_update
     python -m app.cli restore-test
     python -m app.cli restore --backup-dir E:\\BOMS-Backup   # superuser; clean PC only
+    python -m app.cli demo-seed [--reset]   # v0.10.1: the showcase dataset, in database boms_demo only
 
 Passwords are read from environment variables (for scripts) or prompted for;
 they are never accepted as command-line arguments.
@@ -174,6 +175,43 @@ def cmd_restore_test(_: argparse.Namespace) -> None:
         sys.exit(2)
 
 
+def cmd_demo_seed(args: argparse.Namespace) -> None:
+    """v0.10.1 section 5: build the showcase dataset. Runs only when BOMS_DB_NAME is boms_demo (or boms_demo_*), so
+    it can never touch the owner's real database."""
+    from app.modules.system import demo, users
+
+    config = get_config()
+    if not demo.is_demo_database(config.db_name):
+        sys.exit(f"demo-seed refuses to run on database {config.db_name!r}: set BOMS_DB_NAME=boms_demo")
+    conninfo = superuser_conninfo()
+    dbadmin.ensure_role(conninfo, config.db_user, get_secret("db_password"))
+    if args.reset and dbadmin.database_exists(conninfo, config.db_name):
+        dbadmin.drop_database(conninfo, config.db_name)
+        print(f"Dropped {config.db_name}")
+    if not dbadmin.database_exists(conninfo, config.db_name):
+        dbadmin.create_database(conninfo, config.db_name, config.db_user)
+        print(f"Created {config.db_name}")
+    command.upgrade(alembic_config(), "head")
+    cmd_seed(args)
+    with new_session() as db:
+        from sqlalchemy import text
+
+        if db.execute(text("SELECT count(*) FROM ops.case")).scalar():
+            sys.exit("The demo database already has data; run demo-seed --reset to build it again")
+        user = users.get_user(db)
+        if user is None:
+            user = users.create_user(db, "admin", _password("BOMS_INITIAL_PASSWORD", "Demo app password: "), source="script",
+                                     language="fa")
+            db.commit()
+        user_id = user.id
+    api = demo.Api(user_id)
+    try:
+        out = demo.Demo(api).run(new_session)
+    finally:
+        api.close()
+    print(f"Demo data ready in {config.db_name}: {out}")
+
+
 def cmd_restore(args: argparse.Namespace) -> None:
     from app.modules.system import backup
 
@@ -216,6 +254,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--release", help="the release name to record (default: from the file)")
     p.set_defaults(func=cmd_reference_import)
     sub.add_parser("folders-rebuild", help="rebuild the readable case folders (v0.9.0)").set_defaults(func=cmd_folders_rebuild)
+    p = sub.add_parser("demo-seed", help="the showcase dataset, in database boms_demo only (v0.10.1)")
+    p.add_argument("--reset", action="store_true", help="drop and rebuild the demo database")
+    p.set_defaults(func=cmd_demo_seed)
     p = sub.add_parser("restore", help="disaster recovery onto a clean PC")
     p.add_argument("--backup-dir", required=True)
     p.add_argument("--dump", help="specific .dump file (default: latest in <backup-dir>/db)")

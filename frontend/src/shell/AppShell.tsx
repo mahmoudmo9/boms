@@ -2,11 +2,13 @@
  * mark; modules not built yet keep their version tag) and the top bar (the search field that opens the command
  * palette, quick add, theme light / dark / system, language, lock, user). Global keys: Ctrl+K and «/» open the
  * palette, «?» the shortcut sheet. Below 1024 px the sidebar is a drawer. Live updates run for the whole app. */
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 
 import { Icon, IconButton, Kbd, Menu } from "../design/components";
+import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { toFaDigits } from "../lib/format";
 import { WORKSPACES, type Workspace } from "../lib/nav";
@@ -153,10 +155,12 @@ function TopBar({ onPalette, onMenu, onShortcuts }: { onPalette: () => void; onM
   const { user, lock, logout, updatePrefs } = useAuth();
   const quickLog = useQuickLog();
   const navigate = useNavigate();
+  const health = useQuery({ queryKey: ["health"], queryFn: () => api<{ demo?: boolean }>("/api/health", { background: true }), staleTime: Infinity });
   if (!user) return null;
   return (
     <header className="flex h-(--topbar-height) shrink-0 items-center gap-2 border-b border-line bg-surface px-3 lg:px-5" data-testid="topbar">
       <IconButton icon="menu" label={t("nav.menu")} className="lg:hidden" onClick={onMenu} />
+      {health.data?.demo && <span className="shrink-0 rounded-md border border-warning-line bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning" data-testid="demo-badge" title={t("shell.demoHint")}>{t("shell.demo")}</span>}
       <button type="button" onClick={onPalette} data-testid="open-palette" aria-haspopup="dialog"
         className="flex h-10 w-full max-w-md min-w-0 cursor-pointer items-center gap-2.5 rounded-xl border border-accent-line bg-sunken px-3.5 text-sm text-muted transition-colors duration-150 hover:border-accent hover:text-fg">
         <Icon name="search" size={16} className="text-accent" />
