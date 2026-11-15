@@ -287,8 +287,8 @@ def cancel_open_of_order(db: Session, order_id: uuid.UUID, reason: str, source: 
 
 
 def cash_position(db: Session, case_id: uuid.UUID) -> dict:
-    """Actual so far, per currency: received from the customer, paid to suppliers and others, and the cash tied up
-    now (paid minus received). The plan is the Phase 6 computed exposure of the current cost sheet."""
+    """Actual so far, per currency: received from the customer, paid to suppliers and others, the cash tied up now
+    (paid minus received, never below zero) and the customer's advance (received minus paid, never below zero). The plan is the Phase 6 computed exposure of the current cost sheet."""
     from app.modules.costing import service as costing
 
     rows = db.execute(select(PaymentMilestone.direction, PaymentRecord.amount_currency, func.sum(PaymentRecord.amount))
@@ -298,8 +298,12 @@ def cash_position(db: Session, case_id: uuid.UUID) -> dict:
     per: dict[str, dict[str, Decimal]] = defaultdict(lambda: {"received": ZERO, "paid": ZERO})
     for direction, currency, total in rows:
         per[currency]["received" if direction == "in" else "paid"] += total
+    # v0.10.1 section 1.4: «نقدینگی درگیر» is max(0, paid − received) and «پیش‌دریافت» max(0, received − paid); the
+    # signed net stays for compatibility. The computed figure of the cost sheet is «تعهد باز» (``plan.exposure``).
     actual = {cur: {"received": money(v["received"]), "paid": money(v["paid"]),
-                    "net_tied_up": money(v["paid"] - v["received"])} for cur, v in sorted(per.items())}
+                    "net_tied_up": money(v["paid"] - v["received"]),
+                    "tied_up": money(max(ZERO, v["paid"] - v["received"])),
+                    "advance": money(max(ZERO, v["received"] - v["paid"]))} for cur, v in sorted(per.items())}
     expected = defaultdict(lambda: {"in": ZERO, "out": ZERO})
     for ms in milestones_of(db, case_id=case_id):
         if ms.status in ("expected", "partly"):

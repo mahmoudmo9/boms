@@ -4,15 +4,18 @@ import { useTranslation } from "react-i18next";
 
 import { Badge, Bdi, Button, Card, DateInput, EmptyState, ErrorNote, Field, PageHeader, Pagination, Select, Spinner } from "../../design/components";
 import { api, type Page } from "../../lib/api";
+import { useListView } from "../../lib/listView";
 import { useFormat } from "../../lib/prefs";
+import { EventSentence, useEventTemplate } from "../../components/EventSentence";
+import { shortLabel } from "../../lib/eventText";
 import type { EventItem } from "../../lib/types";
 
 const PAGE_SIZE = 50;
 
-/** Translated label for an event action, falling back to the raw action key. */
+/** The short label of an event action for the filter: its sentence without the subject (never the raw key). */
 function useActionLabel() {
-  const { t, i18n } = useTranslation();
-  return (action: string) => (i18n.exists(`events.actions.${action}`) ? t(`events.actions.${action}`) : action);
+  const template = useEventTemplate();
+  return (action: string) => shortLabel(template(action));
 }
 
 function useEntityLabel() {
@@ -20,10 +23,9 @@ function useEntityLabel() {
   return (type: string) => (i18n.exists(`events.entities.${type}`) ? t(`events.entities.${type}`) : type);
 }
 
-export function EventList({ items, compact = false }: { items: EventItem[]; compact?: boolean }) {
+export function EventList({ items, compact = false, caseId }: { items: EventItem[]; compact?: boolean; caseId?: string | null }) {
   const { t } = useTranslation();
   const f = useFormat();
-  const actionLabel = useActionLabel();
   const entityLabel = useEntityLabel();
   const [open, setOpen] = useState<number | null>(null);
   if (items.length === 0) return <EmptyState>{t("events.empty")}</EmptyState>;
@@ -34,8 +36,7 @@ export function EventList({ items, compact = false }: { items: EventItem[]; comp
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="tabular-nums text-muted">{f.date(e.occurred_at, true)}</span>
             {!compact && <Badge>{entityLabel(e.entity_type)}</Badge>}
-            <span className="font-medium">{actionLabel(e.action)}</span>
-            {!compact && e.entity_id && <Bdi ltr className="truncate text-xs text-muted">{e.entity_id}</Bdi>}
+            <EventSentence event={e} caseId={caseId} />
             <span className="ms-auto flex items-center gap-2 text-xs text-muted">
               <Bdi>{e.actor}</Bdi>
               <Badge tone="accent">{t(`events.sources.${e.source}`)}</Badge>
@@ -65,7 +66,9 @@ export function EventLogPage() {
     from: null,
     to: null,
   });
-  const [page, setPage] = useState(1);
+  const [view, setView] = useListView({ size: PAGE_SIZE });      // v0.10.1: the page lives in the URL
+  const page = view.page;
+  const setPage = (n: number) => setView({ page: n });
   const update = (changes: Partial<typeof filters>) => {
     setFilters({ ...filters, ...changes });
     setPage(1);

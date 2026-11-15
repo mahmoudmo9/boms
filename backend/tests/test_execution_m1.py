@@ -252,7 +252,9 @@ def test_cash_position_on_a_fixed_dataset(client):
     client.post(f"/api/payment-milestones/{m_in['id']}/payments", json={"amount": "1000", "paid_on": day(0)})
     client.post(f"/api/payment-milestones/{m_out['id']}/payments", json={"amount": "600", "paid_on": day(0)})
     cash = client.get(f"/api/cases/{case['id']}/cash-position").json()
-    assert cash["actual"] == {cur: {"received": "1000.0000", "paid": "600.0000", "net_tied_up": "-400.0000"}}
+    # v0.10.1 section 1.4: the signed net stays; the shown figures are floored (here the customer's advance)
+    assert cash["actual"] == {cur: {"received": "1000.0000", "paid": "600.0000", "net_tied_up": "-400.0000",
+                                    "tied_up": "0.0000", "advance": "400.0000"}}
     assert cash["outstanding"] == {cur: {"in": "0.0000", "out": "900.0000"}}
     assert cash["plan"] and cash["plan"]["currency"]
     assert client.get(f"/api/cases/{case['id']}/execution").json()["cash"] == cash

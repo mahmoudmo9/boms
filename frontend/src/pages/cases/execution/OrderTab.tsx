@@ -23,9 +23,9 @@ export function CashCard({ cash }: { cash: CashPosition }) {
           <div key={r.currency} className="grid gap-2 sm:grid-cols-3" data-currency={r.currency}>
             <Stat label={t("execution.cash.received")} value={<Money amount={r.received} currency={r.currency} />} />
             <Stat label={t("execution.cash.paid")} value={<Money amount={r.paid} currency={r.currency} />} />
-            <Stat label={t("execution.cash.net")} tone={r.tone} value={<Money amount={r.net} currency={r.currency} />} />
+            <Stat label={t(`execution.cash.${r.figure.kind}`)} tone={r.tone} value={<Money amount={r.figure.amount} currency={r.currency} />} />
             {(Number(r.outstandingIn) > 0 || Number(r.outstandingOut) > 0) && <p className="text-xs text-muted sm:col-span-3">
-              {t("execution.cash.outstanding", { in: f.num(r.outstandingIn), out: f.num(r.outstandingOut), cur: r.currency })}</p>}
+              {t("execution.cash.outstanding", { in: f.money(r.outstandingIn, r.currency), out: f.money(r.outstandingOut, r.currency), cur: r.currency })}</p>}
           </div>
         ))}
       </div>

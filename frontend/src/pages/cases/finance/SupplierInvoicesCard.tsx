@@ -71,7 +71,7 @@ function SupplierInvoiceItem({ caseId, invoice, claims, readOnly }: { caseId: st
     <li className="flex flex-col gap-2 px-4 py-2 text-sm" data-testid="supplier-invoice" data-status={invoice.status}>
       <span className="flex flex-wrap items-center gap-2">
         <bdi dir="ltr" className="font-mono">{invoice.supplier_invoice_no}</bdi>
-        <span dir="auto" className="text-muted">{partyName(invoice.supplier, f.lang)}</span>
+        <span dir="auto" className="text-muted"><bdi>{partyName(invoice.supplier, f.lang)}</bdi></span>
         {invoice.purchase_order_number && <bdi dir="ltr" className="text-xs text-muted">{invoice.purchase_order_number}</bdi>}
         <Badge tone={invoice.status === "approved" ? "success" : invoice.status === "disputed" ? "danger" : invoice.status === "cancelled" ? "neutral" : "warning"}>{t(`finance.supplier.statuses.${invoice.status}`)}</Badge>
         {invoice.status !== "cancelled" && <Badge tone={PAYMENT_TONE[invoice.payment_status]}>{t(`finance.paymentStatus.${invoice.payment_status}`)}</Badge>}
@@ -84,7 +84,7 @@ function SupplierInvoiceItem({ caseId, invoice, claims, readOnly }: { caseId: st
             <th className="text-end">{t("finance.supplier.poPrice")}</th><th className="text-end">{t("finance.supplier.invoicePrice")}</th><th /></tr></thead>
           <tbody>{invoice.matching.rows.map((r) => (
             <tr key={r.purchase_order_item_id} className={r.flags.length ? "text-danger" : ""}>
-              <td dir="auto">{r.description}</td><td className="text-end tabular-nums">{f.num(r.ordered)}</td><td className="text-end tabular-nums">{f.num(r.received)}</td>
+              <td dir="auto"><bdi>{r.description}</bdi></td><td className="text-end tabular-nums">{f.num(r.ordered)}</td><td className="text-end tabular-nums">{f.num(r.received)}</td>
               <td className="text-end tabular-nums">{f.num(r.invoiced)}</td><td className="text-end tabular-nums">{f.num(r.po_price)}</td>
               <td className="text-end tabular-nums">{r.invoice_price ? f.num(r.invoice_price) : "—"}</td>
               <td>{r.flags.map((fl) => <Badge key={fl} tone="danger">{t(`finance.supplier.flags.${fl}`)}</Badge>)}</td>

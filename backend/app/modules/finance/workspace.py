@@ -273,6 +273,21 @@ HEADERS = {
                     ("bucket", "بازه", "Bucket")],
 }
 DATE_COLUMNS = {"issue_date", "due_date", "invoice_date", "paid_on", "incurred_on"}
+# v0.10.1 section 1.5: amounts in the row's currency, and amounts in the base currency (the rial); a rial amount is
+# written without decimals (the stored value keeps its precision).
+AMOUNT_COLUMNS = {"subtotal", "vat_amount", "total", "balance", "amount", "allocated_amount", "unallocated",
+                  "revenue_planned", "revenue_actual", "cost_planned", "cost_actual", "profit_planned", "profit_actual"}
+BASE_COLUMNS = {"base_amount", "profit_base"}
+NO_DECIMALS = {"IRR", "IRT"}
+
+
+def _rounded(value) -> str:
+    from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+
+    try:
+        return str(Decimal(str(value)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, ValueError):
+        return str(value)
 
 
 class Csv:
@@ -310,6 +325,9 @@ class Csv:
                 value = row.get(key)
                 if key in DATE_COLUMNS:
                     out += [self._date(value), str(value)[:10] if value else ""]
+                elif value is not None and value != "" and (key in BASE_COLUMNS or (
+                        key in AMOUNT_COLUMNS and str(row.get("currency") or "") in NO_DECIMALS)):
+                    out.append(_rounded(value))
                 else:
                     out.append("" if value is None else str(value))
             writer.writerow(out)

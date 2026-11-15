@@ -44,7 +44,7 @@ function NewInvoiceDialog({ caseId, orderId, onClose }: { caseId: string; orderI
             <th className="text-end">{t("finance.invoices.quantity")}</th></tr></thead>
           <tbody>{rows.map((r) => (
             <tr key={r.sales_order_item_id}>
-              <td dir="auto">{r.description}</td><td className="text-end tabular-nums">{f.num(r.ordered)}</td>
+              <td dir="auto"><bdi>{r.description}</bdi></td><td className="text-end tabular-nums">{f.num(r.ordered)}</td>
               <td className="text-end tabular-nums">{f.num(r.delivered)}</td><td className="text-end tabular-nums">{f.num(r.invoiced)}</td>
               <td className="text-end"><Input className="w-24" dir="ltr" inputMode="decimal" aria-label={`${t("finance.invoices.quantity")} ${r.description}`}
                 value={value(r)} onChange={(e) => setQty({ ...qty, [r.sales_order_item_id]: e.target.value })} /></td>
@@ -154,9 +154,9 @@ function InvoiceItem({ caseId, invoice, readOnly }: { caseId: string; invoice: S
       {open && (
         <div className="flex flex-col gap-2 rounded-xl border border-line p-3">
           <table className="w-full text-xs"><tbody>{invoice.lines.map((l) => (
-            <tr key={l.id}><td dir="auto">{l.description}</td><td className="text-end tabular-nums">{f.num(l.quantity)} {l.unit ?? ""}</td>
-              <td className="text-end tabular-nums">{f.num(l.unit_price)}</td><td className="text-end tabular-nums">{f.num(l.total)}</td></tr>))}</tbody></table>
-          <p className="text-xs text-muted">{t("finance.invoices.totals", { subtotal: f.num(invoice.subtotal), vat: f.num(invoice.vat_amount), rate: f.num(invoice.vat_rate), total: f.num(invoice.total), cur: invoice.currency })}
+            <tr key={l.id}><td dir="auto"><bdi>{l.description}</bdi></td><td className="text-end tabular-nums">{f.num(l.quantity)} {l.unit ?? ""}</td>
+              <td className="text-end tabular-nums">{f.money(l.unit_price, invoice.currency)}</td><td className="text-end tabular-nums">{f.money(l.total, invoice.currency)}</td></tr>))}</tbody></table>
+          <p className="text-xs text-muted">{t("finance.invoices.totals", { subtotal: f.money(invoice.subtotal, invoice.currency), vat: f.money(invoice.vat_amount, invoice.currency), rate: f.num(invoice.vat_rate), total: f.money(invoice.total, invoice.currency), cur: invoice.currency })}
             {invoice.issue_date && ` · ${t("finance.invoices.issued")} ${f.day(invoice.issue_date)}`}{invoice.due_date && ` · ${t("finance.invoices.due")} ${f.day(invoice.due_date)}`}
             {invoice.corrects_number && ` · ${t("finance.invoices.corrects")} ${invoice.corrects_number}`}</p>
           {invoice.status === "draft" && !readOnly && (

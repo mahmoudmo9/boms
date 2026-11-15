@@ -15,6 +15,14 @@ export function Bdi({ children, ltr = false, className }: { children: ReactNode;
   return <bdi dir={ltr ? "ltr" : undefined} className={className}>{children}</bdi>;
 }
 
+/** v0.10.1 section 3.4: text that mixes Persian with Latin runs (a standard's name, a command, a model, a code)
+ * with each Latin run isolated in its own left-to-right <bdi>, so the order reads correctly and its digits stay
+ * Latin on purpose. */
+export function Isolated({ text, className }: { text: string; className?: string }) {
+  const parts = text.split(/([A-Za-z0-9](?:[A-Za-z0-9 .:/_\-+@#]*[A-Za-z0-9])?)/);
+  return <span className={className}>{parts.map((part, i) => (i % 2 === 1 ? <bdi key={i} dir="ltr">{part}</bdi> : part))}</span>;
+}
+
 const VARIANTS: Record<Variant, string> = {
   primary: "border-transparent bg-linear-to-br from-accent-fill-from to-accent-fill-to font-semibold text-accent-fg shadow-accent hover:brightness-105 active:brightness-95",
   secondary: "border-line-strong bg-surface text-fg hover:border-control hover:bg-hover active:bg-surface-2",

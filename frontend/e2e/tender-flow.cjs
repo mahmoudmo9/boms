@@ -265,7 +265,7 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       const sup = (await call('POST', '/api/parties', { confirm_duplicate: true, name_fa: `تأمین‌کننده ${Date.now() % 100000}`, roles: ['supplier'], country_iso2: 'IR' })).body.party;
       const offer = (await call('POST', '/api/offers', { case_id: caseId, party_id: sup.id, channel: 'phone', currency: 'IRR', valid_until: soon(200),
         no_followup_reason: 'browser check', items: items.map((i) => ({ line_item_id: i.id, unit_price: '15000000' })) })).body;
-      for (const [i, it] of items.entries()) await call('POST', `/api/line-items/${it.id}/select`, { offer_item_id: offer.items[i].id });
+      for (const [i, it] of items.entries()) await call('POST', `/api/line-items/${it.id}/select`, { offer_item_id: offer.items.find((r) => r.line_item_id === it.id).id });
       step = `${lang} cost sheet`;
       const sheet = (await call('POST', '/api/cost-sheets', { case_id: caseId, deal_type: 'domestic', pricing_currency: 'IRR' })).body;
       await call('POST', `/api/cost-sheets/${sheet.id}/lines/not-applicable`);

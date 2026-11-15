@@ -166,7 +166,7 @@ function PoCard({ po, caseId, receipts }: { po: PurchaseOrderRow; caseId: string
         {draft && <Button variant="ghost" onClick={() => run(`/api/purchase-orders/${po.id}`, undefined, "DELETE")}>{t("common.remove")}</Button>}
       </span>}>
       <div className="flex flex-col gap-3" data-testid="purchase-order" data-po={po.id}>
-        {po.above_cost_sheet.some((x) => x.check !== "fx_missing") && <p className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning" role="alert">{t("execution.purchase.aboveCost", { n: f.num(po.above_cost_sheet.filter((x) => x.check !== "fx_missing").length) })}</p>}
+        {po.above_cost_sheet.some((x) => x.check !== "fx_missing") && <p className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning" role="alert">{t("execution.purchase.aboveCost", { count: po.above_cost_sheet.filter((x) => x.check !== "fx_missing").length, n: f.num(po.above_cost_sheet.filter((x) => x.check !== "fx_missing").length) })}</p>}
         {po.above_cost_sheet.filter((x) => x.check === "fx_missing").map((x) => (
           <p key={x.purchase_order_item_id} className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning" role="alert" data-testid="po-fx-missing">
             <span dir="auto">{x.description}</span>: {t("execution.purchase.fxMissing", { from: x.currency, to: x.cost_sheet_currency ?? "" })}</p>))}

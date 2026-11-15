@@ -2,7 +2,7 @@
  * mark; modules not built yet keep their version tag) and the top bar (the search field that opens the command
  * palette, quick add, theme light / dark / system, language, lock, user). Global keys: Ctrl+K and «/» open the
  * palette, «?» the shortcut sheet. Below 1024 px the sidebar is a drawer. Live updates run for the whole app. */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 
@@ -19,21 +19,68 @@ import { LiveUpdatesProvider, useLive } from "./LiveUpdates";
 import { ShortcutSheet } from "./Shortcuts";
 
 const THEME_ICON: Record<Theme, string> = { light: "sun", dark: "moon", system: "monitor" };
-const COLLAPSE_KEY = "boms.nav.collapsed";
-const readCollapsed = () => { try { return localStorage.getItem(COLLAPSE_KEY) === "1"; } catch { return false; } };
+/** v0.10.1 section 3.1: the sidebar is an icon rail by default (72 px) that expands over the content on hover or
+ * focus; pinned, it stays open beside the content. The choice is kept per viewer. */
+const PIN_KEY = "boms.nav.pinned";
+const readPinned = () => { try { return localStorage.getItem(PIN_KEY) === "1"; } catch { return false; } };
+
+/** Whether the user's last input was the keyboard: only then does focus inside the rail open it. Focus that comes
+ * back on its own (a dialog closing returns focus to the nav link clicked before it) must not open it over the page. */
+let keyboardModality = false;
+if (typeof window !== "undefined") {
+  window.addEventListener("keydown", (e) => { if (e.key === "Tab" || e.key.startsWith("Arrow")) keyboardModality = true; }, true);
+  window.addEventListener("pointerdown", () => { keyboardModality = false; }, true);
+}
+function lastInputWasKeyboard(): boolean { return keyboardModality; }
+
+/** lg and up (1024 px): the rail; below, the sidebar is a drawer. */
+function useDesktop(): boolean {
+  const query = "(min-width: 64rem)";
+  const [on, setOn] = useState(() => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(query).matches);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const m = window.matchMedia(query);
+    const set = () => setOn(m.matches);
+    m.addEventListener("change", set);
+    return () => m.removeEventListener("change", set);
+  }, []);
+  return on;
+}
 
 function inSection(ws: Workspace, path: string) {
   return path === ws.path || path.startsWith(`${ws.path}/`) || Boolean(ws.children?.some((c) => path === c.path || path.startsWith(`${c.path}/`)));
 }
 
-function Sidebar({ open, collapsed, onToggle, onNavigate }: { open: boolean; collapsed: boolean; onToggle: () => void; onNavigate: () => void }) {
+function Sidebar({ open, pinned, onPin, onNavigate }: { open: boolean; pinned: boolean; onPin: () => void; onNavigate: () => void }) {
   const { t } = useTranslation();
   const f = useFormat();
   const location = useLocation();
-  const narrow = collapsed && !open;
+  const [hover, setHover] = useState(false);
+  const [focused, setFocused] = useState(false);
+  // hover intent: a pointer passing over the rail does not open it; a press anywhere outside closes it
+  const hoverTimer = useRef<number | undefined>(undefined);
+  const asideRef = useRef<HTMLElement>(null);
+  const chosen = useRef(false);   // a module was just chosen: stay closed until the pointer leaves and comes back
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      if (asideRef.current && !asideRef.current.contains(e.target as Node)) { window.clearTimeout(hoverTimer.current); setHover(false); setFocused(false); }
+    };
+    window.addEventListener("pointerdown", onDown, true);
+    return () => { window.removeEventListener("pointerdown", onDown, true); window.clearTimeout(hoverTimer.current); };
+  }, []);
+  const desktop = useDesktop();
+  const narrow = desktop && !open && !pinned && !hover && !focused;
+  const floating = desktop && !pinned && (hover || focused);
   return (
-    <aside data-testid="sidebar" data-collapsed={narrow || undefined}
-      className={`fixed inset-y-0 start-0 z-(--z-drawer) flex shrink-0 flex-col border-e border-rail-line bg-rail text-rail-fg transition-[width,transform] duration-200 ease-out lg:static ${narrow ? "w-(--rail-width-collapsed)" : "w-(--rail-width)"} ${open ? "" : "max-lg:-translate-x-full max-lg:rtl:translate-x-full"}`}>
+    <aside data-testid="sidebar" data-collapsed={narrow || undefined} data-pinned={pinned || undefined} data-floating={floating || undefined} data-hover={hover || undefined} data-focus={focused || undefined}
+      ref={asideRef}
+      onMouseEnter={() => { window.clearTimeout(hoverTimer.current); if (!chosen.current) hoverTimer.current = window.setTimeout(() => setHover(true), 180); }}
+      onMouseMove={() => { if (!chosen.current && !hover && hoverTimer.current === undefined) hoverTimer.current = window.setTimeout(() => setHover(true), 180); }}
+      onMouseLeave={() => { window.clearTimeout(hoverTimer.current); hoverTimer.current = undefined; chosen.current = false; setHover(false); }}
+      // keyboard focus expands the rail; a mouse click does not keep it open (focus stays on the clicked link)
+      onFocus={() => setFocused(lastInputWasKeyboard())}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false); }}
+      className={`fixed inset-y-0 start-0 z-(--z-drawer) flex shrink-0 flex-col border-e border-rail-line bg-rail text-rail-fg transition-[width,transform] duration-200 ease-out ${pinned ? "lg:static" : "lg:absolute"} ${floating ? "shadow-2xl" : ""} ${narrow ? "w-(--rail-width-collapsed)" : "w-max min-w-(--rail-width) max-w-(--rail-width-max)"} ${open ? "" : "max-lg:-translate-x-full max-lg:rtl:translate-x-full"}`}>
       <div className={`flex h-(--topbar-height) shrink-0 items-center gap-3 border-b border-rail-line ${narrow ? "justify-center px-2" : "px-5"}`}>
         <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-accent-fill-from to-accent-fill-to font-display text-lg font-bold text-accent-fg">B</span>
         {!narrow && <span className="flex flex-col leading-tight"><span className="text-md font-bold tracking-wide text-rail-title">BOMS</span><span className="text-2xs text-rail-muted">{t("shell.tagline")}</span></span>}
@@ -45,11 +92,11 @@ function Sidebar({ open, collapsed, onToggle, onNavigate }: { open: boolean; col
             const name = t(`nav.${ws.key}`);
             return (
               <li key={ws.key}>
-                <NavLink to={ws.children ? ws.children[0].path : ws.path} end={!ws.children} onClick={onNavigate} title={narrow ? name : undefined}
+                <NavLink to={ws.children ? ws.children[0].path : ws.path} end={!ws.children} onClick={(e) => { e.currentTarget.blur(); window.clearTimeout(hoverTimer.current); chosen.current = true; setHover(false); setFocused(false); onNavigate(); }} title={narrow ? name : undefined}
                   aria-current={active ? "page" : undefined} data-testid={`nav-${ws.key}`}
                   className={`relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-150 ${narrow ? "justify-center" : ""} ${active ? "bg-rail-active font-semibold text-rail-title before:absolute before:inset-y-2 before:start-0 before:w-0.75 before:rounded-2xl before:bg-rail-accent" : "text-rail-fg hover:bg-rail-active hover:text-rail-title"}`}>
                   <Icon name={ws.icon} size={18} className={active ? "text-rail-accent" : ""} />
-                  {!narrow && <span className="flex-1 truncate">{name}</span>}
+                  {!narrow && <span className="flex-1 whitespace-nowrap">{name}</span>}
                   {!narrow && ws.phase && <span className="rounded-2xl border border-rail-line px-2 text-2xs text-rail-muted">{t("nav.phaseShort", { phase: f.digits === "fa" ? toFaDigits(ws.phase) : ws.phase })}</span>}
                   {narrow && <span className="sr-only">{name}</span>}
                 </NavLink>
@@ -64,7 +111,7 @@ function Sidebar({ open, collapsed, onToggle, onNavigate }: { open: boolean; col
                         : location.pathname.startsWith(prefix(child.path));
                       return (
                         <li key={child.key}>
-                          <NavLink to={child.path} onClick={onNavigate} aria-current={on ? "page" : undefined}
+                          <NavLink to={child.path} onClick={(e) => { e.currentTarget.blur(); window.clearTimeout(hoverTimer.current); chosen.current = true; setHover(false); setFocused(false); onNavigate(); }} aria-current={on ? "page" : undefined}
                             className={`flex min-h-9 items-center rounded-md px-2.5 text-sm transition-colors duration-150 ${on ? "font-medium text-rail-accent" : "text-rail-muted hover:text-rail-title"}`}>
                             {t(`nav.sub.${child.key}`)}
                           </NavLink>
@@ -78,9 +125,9 @@ function Sidebar({ open, collapsed, onToggle, onNavigate }: { open: boolean; col
           })}
         </ul>
       </nav>
-      <div className={`flex shrink-0 border-t border-rail-line p-3 max-lg:hidden ${narrow ? "justify-center" : "justify-end"}`}>
-        <button type="button" onClick={onToggle} aria-label={narrow ? t("shell.expand") : t("shell.collapse")} title={narrow ? t("shell.expand") : t("shell.collapse")}
-          aria-expanded={!narrow} data-testid="nav-collapse"
+      <div className="flex shrink-0 justify-start border-t border-rail-line p-4 max-lg:hidden">
+        <button type="button" onClick={(e) => { if (pinned) { e.currentTarget.blur(); setFocused(false); } onPin(); }} aria-label={pinned ? t("shell.unpin") : t("shell.pin")} title={pinned ? t("shell.unpin") : t("shell.pin")}
+          aria-pressed={pinned} data-testid="nav-pin"
           className="inline-flex size-10 cursor-pointer items-center justify-center rounded-lg text-rail-muted transition-colors duration-150 hover:bg-rail-active hover:text-rail-title">
           <Icon name="sidebar" size={18} />
         </button>
@@ -158,7 +205,7 @@ export function AppShell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [pinned, setPinned] = useState(readPinned);
   const location = useLocation();
 
   useEffect(() => {
@@ -172,7 +219,7 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   useEffect(() => setNavOpen(false), [location.pathname]);
-  const toggle = () => setCollapsed((v) => { try { localStorage.setItem(COLLAPSE_KEY, v ? "0" : "1"); } catch { /* ignore */ } return !v; });
+  const togglePin = () => setPinned((v) => { try { localStorage.setItem(PIN_KEY, v ? "0" : "1"); } catch { /* ignore */ } return !v; });
 
   if (!user) return null;
   return (
@@ -180,7 +227,10 @@ export function AppShell() {
       <QuickLogProvider>
         <a href="#main" className="sr-only z-(--z-toast) rounded-md bg-surface-3 px-3 py-2 focus:not-sr-only focus:fixed focus:start-3 focus:top-3">{t("shell.skip")}</a>
         <div className="flex h-full">
-          <Sidebar open={navOpen} collapsed={collapsed} onToggle={toggle} onNavigate={() => setNavOpen(false)} />
+          {/* the rail keeps its 72 px in the layout; expanded on hover it floats over the content */}
+          <div className={`relative shrink-0 ${pinned ? "" : "lg:w-(--rail-width-collapsed)"}`} data-testid="rail-slot">
+            <Sidebar open={navOpen} pinned={pinned} onPin={togglePin} onNavigate={() => setNavOpen(false)} />
+          </div>
           {navOpen && <div className="fixed inset-0 z-(--z-rail) bg-overlay lg:hidden" onClick={() => setNavOpen(false)} aria-hidden />}
           <div className="flex min-w-0 flex-1 flex-col">
             <TopBar onPalette={() => setPaletteOpen(true)} onMenu={() => setNavOpen(true)} onShortcuts={() => setSheetOpen(true)} />

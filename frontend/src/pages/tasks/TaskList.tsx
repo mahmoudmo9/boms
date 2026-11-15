@@ -77,17 +77,20 @@ export function TaskList({ rows, tone, showCase = true }: { rows: TaskRow[]; ton
         const link = taskLink(task);
         const of = task.status === "open" ? remindsOf(task) : null;
         return (
-          <li key={task.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm" data-testid="task-row">
-            <span className={`w-24 shrink-0 tabular-nums ${tone === "danger" ? "font-medium text-danger" : "text-muted"}`}>{f.day(task.due_on)}</span>
-            {task.priority === "high" && <Badge tone="danger">{t("tasks.high")}</Badge>}
-            <span className={`min-w-0 flex-1 truncate ${task.status !== "open" ? "text-muted line-through" : ""}`} dir="auto">{task.title}</span>
-            <Badge>{t(`tasks.kinds.${task.source_kind}`)}</Badge>
-            {of && <TimeLeftBadge at={of} />}
-            {showCase && task.case_id && link && (
-              <Link to={link} className="max-w-48 truncate text-xs text-accent hover:underline"><Bdi>{task.case_title ?? t("tasks.openCase")}</Bdi></Link>
-            )}
-            {task.status !== "open" && task.done_note && <span className="text-xs text-muted" dir="auto">{task.done_note}</span>}
-            <TaskActions task={task} />
+          <li key={task.id} className="flex flex-col gap-1 px-4 py-2.5 text-sm" data-testid="task-row">
+            {/* v0.10.1: the title always gets the row's width; case, kind and due are secondary text under it. */}
+            <span className={`truncate font-medium ${task.status !== "open" ? "text-muted line-through" : "text-fg"}`} dir="auto" title={task.title} data-testid="task-title"><bdi>{task.title}</bdi></span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+              <span className={`tabular-nums ${tone === "danger" ? "font-medium text-danger" : ""}`}>{f.day(task.due_on)}</span>
+              {task.priority === "high" && <Badge tone="danger">{t("tasks.high")}</Badge>}
+              <span>{t(`tasks.kinds.${task.source_kind}`)}</span>
+              {of && <TimeLeftBadge at={of} />}
+              {showCase && task.case_id && link && (
+                <Link to={link} className="max-w-56 truncate text-accent hover:underline"><Bdi>{task.case_title ?? t("tasks.openCase")}</Bdi></Link>
+              )}
+              {task.status !== "open" && task.done_note && <span dir="auto">{task.done_note}</span>}
+              <span className="ms-auto"><TaskActions task={task} /></span>
+            </div>
           </li>
         );
       })}

@@ -6,6 +6,7 @@ import { NavLink, useParams, useSearchParams } from "react-router";
 
 import { Badge, Bdi, Button, Card, Checkbox, DataTable, ErrorNote, Field, Input, Modal, PageHeader, Pagination, Segmented, Select, useToast } from "../../design/components";
 import { api, type Page } from "../../lib/api";
+import { useListView } from "../../lib/listView";
 import { useFormat } from "../../lib/prefs";
 import type { Country, Currency, Unit } from "../../lib/types";
 
@@ -147,7 +148,9 @@ export function BaseDataPage() {
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
   const [active, setActive] = useState<"all" | "true" | "false">("all");
-  const [page, setPage] = useState(1);
+  const [view, setView] = useListView({ size: PAGE_SIZE });      // v0.10.1: the page lives in the URL
+  const page = view.page;
+  const setPage = (n: number) => setView({ page: n });
   const [editing, setEditing] = useState<Row | "new" | null>(null);
 
   const query = useQuery({

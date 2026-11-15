@@ -4,7 +4,8 @@ execution, quotes and Setad modules already compute and calculates nothing of it
 - ``profit_quarter``: the profit of the deals closed this quarter (frozen ``DealResult`` snapshots), per deal currency;
   the period both as a Gregorian quarter and as a Jalali season (فصل), the page shows the one of the user's calendar;
 - ``win_rate``: decided quotes (accepted, partially accepted, rejected) per month over six months, and the total;
-- ``tied_up``: cash tied up now in the open deals (``cash_position``: paid minus received), per currency;
+- ``tied_up``: per currency over the open deals, «نقدینگی درگیر» Σ max(0, paid − received) and «پیش‌دریافت»
+  Σ max(0, received − paid) (v0.10.1 section 1.4);
 - ``setad_today``: the new listings of the latest harvests that match the warning keywords, counted per keyword;
 - ``cash_flow``: the open payment milestones due in the next 90 days (expected amount less what was received or paid),
   in and out per week and per currency, with the running net and the lowest point. Milestones without a due date or
@@ -86,22 +87,40 @@ def _win_rate(db: Session, today: date) -> dict:
             "months": [{"month": m.isoformat(), **v} for m, v in series.items()]}
 
 
+def sum_positions(actuals: list[dict]) -> dict:
+    """v0.10.1 section 1.4, per currency over the open deals' actual cash (``cash_position(...)["actual"]``):
+    «نقدینگی درگیر» = Σ max(0, paid − received) and «پیش‌دریافت» = Σ max(0, received − paid). A deal with an advance
+    no longer cancels another deal's tied-up cash."""
+    tied: dict[str, Decimal] = defaultdict(lambda: ZERO)
+    advance: dict[str, Decimal] = defaultdict(lambda: ZERO)
+    cases = advance_cases = 0
+    for actual in actuals:
+        counted = advanced = False
+        for currency, v in actual.items():
+            net = Decimal(str(v["net_tied_up"]))
+            if net > 0:
+                tied[currency] += net
+                counted = True
+            elif net < 0:
+                advance[currency] -= net
+                advanced = True
+        cases += counted
+        advance_cases += advanced
+
+    def rows(per: dict[str, Decimal]) -> list[dict]:
+        return [{"currency": c, "amount": str(v)} for c, v in sorted(per.items(), key=lambda x: -x[1]) if v != 0]
+
+    return {"cases": cases, "by_currency": rows(tied), "advance_cases": advance_cases, "advance_by_currency": rows(advance)}
+
+
 def _tied_up(db: Session) -> dict:
     from app.modules.execution.milestones import cash_position
     from app.modules.execution.models import PaymentMilestone
     from app.modules.sourcing.models import Case
 
-    per: dict[str, Decimal] = defaultdict(lambda: ZERO)
-    cases = 0
     ids = db.scalars(select(PaymentMilestone.case_id).join(Case, Case.id == PaymentMilestone.case_id)
                      .where(Case.status != "closed").distinct())
-    for case_id in ids:
-        actual = cash_position(db, case_id)["actual"]
-        if actual:
-            cases += 1
-        for currency, v in actual.items():
-            per[currency] += Decimal(str(v["net_tied_up"]))
-    return {"cases": cases, "by_currency": [{"currency": c, "amount": str(v)} for c, v in sorted(per.items(), key=lambda x: -abs(x[1])) if v != 0]}
+    return sum_positions([cash_position(db, case_id)["actual"] for case_id in ids])
 
 
 def _setad_today(db: Session, today: date) -> dict:

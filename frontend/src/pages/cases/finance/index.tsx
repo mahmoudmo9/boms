@@ -48,7 +48,7 @@ export function FinanceHeaderFacts({ caseId }: { caseId: string }) {
   const due = issued.reduce((s, i) => s + Number(i.balance_due), 0);
   return (
     <span className="text-xs text-muted" data-testid="finance-header">
-      {t("finance.header", { n: f.num(issued.length), due: f.num(due), profit: f.num(d.profit.profit.actual.deal), cur: d.profit.deal_currency })}
+      {t("finance.header", { n: f.num(issued.length), due: f.money(due, d.profit.deal_currency), profit: f.money(d.profit.profit.actual.deal, d.profit.deal_currency), cur: d.profit.deal_currency })}
     </span>
   );
 }

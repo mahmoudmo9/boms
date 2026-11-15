@@ -176,7 +176,7 @@ function ArchiveDialog({ count, busy, error, onArchive, onClose }: {
       <Button variant="danger" busy={busy} onClick={() => onArchive(mode)}>{t("parties.archive")}</Button>
     </>}>
       <div className="flex flex-col gap-3 text-sm">
-        <p>{t("parties.archiveOpenFollowups", { count: f.num(count) })}</p>
+        <p>{t("parties.archiveOpenFollowups", { count, n: f.num(count) })}</p>
         <Segmented label={t("parties.archiveTitle")} value={mode} onChange={setMode}
           options={[{ value: "cancel", label: t("parties.archiveCancel") }, { value: "keep", label: t("parties.archiveKeep") }]} />
         <p className="text-xs text-muted">{mode === "cancel" ? t("parties.archiveCancelHint") : t("parties.archiveKeepHint")}</p>
@@ -223,7 +223,7 @@ function FollowupRows({ rows }: { rows: Followup[] }) {
       {rows.map((row) => (
         <li key={row.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
           <span className="w-24 tabular-nums text-muted">{f.day(row.due_on)}</span>
-          <span className="min-w-0 flex-1 truncate" dir="auto">{row.action}</span>
+          <span className="min-w-0 flex-1 truncate" dir="auto"><bdi>{row.action}</bdi></span>
           <FollowupActions followup={row} extra={<CancelFollowupButton followup={row} />} />
         </li>
       ))}

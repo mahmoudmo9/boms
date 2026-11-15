@@ -19,7 +19,7 @@ export type Moment = {
 export type Overview = {
   profit_quarter: { gregorian: PeriodProfit; jalali: PeriodProfit & { year: number; season: number } };
   win_rate: { won: number; decided: number; percent: number | null; months: { month: string; won: number; lost: number }[] };
-  tied_up: { cases: number; by_currency: { currency: string; amount: string }[] };
+  tied_up: { cases: number; by_currency: { currency: string; amount: string }[]; advance_cases?: number; advance_by_currency?: { currency: string; amount: string }[] };
   setad_today: { count: number; keywords: { keyword: string; count: number }[] };
   cash_flow: { from: string; days: number; currencies: CashCurrency[]; overdue: { currency: string; in: string; out: string }[]; undated: number };
 };
@@ -99,6 +99,13 @@ export function todayLine(items: Moment[], now: Date): (Moment & { state: "done"
     if (!current) { current = true; return { ...m, state: "current" as const }; }
     return { ...m, state: "upcoming" as const };
   });
+}
+
+/** Today's line counted per kind (v0.10.1 section 1.2): the line mixes tasks, follow-ups and deadlines, so its count
+ * is never one word that could be read as one of the lists below it. Kinds in a fixed order, zero kinds left out. */
+export const LINE_KINDS: Moment["kind"][] = ["task", "followup", "tender", "setad", "step", "quote"];
+export function lineCounts(line: Pick<Moment, "kind">[]): { kind: Moment["kind"]; n: number }[] {
+  return LINE_KINDS.map((kind) => ({ kind, n: line.filter((m) => m.kind === kind).length })).filter((c) => c.n > 0);
 }
 
 /** The currency to show first in the cash flow: the one with the most money moving. */

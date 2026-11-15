@@ -17,7 +17,20 @@ export function orderProgress(items: { quantity: string; delivered: string }[]):
   return { done, total: items.length, complete: items.length > 0 && done === items.length };
 }
 
-export interface CashRow { currency: string; received: string; paid: string; net: string; tone: Tone; outstandingIn: string; outstandingOut: string }
+export interface CashRow { currency: string; received: string; paid: string; net: string; tone: Tone; outstandingIn: string; outstandingOut: string;
+  /** v0.10.1 section 1.4: the one cash figure to show — «نقدینگی درگیر» (paid − received, floored at 0) or, when the
+   * customer paid more than we did, «پیش‌دریافت» (received − paid). */
+  figure: CashFigure }
+
+export interface CashFigure { kind: "tied_up" | "advance"; amount: string }
+
+/** The cash figure of one currency of a deal (section 1.4); never a negative «نقدینگی درگیر». */
+export function cashFigure(v: { net_tied_up: string; tied_up?: string; advance?: string } | null | undefined): CashFigure {
+  const net = Number(v?.net_tied_up ?? 0);
+  const advance = v?.advance ?? (net < 0 ? String(v?.net_tied_up ?? "0").replace(/^-/, "") : "0");
+  if (net < 0) return { kind: "advance", amount: advance };
+  return { kind: "tied_up", amount: v?.tied_up ?? (net > 0 ? String(v?.net_tied_up) : "0") };
+}
 
 /** One row per currency: received, paid, the net cash tied up now (positive = our money in the deal: warning), and
  * what is still expected in and out. Currencies of both actual and outstanding, sorted. */
@@ -30,7 +43,7 @@ export function cashRows(cash: CashPosition | null | undefined): CashRow[] {
     const net = a?.net_tied_up ?? "0";
     const n = Number(net);
     return { currency, received: a?.received ?? "0", paid: a?.paid ?? "0", net, tone: n > 0 ? "warning" : n < 0 ? "success" : "neutral",
-      outstandingIn: o?.in ?? "0", outstandingOut: o?.out ?? "0" };
+      outstandingIn: o?.in ?? "0", outstandingOut: o?.out ?? "0", figure: cashFigure(a) };
   });
 }
 
@@ -75,4 +88,12 @@ export function manualPoSteps(status: string): string[] {
 /** Containers typed as "MSCU1234567, TGHU7654321" or one per line -> a clean list. */
 export function parseContainers(text: string): string[] {
   return [...new Set(text.split(/[\s,،;]+/).map((c) => c.trim().toUpperCase()).filter(Boolean))];
+}
+
+/** A shipment event's date change: the structured details, or (events written before v0.10.1) the generated note
+ * «ETA: 2026-12-07 → 2026-12-14» read back into dates so it too shows in the user's calendar. */
+export function dateChangeOf(e: { note: string | null; details?: { field: string; old: string | null; new: string | null } | null }) {
+  if (e.details?.field) return { field: e.details.field, old: e.details.old, new: e.details.new, legacy: false };
+  const m = /^(ETA|ETD): (\d{4}-\d{2}-\d{2}) → (\d{4}-\d{2}-\d{2}|—)$/.exec((e.note ?? "").trim());
+  return m ? { field: m[1].toLowerCase(), old: m[2], new: m[3] === "—" ? null : m[3], legacy: true } : null;
 }

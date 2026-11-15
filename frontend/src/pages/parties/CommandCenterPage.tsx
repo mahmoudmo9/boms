@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Bdi, Button, Card, EmptyState, ErrorState, Loading, PageHeader } from "../../design/components";
+import { Badge, Bdi, Button, Card, ErrorState, Loading, PageHeader } from "../../design/components";
+import { Capped, LinkRows, type LinkRow } from "../../components/Capped";
 import { TimeLeftBadge } from "../../components/TimeLeft";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
@@ -18,40 +19,28 @@ const FUNNELS = ["buyer", "supplier"] as const;
 function FollowupList({ rows, tone }: { rows: FollowupRow[]; tone?: "danger" }) {
   const { t } = useTranslation();
   const f = useFormat();
-  if (rows.length === 0) return <EmptyState>{t("cc.nothing")}</EmptyState>;
-  return (
+  return <Capped rows={rows} render={(shown) => (
     <ul className="divide-y divide-line">
-      {rows.map((row) => (
-        <li key={row.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
-          <span className={`w-24 shrink-0 tabular-nums ${tone === "danger" ? "font-medium text-danger" : "text-muted"}`}>{f.day(row.due_on)}</span>
-          <PartyName fa={row.party_name_fa} en={row.party_name_en} dnc={row.do_not_contact} id={row.party_id} className="max-w-56" />
-          {row.party_status === "archived" && <Badge>{t("parties.archived")}</Badge>}
-          <span className="min-w-0 flex-1 truncate" dir="auto">{row.action}</span>
-          <FollowupActions
-            followup={row}
-            extra={
-              <Link to={`/parties/${row.party_id}`} className="inline-flex h-8 items-center rounded-md px-2 text-sm text-accent hover:bg-surface-2">
-                {t("cc.openParty")}
-              </Link>
-            }
-          />
+      {shown.map((row) => (
+        <li key={row.id} className="flex flex-col gap-1 px-4 py-2.5 text-sm" data-testid="followup-row">
+          <span className="truncate font-medium text-fg" dir="auto" title={row.action}><bdi>{row.action}</bdi></span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+            <span className={`tabular-nums ${tone === "danger" ? "font-medium text-danger" : ""}`}>{f.day(row.due_on)}</span>
+            <PartyName fa={row.party_name_fa} en={row.party_name_en} dnc={row.do_not_contact} id={row.party_id} className="max-w-56" />
+            {row.party_status === "archived" && <Badge>{t("parties.archived")}</Badge>}
+            <span className="ms-auto"><FollowupActions followup={row} /></span>
+          </div>
         </li>
       ))}
     </ul>
-  );
+  )} />;
 }
 
 /** Phase 5: items without RFQ, overdue RFQ replies, offers expiring soon, cases not covered, coverage %. */
 function SourcingSection({ s }: { s: SourcingSummary }) {
   const { t } = useTranslation();
   const f = useFormat();
-  const list = (rows: { key: string; to: string; label: ReactNode; extra?: ReactNode }[]) => rows.length === 0 ? <EmptyState>{t("cc.nothing")}</EmptyState> : (
-    <ul className="divide-y divide-line">{rows.map((r) => (
-      <li key={r.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
-        <Link to={r.to} className="min-w-0 truncate text-accent hover:underline">{r.label}</Link>{r.extra}
-      </li>
-    ))}</ul>
-  );
+  const list = (rows: LinkRow[], to: string = "/cases") => <LinkRows rows={rows} to={to} />;
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
@@ -126,13 +115,7 @@ function SetadSection({ s }: { s: SetadSummary }) {
   const { t } = useTranslation();
   const f = useFormat();
   const listingLink = (r: { id: string; source: string }) => `/tenders?source=${r.source}&include_old=1&listing=${r.id}`;
-  const list = (rows: { key: string; to: string; label: ReactNode; extra?: ReactNode }[]) => rows.length === 0 ? <EmptyState>{t("cc.nothing")}</EmptyState> : (
-    <ul className="divide-y divide-line">{rows.map((r) => (
-      <li key={r.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
-        <Link to={r.to} className="min-w-0 truncate text-accent hover:underline" dir="auto">{r.label}</Link>{r.extra}
-      </li>
-    ))}</ul>
-  );
+  const list = (rows: LinkRow[], to: string = "/tenders") => <LinkRows rows={rows} to={to} />;
   return (
     <section className="flex flex-col gap-3" data-testid="cc-setad">
       <div className="flex flex-wrap items-center gap-3">
@@ -169,13 +152,7 @@ function SetadSection({ s }: { s: SetadSummary }) {
 function TendersSection({ s }: { s: TendersSummary }) {
   const { t } = useTranslation();
   const f = useFormat();
-  const list = (rows: { key: string; to: string; label: ReactNode; extra?: ReactNode }[]) => rows.length === 0 ? <EmptyState>{t("cc.nothing")}</EmptyState> : (
-    <ul className="divide-y divide-line">{rows.map((r) => (
-      <li key={r.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
-        <Link to={r.to} className="min-w-0 truncate text-accent hover:underline" dir="auto">{r.label}</Link>{r.extra}
-      </li>
-    ))}</ul>
-  );
+  const list = (rows: LinkRow[], to: string = "/cases") => <LinkRows rows={rows} to={to} />;
   const tab = (caseId: string) => `/cases/${caseId}?tab=tender`;
   const card = (key: string, n: number, tone: "warning" | "danger", body: ReactNode) => (
     <Card padded={false} title={<span className="flex items-center gap-2">{t(`cc.tenders.${key}`)} <Badge tone={n ? tone : "neutral"}>{f.num(n)}</Badge></span>}>{body}</Card>
@@ -209,13 +186,7 @@ function TendersSection({ s }: { s: TendersSummary }) {
 export function ExecutionSection({ s }: { s: ExecutionSummary }) {
   const { t } = useTranslation();
   const f = useFormat();
-  const list = (rows: { key: string; to: string; label: ReactNode; extra?: ReactNode }[]) => rows.length === 0 ? <EmptyState>{t("cc.nothing")}</EmptyState> : (
-    <ul className="divide-y divide-line">{rows.map((r) => (
-      <li key={r.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
-        <Link to={r.to} className="min-w-0 truncate text-accent hover:underline" dir="auto">{r.label}</Link>{r.extra}
-      </li>
-    ))}</ul>
-  );
+  const list = (rows: LinkRow[], to: string = "/execution") => <LinkRows rows={rows} to={to} />;
   const card = (key: string, n: number, tone: "warning" | "danger", body: ReactNode) => (
     <Card padded={false} title={<span className="flex items-center gap-2">{t(`cc.execution.${key}`)} <Badge tone={n ? tone : "neutral"}>{f.num(n)}</Badge></span>}>{body}</Card>
   );
@@ -233,7 +204,7 @@ export function ExecutionSection({ s }: { s: ExecutionSummary }) {
         {card("steps", s.steps_due.length, "warning", list(s.steps_due.map((r) => ({ key: r.step_id, to: to(r.case_id, "logistics"), label: r.case_title,
           extra: <span className={`text-xs ${r.overdue ? "text-danger" : "text-warning"}`} dir="auto">{f.lang === "fa" ? r.label_fa : r.label_en} · {f.day(r.due_on)}</span> }))))}
         {card("payments", s.payments_overdue.length, "danger", list(s.payments_overdue.map((r) => ({ key: r.milestone_id, to: to(r.case_id, r.direction === "in" ? "order" : "purchase"), label: r.case_title,
-          extra: <span className="text-xs text-danger">{t(`cc.execution.direction.${r.direction}`)} · {f.num(r.amount)} {r.currency} · {f.day(r.due_on)}</span> }))))}
+          extra: <span className="text-xs text-danger">{t(`cc.execution.direction.${r.direction}`)} · {f.money(r.amount, r.currency)} {r.currency} · {f.day(r.due_on)}</span> }))))}
         {card("claims", s.claims_open.length, "warning", list(s.claims_open.map((r) => ({ key: r.claim_id, to: to(r.case_id, "delivery"), label: r.case_title,
           extra: <span className="text-xs text-warning">{t(`execution.claims.kinds.${r.kind}`)} · {t(`execution.claims.statuses.${r.status}`)}</span> }))))}
         {card("deliveries", s.deliveries_due.length, "warning", list(s.deliveries_due.map((r) => ({ key: r.sales_order_id, to: to(r.case_id, "delivery"), label: r.case_title,
@@ -250,7 +221,7 @@ function TasksSection({ s }: { s: NonNullable<CommandCenter["tasks"]> }) {
   const card = (key: "overdue" | "today" | "tomorrow") => (
     <Card key={key} padded={false} className={key === "overdue" && s.overdue.length ? "border-danger" : ""}
       title={<span className="flex items-center gap-2">{t(`cc.tasks.${key}`)} <Badge tone={key === "overdue" && s[key].length ? "danger" : key === "today" ? "accent" : "neutral"}>{f.num(s[key].length)}</Badge></span>}>
-      <div className="max-h-72 overflow-y-auto"><TaskList rows={s[key]} tone={key === "overdue" ? "danger" : undefined} /></div>
+      <Capped rows={s[key]} to="/tasks" empty={<TaskList rows={[]} />} render={(rows) => <TaskList rows={rows} tone={key === "overdue" ? "danger" : undefined} />} />
     </Card>
   );
   return (
@@ -269,12 +240,9 @@ function TasksSection({ s }: { s: NonNullable<CommandCenter["tasks"]> }) {
 function FinanceSection({ s }: { s: NonNullable<CommandCenter["finance"]> }) {
   const { t } = useTranslation();
   const f = useFormat();
-  const card = (key: keyof typeof s, rows: { key: string; to: string; label: ReactNode; extra?: ReactNode }[], tone: "danger" | "warning" | "accent" = "warning") => (
+  const card = (key: keyof typeof s, rows: LinkRow[], tone: "danger" | "warning" | "accent" = "warning") => (
     <Card key={key} padded={false} title={<span className="flex items-center gap-2">{t(`cc.finance.${key}`)} <Badge tone={rows.length ? tone : "neutral"}>{f.num(rows.length)}</Badge></span>}>
-      {rows.length === 0 ? <EmptyState>{t("cc.nothing")}</EmptyState> : (
-        <ul className="max-h-64 divide-y divide-line overflow-y-auto">{rows.map((r) => (
-          <li key={r.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
-            <Link to={r.to} className="min-w-0 truncate text-accent hover:underline">{r.label}</Link>{r.extra}</li>))}</ul>)}
+      <LinkRows rows={rows} to="/finance" />
     </Card>
   );
   const to = (caseId: string) => `/cases/${caseId}?tab=finance`;
@@ -284,16 +252,16 @@ function FinanceSection({ s }: { s: NonNullable<CommandCenter["finance"]> }) {
         <Link to="/finance" className="text-sm text-accent hover:underline">{t("cc.finance.open")}</Link></div>
       <div className="grid gap-4 xl:grid-cols-2">
         {card("receivables_overdue", s.receivables_overdue.map((r) => ({ key: r.invoice_id, to: to(r.case_id), label: <bdi dir="ltr">{r.number}</bdi>,
-          extra: <span className="text-xs text-danger">{f.num(r.balance)} {r.currency} · {t("cc.finance.daysPast", { n: f.num(r.days_past_due) })}</span> })), "danger")}
+          extra: <span className="text-xs text-danger">{f.money(r.balance, r.currency)} {r.currency} · {t("cc.finance.daysPast", { n: f.num(r.days_past_due) })}</span> })), "danger")}
         {card("payables_due", s.payables_due.map((r) => ({ key: r.id, to: to(r.case_id), label: <Bdi>{r.label}</Bdi>,
-          extra: <span className="text-xs text-warning">{f.num(r.balance)} {r.currency}{r.due_date ? ` · ${f.day(r.due_date)}` : ""}</span> })))}
+          extra: <span className="text-xs text-warning">{f.money(r.balance, r.currency)} {r.currency}{r.due_date ? ` · ${f.day(r.due_date)}` : ""}</span> })))}
         {card("delivered_not_invoiced", s.delivered_not_invoiced.map((r) => ({ key: r.sales_order_id, to: to(r.case_id), label: <bdi dir="ltr">{r.number}</bdi>,
           extra: <span className="text-xs text-muted"><Bdi>{r.case_title ?? ""}</Bdi> · {f.num(r.quantity)}</span> })))}
         {card("received_not_invoiced", s.received_not_invoiced.map((r) => ({ key: r.purchase_order_id, to: to(r.case_id), label: <bdi dir="ltr">{r.number}</bdi>,
           extra: <span className="text-xs text-muted"><Bdi>{r.case_title ?? ""}</Bdi></span> })))}
         {card("moadian_pending", s.moadian_pending.map((r) => ({ key: r.invoice_id, to: to(r.case_id), label: <bdi dir="ltr">{r.number}</bdi>,
           extra: <span className="text-xs text-warning">{t(`finance.moadian.statuses.${r.moadian_status}`)}</span> })))}
-        {card("payments_without_rate", s.payments_without_rate.map((r) => ({ key: r.record_id, to: to(r.case_id), label: <span>{f.num(r.amount)} {r.currency}</span>,
+        {card("payments_without_rate", s.payments_without_rate.map((r) => ({ key: r.record_id, to: to(r.case_id), label: <span>{f.money(r.amount, r.currency)} {r.currency}</span>,
           extra: <span className="text-xs text-muted">{f.day(r.paid_on)} · <Bdi>{r.case_title ?? ""}</Bdi></span> })), "danger")}
         {card("ready_to_close", s.ready_to_close.map((r) => ({ key: r.case_id, to: to(r.case_id), label: <Bdi>{r.case_title ?? ""}</Bdi> })), "accent")}
       </div>
@@ -335,11 +303,9 @@ export function CommandCenterPage() {
           <FollowupList rows={d.upcoming_7_days} />
         </Card>
         <Card padded={false} title={<span className="flex items-center gap-2">{t("cc.stale", { days: f.num(d.stale_lead_days) })} <Badge tone={d.stale_leads.length ? "warning" : "neutral"}>{f.num(d.stale_leads.length)}</Badge></span>}>
-          {d.stale_leads.length === 0 ? (
-            <EmptyState>{t("cc.nothing")}</EmptyState>
-          ) : (
+          <Capped rows={d.stale_leads} to="/parties?sort=updated_at&order=asc" render={(shown) => (
             <ul className="divide-y divide-line">
-              {d.stale_leads.map((s) => (
+              {shown.map((s) => (
                 <li key={`${s.party_id}-${s.role}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
                   <PartyName fa={s.party_name_fa} en={s.party_name_en} dnc={s.do_not_contact} id={s.party_id} className="max-w-56" />
                   <Badge>{t(`parties.roles.${s.role}`)} · {stageLabel(t, s.role, s.stage)}</Badge>
@@ -350,7 +316,7 @@ export function CommandCenterPage() {
                 </li>
               ))}
             </ul>
-          )}
+          )} />
         </Card>
       </div>
       {d.tasks && <TasksSection s={d.tasks} />}

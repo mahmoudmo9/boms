@@ -19,7 +19,7 @@ type Row = Record<string, unknown> & { id?: string; case_id?: string; currency?:
 
 function useName() {
   const f = useFormat();
-  return (p: Named | undefined) => ((f.lang === "fa" ? p?.name_fa || p?.name_en : p?.name_en || p?.name_fa) ?? "—");
+  return (p: Named | undefined) => <bdi>{(f.lang === "fa" ? p?.name_fa || p?.name_en : p?.name_en || p?.name_fa) ?? "—"}</bdi>;
 }
 
 function Table({ head, rows, testid }: { head: string[]; rows: React.ReactNode[][]; testid: string }) {
@@ -49,8 +49,8 @@ function Receivables() {
     <div className="flex flex-col gap-4">
       <Card padded={false} title={t("finance.ws.byCustomer")}>
         <Table testid="aging-by-party" head={[t("finance.ws.party"), t("finance.ws.currency"), ...AGING_BUCKETS.map((b) => t(`finance.ws.buckets.${b}`)), t("finance.ws.total")]}
-          rows={q.data.by_party.map((r) => [name(r.party as Named), String(r.currency), ...AGING_BUCKETS.map((b) => <bdi dir="ltr" key={b} className="tabular-nums">{f.num(String(r[b]))}</bdi>),
-            <bdi dir="ltr" key="t" className="tabular-nums font-medium">{f.num(String(r.total))}</bdi>])} />
+          rows={q.data.by_party.map((r) => [name(r.party as Named), String(r.currency), ...AGING_BUCKETS.map((b) => <bdi dir="ltr" key={b} className="tabular-nums">{f.money(String(r[b]), String(r.currency))}</bdi>),
+            <bdi dir="ltr" key="t" className="tabular-nums font-medium">{f.money(String(r.total), String(r.currency))}</bdi>])} />
       </Card>
       <Card padded={false} title={t("finance.ws.byInvoice")}>
         <Table testid="aging-invoices" head={[t("finance.ws.number"), t("finance.ws.party"), t("finance.ws.case"), t("finance.ws.due"), t("finance.ws.balance"), t("finance.ws.bucket")]}
@@ -155,7 +155,7 @@ function Vat({ from, to }: { from: string; to: string }) {
   return (
     <Card padded={false} title={`${t("finance.ws.tabs.vat")} (${q.data.currency}) — ${t("finance.ws.infoOnly")}`}>
       <Table testid="vat-table" head={[t("finance.ws.period"), t("finance.vat.output"), t("finance.vat.input"), t("finance.vat.net")]}
-        rows={q.data.periods.map((p) => [<bdi key="p" dir="ltr">{String(p.period)}</bdi>, f.num(String(p.output)), f.num(String(p.input)), f.num(String(p.net))])} />
+        rows={q.data.periods.map((p) => [<bdi key="p" dir="ltr">{String(p.period)}</bdi>, f.money(String(p.output), q.data.currency), f.money(String(p.input), q.data.currency), f.money(String(p.net), q.data.currency)])} />
     </Card>
   );
 }

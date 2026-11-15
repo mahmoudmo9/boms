@@ -24,7 +24,7 @@ export function DealCashCard({ execution }: { execution: CaseExecution | undefin
       actions={flow.currencies.length > 1 ? <Segmented size="sm" label={t("ds.money.currency")} value={shown?.currency ?? ""} onChange={setCurrency}
         options={flow.currencies.map((c) => ({ value: c.currency, label: <bdi dir="ltr">{c.currency}</bdi> }))} /> : undefined}>
       {!shown || shown.points.length === 0 ? <EmptyState compact icon="coins">{t("finance.dealCash.empty")}</EmptyState> : (
-        <CashFlow label={`${t("finance.dealCash.title")} (${shown.currency})`} format={(n) => f.num(n, 0)} points={shown.points}
+        <CashFlow label={`${t("finance.dealCash.title")} (${shown.currency})`} format={(n) => f.compact(n)} points={shown.points}
           legend={{ cashIn: t("cc.cash.in"), cashOut: t("cc.cash.out"), balance: t("cc.cash.net"), lowest: t("cc.cash.lowest") }} />
       )}
       {((shown && (shown.overdueIn > 0 || shown.overdueOut > 0)) || flow.undated > 0) && (

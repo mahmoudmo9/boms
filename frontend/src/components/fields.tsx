@@ -159,7 +159,7 @@ export function MoneyNote({ amount, currency, rate, rateCurrency, quantity, word
   const converted = rate && rateCurrency && rateCurrency !== currency && !Number.isNaN(Number(rate)) ? (total ?? n) * Number(rate) : null;
   return (
     <div className="flex flex-col gap-0.5 text-xs text-muted" data-testid="money-note">
-      {total !== null && <span>{t("smart.lineTotal")}: <bdi dir="ltr" className="tabular-nums text-fg-2">{f.num(total)} {currency}</bdi></span>}
+      {total !== null && <span>{t("smart.lineTotal")}: <bdi dir="ltr" className="tabular-nums text-fg-2">{f.money(total, currency)} {currency}</bdi></span>}
       {converted !== null && <span>= <bdi dir="ltr" className="tabular-nums text-fg-2">{f.num(Math.round(converted))} {rateCurrency}</bdi></span>}
       {words && <AmountInWords amount={converted !== null ? Math.round(converted) : total ?? n} currency={converted !== null ? rateCurrency! : currency} lang={f.lang} />}
     </div>

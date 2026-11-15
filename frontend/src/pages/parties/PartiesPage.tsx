@@ -174,7 +174,7 @@ export function PartiesPage() {
     {
       id: "next", header: t("parties.nextFollowup"),
       cell: ({ row }) => row.original.next_followup ? (
-        <span className="flex items-center gap-2 text-sm"><span className="tabular-nums text-muted">{f.day(row.original.next_followup.due_on)}</span><span className="max-w-48 truncate" dir="auto">{row.original.next_followup.action}</span></span>
+        <span className="flex items-center gap-2 text-sm"><span className="tabular-nums text-muted">{f.day(row.original.next_followup.due_on)}</span><span className="max-w-48 truncate" dir="auto"><bdi>{row.original.next_followup.action}</bdi></span></span>
       ) : null,
     },
     { id: "updated_at", header: t("parties.updated"), cell: ({ row }) => <span className="tabular-nums text-muted">{f.date(row.original.updated_at)}</span> },

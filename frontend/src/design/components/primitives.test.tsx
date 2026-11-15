@@ -127,3 +127,14 @@ describe("Tooltip", () => {
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
 });
+
+describe("Isolated (v0.10.1 section 3.4)", () => {
+  it("puts each Latin run of a mixed caption in its own left-to-right bdi", async () => {
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { Isolated } = await import("./primitives");
+    const html = renderToStaticMarkup(<Isolated text="پاییز ۱۴۰۵ · ۱۰ معامله · USD ۱٬۳۷۳ · ISO 20275" />);
+    expect(html).toContain('<bdi dir="ltr">USD</bdi>');
+    expect(html).toContain('<bdi dir="ltr">ISO 20275</bdi>');
+    expect(html).toContain("پاییز ۱۴۰۵ · ۱۰ معامله · ");        // Persian runs (and Persian digits) stay as they are
+  });
+});

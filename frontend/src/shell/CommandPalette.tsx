@@ -13,7 +13,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { buildSections, flatten, GROUP_ICON, highlight, loadRecent, moveActive, type PaletteAction, type PaletteRow, pushRecent, saveRecent,
   staticActions } from "../lib/palette";
-import { useFormat } from "../lib/prefs";
+import { type Formatters, useFormat } from "../lib/prefs";
 import type { SearchGroup, SearchHit } from "../lib/types";
 
 function useDebounced<T>(value: T, ms: number): T {
@@ -24,6 +24,17 @@ function useDebounced<T>(value: T, ms: number): T {
 
 function Marked({ text, q }: { text: string; q: string }) {
   return <>{highlight(text, q).map((p, i) => (p.match ? <mark key={i} className="bg-transparent font-semibold text-accent">{p.text}</mark> : <span key={i}>{p.text}</span>))}</>;
+}
+
+/** v0.10.1 section 1.7: an amount and a date sent as fields are formatted here, in the user's calendar and digits. */
+function hitSubtitle(hit: { subtitle: string | null; extra?: Record<string, unknown> | null }, f: Formatters): string | null {
+  const x = hit.extra ?? {};
+  const parts = [
+    typeof x.amount === "string" ? `${f.money(x.amount, typeof x.currency === "string" ? x.currency : null)} ${typeof x.currency === "string" ? x.currency : ""}`.trim() : null,
+    typeof x.on === "string" ? f.day(x.on) : null,
+    hit.subtitle,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
 }
 
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -60,7 +71,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const run = (row: PaletteRow) => {
     onClose();
     if (row.kind === "hit") {
-      const next = pushRecent(recent, { id: row.hit.id, type: row.group, title: row.title, subtitle: row.hit.subtitle, link: row.hit.link });
+      const next = pushRecent(recent, { id: row.hit.id, type: row.group, title: row.title, subtitle: hitSubtitle(row.hit, f), link: row.hit.link });
       saveRecent(next);
       setRecent(next);
       navigate(row.hit.link);
@@ -113,7 +124,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                 const selected = i === active;
                 const icon = row.kind === "hit" ? GROUP_ICON[row.group] ?? "file" : row.kind === "recent" ? "clock" : row.action.icon;
                 const title = row.kind === "hit" ? row.title : row.kind === "recent" ? row.recent.title : label(row.action);
-                const subtitle = row.kind === "hit" ? row.hit.subtitle : row.kind === "recent" ? row.recent.subtitle : null;
+                const subtitle = row.kind === "hit" ? hitSubtitle(row.hit, f) : row.kind === "recent" ? row.recent.subtitle : null;
                 return (
                   <div key={row.key} id={`${listId}-${i}`} role="option" aria-selected={selected} data-testid="palette-row" data-kind={row.kind}
                     data-exact={row.kind === "hit" && row.exact ? "true" : undefined} onMouseEnter={() => setActive(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => run(row)}

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 
 import { Badge, Bdi, Button, ButtonLink, Card, EmptyState, ErrorNote, ErrorState, Field, Icon, IconButton, Input, Loading, Select, Textarea, useToast } from "../../design/components";
+import { FileType } from "../../components/FileType";
 import { api, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { DocumentDetail, EventItem } from "../../lib/types";
@@ -100,7 +101,7 @@ export function DocumentDetailPage() {
           <Card title={t("documents.details")}>
             <dl>
               <MetaRow label={t("documents.filename")}><Bdi>{d.original_filename}</Bdi></MetaRow>
-              <MetaRow label={t("documents.type")}><Bdi>{d.mime_type}</Bdi></MetaRow>
+              <MetaRow label={t("documents.type")}><FileType mime={d.mime_type} name={d.original_filename} /></MetaRow>
               <MetaRow label={t("documents.size")}><span className="tabular-nums">{f.bytes(d.size_bytes)}</span></MetaRow>
               <MetaRow label={t("documents.uploadedAt")}><span className="tabular-nums">{f.date(d.uploaded_at, true)}</span></MetaRow>
               <MetaRow label={t("documents.text")}>

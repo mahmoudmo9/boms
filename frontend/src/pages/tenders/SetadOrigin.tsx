@@ -38,7 +38,7 @@ export function SetadOrigin({ inquiryId }: { inquiryId: string }) {
   return (
     <div className="flex flex-col gap-2" data-testid="setad-origin">
       <p className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent">{t("setad.fromSetad", { number: `\u2068${o.number}\u2069` })}</span>
+        <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent">{t("setad.fromSetad", { number: "{{number}}" }).split("{{number}}").map((part, i) => i === 0 ? part : <span key={i}><bdi dir="ltr">{o.number}</bdi>{part}</span>)}</span>
         <Link className="text-accent hover:underline" to={`/tenders?${o.source ? `source=${o.source}&` : ""}include_old=1&listing=${o.listing_id}`}>{t("setad.openListing")}</Link>
         {o.url && <a className="text-accent hover:underline" href={o.url} target="_blank" rel="noreferrer">{t("setad.openOnSetad")}</a>}
       </p>

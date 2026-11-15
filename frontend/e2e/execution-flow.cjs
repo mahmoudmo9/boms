@@ -338,7 +338,7 @@ const psql = (sql) => execFileSync('psql', ['-h', '127.0.0.1', '-U', process.env
     const sup = (await ok('POST', '/api/parties', { confirm_duplicate: true, name_fa: `تأمین‌کنندهٔ داخلی ${Date.now() % 100000}`, roles: ['supplier'], country_iso2: 'IR' })).party;
     const offer = await ok('POST', '/api/offers', { case_id: kase.id, party_id: sup.id, channel: 'phone', currency: 'IRR', valid_until: soon(60),
       no_followup_reason: 'browser check', items: items.map((i) => ({ line_item_id: i.id, unit_price: '15000000' })) });
-    for (const [i, it] of items.entries()) await ok('POST', `/api/line-items/${it.id}/select`, { offer_item_id: offer.items[i].id });
+    for (const [i, it] of items.entries()) await ok('POST', `/api/line-items/${it.id}/select`, { offer_item_id: offer.items.find((r) => r.line_item_id === it.id).id });
     const sheet = await ok('POST', '/api/cost-sheets', { case_id: kase.id, deal_type: 'domestic', pricing_currency: 'IRR' });
     await ok('POST', `/api/cost-sheets/${sheet.id}/lines/not-applicable`);
     await ok('PATCH', `/api/cost-sheets/${sheet.id}`, { pricing_method: 'margin', target_percent: '20' });

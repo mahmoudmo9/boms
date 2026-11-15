@@ -10,7 +10,7 @@ import { Link } from "react-router";
 
 import { TimeLeftBadge } from "../../../components/TimeLeft";
 import { ApiError, api } from "../../../lib/api";
-import { parseContainers, STEP_TONE, stepGroups, stepState } from "../../../lib/execution";
+import { dateChangeOf, parseContainers, STEP_TONE, stepGroups, stepState } from "../../../lib/execution";
 import { toDateString } from "../../../lib/followups";
 import { useFormat } from "../../../lib/prefs";
 import { routeStops } from "../CaseOverview";
@@ -217,6 +217,14 @@ function ShipmentCard({ s, caseId, warnings }: { s: ShipmentRow; caseId: string;
           {(["etd", "eta", "atd", "ata"] as const).map((k) => (
             <Field key={k} label={k.toUpperCase()} htmlFor={`sh-${k}-${s.id}`}><DateInput id={`sh-${k}-${s.id}`} value={dateOrNull(s[k])} onChange={(d) => patch({ [k]: d ? toDateString(d) : null })} /></Field>))}
         </div>
+        {(s.date_rule?.conflicts ?? []).length > 0 && s.date_rule && (
+          <p className="flex flex-wrap items-center gap-2 rounded-md bg-warning-soft px-3 py-1.5 text-sm text-warning" role="alert" data-testid="shipment-date-conflict">
+            {s.date_rule.conflicts.map((c) => t(`execution.shipments.dateRule.${c}`, { status: t(`execution.shipments.statuses.${s.status}`),
+              suggested: t(`execution.shipments.statuses.${s.date_rule!.suggested_status}`) })).join(" ")}
+            {s.date_rule.conflicts.includes("status_behind_dates") && (
+              <button type="button" className="text-accent hover:underline" onClick={() => patch({ status: s.date_rule!.suggested_status })}>
+                {t("execution.shipments.dateRule.apply", { suggested: t(`execution.shipments.statuses.${s.date_rule.suggested_status}`) })}</button>)}
+          </p>)}
         {s.first_eta && s.eta && s.first_eta !== s.eta && <p className="text-xs text-muted">{t("execution.shipments.firstEta")}: {f.day(s.first_eta)}</p>}
         <div className="flex flex-wrap items-end gap-2 border-t border-line pt-2">
           <Field label={t("execution.shipments.eventKind")} htmlFor={`ev-${s.id}`}><Select id={`ev-${s.id}`} value={event.kind} onChange={(e) => setEvent({ ...event, kind: e.target.value })}>
@@ -230,7 +238,11 @@ function ShipmentCard({ s, caseId, warnings }: { s: ShipmentRow; caseId: string;
             .then(() => { setEvent({ ...event, note: "" }); setPlace(null); })} data-testid="add-event">{t("common.add")}</Button>
         </div>
         {s.events.length > 0 && <ul className="text-xs" data-testid="shipment-events">{s.events.map((e) => (
-          <li key={e.id}><span className="tabular-nums text-muted">{f.date(e.at)}</span> · {t(`execution.shipments.events.${e.kind}`, { defaultValue: e.kind })}{e.note && <> · <bdi dir="auto">{e.note}</bdi></>}</li>))}</ul>}
+          <li key={e.id}><span className="tabular-nums text-muted">{f.date(e.at)}</span> · {t(`execution.shipments.events.${e.kind}`, { defaultValue: e.kind })}{(() => {
+            const change = dateChangeOf(e);
+            if (change) return <> · <span data-testid="event-date-change">{change.field.toUpperCase()}: <span className="tabular-nums">{change.old ? f.day(change.old) : "—"}</span> {f.lang === "fa" ? "←" : "→"} <span className="tabular-nums">{change.new ? f.day(change.new) : "—"}</span></span></>;
+            return e.note ? <> · <bdi dir="auto">{e.note}</bdi></> : null;
+          })()}</li>))}</ul>}
         <div className="flex flex-wrap items-end gap-2 border-t border-line pt-2">
           <Field label={t("execution.shipments.docKindFull")} htmlFor={`sd-k-${s.id}`}><Select id={`sd-k-${s.id}`} value={doc.kind} onChange={(e) => setDoc({ ...doc, kind: e.target.value })}>
             {DOC_KINDS.map((k) => <option key={k} value={k}>{t(`execution.shipments.documents.${k}`)}</option>)}</Select></Field>

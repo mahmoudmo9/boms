@@ -60,7 +60,7 @@ export function CasesPage() {
     placeholderData: keepPreviousData,
   });
   const columns = useMemo<ColumnDef<Case, unknown>[]>(() => [
-    { id: "title", header: t("sourcing.case.title"), cell: ({ row }) => <Link to={`/cases/${row.original.id}`} className="font-medium text-accent hover:underline" dir="auto">{row.original.title}</Link> },
+    { id: "title", header: t("sourcing.case.title"), cell: ({ row }) => <Link to={`/cases/${row.original.id}`} className="font-medium text-accent hover:underline" dir="auto"><bdi>{row.original.title}</bdi></Link> },
     { id: "party", header: t("sourcing.case.buyer"), cell: ({ row }) => row.original.party_id
       ? <PartyName fa={row.original.party_name_fa ?? null} en={row.original.party_name_en ?? null} id={row.original.party_id} className="max-w-56" /> : null },
     { id: "exposure", header: t("sourcing.decision.exposure"), cell: ({ row }) => <Money amount={row.original.exposure_estimate} currency={row.original.exposure_currency} /> },

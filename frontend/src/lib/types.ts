@@ -60,6 +60,15 @@ export interface EventItem {
   action: string;
   data: Record<string, unknown>;
   source: string;
+  /** v0.10.1: the object the generated sentence names. */
+  subject?: EventSubject | null;
+}
+
+export interface EventSubject {
+  type: string;
+  id: string | null;
+  code: string | null;
+  name: string | null;
 }
 
 export interface Country {
@@ -1301,7 +1310,12 @@ export interface ProcessTemplateRow {
 /** v0.10.0: a recorded stop of a shipment (origin, a place an event happened, destination). */
 export interface RouteStopRow { role: "origin" | "via" | "destination"; location_id: string; code: string; name: string; name_fa: string | null; at: string | null; event: string | null;
   state: "done" | "last" | "upcoming" }
+/** v0.10.1 section 1.7: a generated date change, kept as dates and rendered in the user's calendar. */
+export interface EventDateChange { field: string; old: string | null; new: string | null }
+
 export interface ShipmentRow {
+  /** v0.10.1 section 1.6: what the actual dates say about the status (old records are flagged, not changed). */
+  date_rule?: { floor: string; suggested_status: string; conflicts: ("ata_before_atd" | "status_behind_dates")[] } | null;
   code?: string | null;                          // v0.9.0
   route?: { fa: string; en: string; stops?: RouteStopRow[] } | null;
   id: string; case_id: string; direction: "inbound" | "outbound"; purchase_order_id: string | null; sales_order_id: string | null; mode: string;
@@ -1310,7 +1324,7 @@ export interface ShipmentRow {
   etd: string | null; eta: string | null; first_eta: string | null; atd: string | null; ata: string | null; status: string;
   policy_no: string | null; notes: string | null;
   items: { id: string; purchase_order_item_id: string | null; sales_order_item_id: string | null; quantity: string }[];
-  events: { id: string; at: string; kind: string; note: string | null; document_id: string | null }[];
+  events: { id: string; at: string; kind: string; note: string | null; document_id: string | null; details?: EventDateChange | null }[];
   documents: { id: string; kind: string; document_id: string; number: string | null; issued_on: string | null }[];
 }
 export interface ClaimSuggestion { case_id: string; direction: string; kind: string; counterparty_id: string | null; purchase_order_id: string | null; shipment_id: string | null; inspection_id?: string; receipt_id?: string; items: Record<string, unknown>[]; opened_on: string; notes?: string | null }
@@ -1324,7 +1338,7 @@ export interface ClaimRow {
 }
 export interface DeliveryRow { id: string; sales_order_id: string; shipment_id: string | null; delivered_on: string; delivery_place: string | null; receiver_name: string | null; receipt_document_id: string | null; note: string | null; items: { id: string; sales_order_item_id: string; quantity: string }[] }
 export interface CashPosition {
-  actual: Record<string, { received: string; paid: string; net_tied_up: string }>;
+  actual: Record<string, { received: string; paid: string; net_tied_up: string; tied_up?: string; advance?: string }>;
   outstanding: Record<string, { in: string; out: string }>;
   plan: { exposure: string; currency: string } | null;
 }

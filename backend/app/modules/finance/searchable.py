@@ -39,8 +39,11 @@ def _payments(db, needle: str, raw: str, limit: int) -> list[SearchHit]:
            FROM ops.payment_record r JOIN ops.payment_milestone m ON m.id = r.milestone_id
            WHERE r.reference IS NOT NULL AND r.reference ILIKE :raw_like ORDER BY r.paid_on DESC LIMIT :limit"""),
         _params(needle, raw, limit)).all()
-    return [SearchHit(id=str(r.id), title=r.reference, subtitle=f"{r.amount.normalize()} {r.amount_currency} · {r.paid_on}",
-                      score=1.0, link=f"/cases/{r.case_id}?tab=finance&payment={r.id}", extra={"direction": r.direction})
+    # v0.10.1 section 1.7: the amount and the date as fields, rendered in the user's calendar and digits
+    return [SearchHit(id=str(r.id), title=r.reference, subtitle=None, score=1.0,
+                      link=f"/cases/{r.case_id}?tab=finance&payment={r.id}",
+                      extra={"direction": r.direction, "amount": f"{r.amount.normalize():f}", "currency": r.amount_currency,
+                             "on": r.paid_on.isoformat() if r.paid_on else None})
             for r in rows]
 
 
@@ -53,8 +56,10 @@ def _actual_costs(db, needle: str, raw: str, limit: int) -> list[SearchHit]:
            WHERE core.normalize_fa(c.description) LIKE :like OR coalesce(p.name_norm, '') LIKE :like
               OR (:amount ~ '^[0-9]+([.][0-9]+)?$' AND c.amount = CAST(CASE WHEN :amount ~ '^[0-9]+([.][0-9]+)?$' THEN :amount END AS numeric))
            ORDER BY c.created_at DESC LIMIT :limit"""), {**_params(needle, raw, limit), "amount": amount}).all()
-    return [SearchHit(id=str(r.id), title=r.description, subtitle=f"{r.amount.normalize():f} {r.currency} · {r.name_fa or r.name_en or r.kind}",
-                      score=1.0, link=f"/cases/{r.case_id}?tab=finance&cost={r.id}", extra={"kind": r.kind}) for r in rows]
+    return [SearchHit(id=str(r.id), title=r.description, subtitle=r.name_fa or r.name_en or r.kind,
+                      score=1.0, link=f"/cases/{r.case_id}?tab=finance&cost={r.id}",
+                      extra={"kind": r.kind, "amount": f"{r.amount.normalize():f}", "currency": r.currency,
+                             "on": r.incurred_on.isoformat() if r.incurred_on else None}) for r in rows]
 
 
 register(SearchProvider(type="actual_cost", label_key="search.type.actual_cost", search=_actual_costs, order=64))

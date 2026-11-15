@@ -19,7 +19,7 @@ export function Breadcrumb({ items }: { items: Crumb[] }) {
         {items.map((c, i) => (
           <li key={i} className="inline-flex items-center gap-1">
             {i > 0 && <Icon name="chevron" size={12} className="text-faint" />}
-            {c.to ? <Link to={c.to} className="rounded-sm transition-colors duration-150 hover:text-fg">{c.label}</Link> : <span aria-current="page" className="text-fg-2">{c.label}</span>}
+            {c.to ? <Link to={c.to} className="rounded-sm transition-colors duration-150 hover:text-fg"><bdi>{c.label}</bdi></Link> : <span aria-current="page" className="text-fg-2"><bdi>{c.label}</bdi></span>}
           </li>
         ))}
       </ol>

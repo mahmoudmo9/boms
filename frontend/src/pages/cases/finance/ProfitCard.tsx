@@ -11,7 +11,7 @@ export function ProfitTable({ profit }: { profit: Profit }) {
   const { t } = useTranslation();
   const f = useFormat();
   const both = profit.deal_currency !== profit.base_currency;
-  const num = (v: string | null | undefined) => (v === null || v === undefined ? "—" : f.num(v));
+  const num = (v: string | null | undefined, currency = profit.deal_currency) => (v === null || v === undefined ? "—" : f.money(v, currency));
   const lines = profitLines(profit);
   return (
     <div className="overflow-x-auto">
@@ -40,9 +40,9 @@ export function ProfitTable({ profit }: { profit: Profit }) {
                 <td className="px-2 py-1.5 text-end tabular-nums"><bdi dir="ltr">{num(l.planned?.deal)}</bdi></td>
                 <td className="px-2 py-1.5 text-end tabular-nums"><bdi dir="ltr">{num(l.actual?.deal)}</bdi></td>
                 <td className={`px-2 py-1.5 text-end tabular-nums ${tone === "danger" ? "text-danger" : tone === "success" ? "text-success" : ""}`}
-                  data-tone={tone}><bdi dir="ltr">{signed(l.variance?.deal, f.num)}</bdi></td>
+                  data-tone={tone}><bdi dir="ltr">{signed(l.variance?.deal, (v) => f.money(v, profit.deal_currency))}</bdi></td>
                 <td className="px-2 py-1.5 text-end tabular-nums"><bdi dir="ltr">{l.percent === null ? "" : `${signed(l.percent, f.num)}%`}</bdi></td>
-                {both && <td className="px-2 py-1.5 text-end tabular-nums"><bdi dir="ltr">{num(l.actual?.base)}</bdi></td>}
+                {both && <td className="px-2 py-1.5 text-end tabular-nums"><bdi dir="ltr">{num(l.actual?.base, profit.base_currency)}</bdi></td>}
               </tr>
             );
           })}
@@ -75,7 +75,7 @@ export function ProfitBridgeCard({ profit }: { profit: Profit }) {
       </div>
       <Card title={t("finance.bridge.title")} subtitle={t("finance.bridge.subtitle", { cur })} testId="bridge-card">
         {bridge ? (
-          <ProfitBridge label={t("finance.bridge.title")} steps={bridge.steps} estimated={bridge.estimated} format={(n) => f.num(Math.round(n), 0)} />
+          <ProfitBridge label={t("finance.bridge.title")} steps={bridge.steps} estimated={bridge.estimated} format={(n) => f.compact(Math.round(n))} />
         ) : <EmptyState compact>{t("finance.profit.noPlan")}</EmptyState>}
       </Card>
     </section>
@@ -98,25 +98,25 @@ export function ProfitCard({ profit }: { profit: Profit }) {
           <Stat label={t("finance.profit.fxEffect")} tone={Number(profit.fx_effect.base) < 0 ? "danger" : Number(profit.fx_effect.base) > 0 ? "success" : undefined}
             value={<bdi dir="ltr" data-testid="fx-effect">{signed(profit.fx_effect.base, f.num)} {base}</bdi>} />
           {profit.expected && <Stat label={t("finance.profit.expected")} value={<span data-testid="expected-profit">
-            <bdi dir="ltr">{f.num(profit.expected.profit)} {profit.deal_currency}</bdi>
+            <bdi dir="ltr">{f.money(profit.expected.profit, profit.deal_currency)} {profit.deal_currency}</bdi>
             {profit.expected.margin_percent !== null && <span className="text-xs text-muted"> · {f.num(profit.expected.margin_percent)}%</span>}</span>} />}
         </div>
         <ProfitTable profit={profit} />
         {profit.expected && (Number(profit.expected.estimated.goods) !== 0 || Number(profit.expected.estimated.planned_costs) !== 0) && (
           <p className="text-xs text-warning" data-testid="expected-estimated">{t("finance.profit.expectedEstimated", {
-            revenue: f.num(profit.expected.revenue), cost: f.num(profit.expected.cost), goods: f.num(profit.expected.estimated.goods),
-            planned: f.num(profit.expected.estimated.planned_costs), cur: profit.deal_currency })}</p>)}
+            revenue: f.money(profit.expected.revenue, profit.deal_currency), cost: f.money(profit.expected.cost, profit.deal_currency), goods: f.money(profit.expected.estimated.goods, profit.deal_currency),
+            planned: f.money(profit.expected.estimated.planned_costs, profit.deal_currency), cur: profit.deal_currency })}</p>)}
         <div className="grid gap-2 text-sm sm:grid-cols-3" data-testid="vat-summary">
-          <span>{t("finance.vat.output")}: <bdi dir="ltr">{f.num(profit.vat.output.base)} {base}</bdi></span>
-          <span>{t("finance.vat.input")}: <bdi dir="ltr">{f.num(profit.vat.input.base)} {base}</bdi></span>
-          <span>{t("finance.vat.net")}: <bdi dir="ltr">{f.num(profit.vat.net.base)} {base}</bdi></span>
+          <span>{t("finance.vat.output")}: <bdi dir="ltr">{f.money(profit.vat.output.base, base)} {base}</bdi></span>
+          <span>{t("finance.vat.input")}: <bdi dir="ltr">{f.money(profit.vat.input.base, base)} {base}</bdi></span>
+          <span>{t("finance.vat.net")}: <bdi dir="ltr">{f.money(profit.vat.net.base, base)} {base}</bdi></span>
         </div>
         <p className="text-xs text-muted" data-testid="cost-of-money">
-          {t("finance.profit.costOfMoney", { actual: f.num(profit.cost_of_money.actual.base), planned: f.num(profit.cost_of_money.planned?.base ?? "0"),
+          {t("finance.profit.costOfMoney", { actual: f.money(profit.cost_of_money.actual.base, base), planned: f.money(profit.cost_of_money.planned?.base ?? "0", base),
             days: f.num(profit.cost_of_money.days), cur: base })}
         </p>
         {(Number(profit.unrealized.revenue) !== 0 || Number(profit.unrealized.cost) !== 0) && (
-          <p className="text-xs text-muted">{t("finance.profit.unrealizedNote", { revenue: f.num(profit.unrealized.revenue), cost: f.num(profit.unrealized.cost), cur: base })}</p>)}
+          <p className="text-xs text-muted">{t("finance.profit.unrealizedNote", { revenue: f.money(profit.unrealized.revenue, base), cost: f.money(profit.unrealized.cost, base), cur: base })}</p>)}
         {profit.missing_rates.length > 0 && <p className="text-xs text-danger">{t("finance.profit.missingRates", { list: profit.missing_rates.join(", ") })}</p>}
       </div>
     </Card>

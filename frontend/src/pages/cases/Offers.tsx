@@ -200,7 +200,7 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
                   ))}
                   <td className="px-3 py-2 text-end whitespace-nowrap tabular-nums" data-testid="offer-line-total">{(() => {
                     const line = r.include && r.available ? offerLineTotal(r.quantity, r.unit_price, r.price_per_quantity) : null;
-                    return line === null ? "—" : <bdi dir="ltr">{f.num(line)} {header.currency ?? ""}</bdi>;
+                    return line === null ? "—" : <bdi dir="ltr">{f.money(line, header.currency)} {header.currency ?? ""}</bdi>;
                   })()}</td>
                 </tr>
               ))}
@@ -208,7 +208,7 @@ export function OfferForm({ caseData, onClose, onSaved, initialPartyId }: { case
             <tfoot><tr className="border-t border-line bg-surface-2 text-sm font-medium" data-testid="offer-total">
               <td className="px-3 py-2" colSpan={8}>{t("smart.documentTotal")}
                 {totals.missing > 0 && <span className="ms-2 text-xs font-normal text-muted">{t("smart.withoutQuantity", { n: f.num(totals.missing) })}</span>}</td>
-              <td className="px-3 py-2 text-end whitespace-nowrap tabular-nums"><bdi dir="ltr">{f.num(totals.total)} {header.currency ?? ""}</bdi></td>
+              <td className="px-3 py-2 text-end whitespace-nowrap tabular-nums"><bdi dir="ltr">{f.money(totals.total, header.currency)} {header.currency ?? ""}</bdi></td>
             </tr></tfoot>
           </table>
         </div>
@@ -419,6 +419,7 @@ export function ComparisonTab({ caseData }: { caseData: CaseDetail }) {
 
 export function CoverageCard({ caseId, onChanged }: { caseId: string; onChanged: () => void }) {
   const { t } = useTranslation();
+  const f = useFormat();
   const coverage = useQuery({ queryKey: ["coverage", caseId], queryFn: () => api<Coverage>(`/api/cases/${caseId}/coverage`) });
   const unitLabel = useUnitLabel();
   const [marking, setMarking] = useState<string | null>(null);
@@ -446,7 +447,7 @@ export function CoverageCard({ caseId, onChanged }: { caseId: string; onChanged:
               <tr key={i.item_id} className="border-b border-line">
                 <td className="p-2"><Bdi>{i.name}</Bdi></td>
                 <td className="p-2"><div className="flex flex-wrap gap-1"><StatusBadge group="item" status={i.status} />{i.no_coverage_confirmed && <Badge tone="danger">{t("sourcing.noCoverage")}</Badge>}{i.selection_lost && <Badge tone="warning">{t("sourcing.selectionLost")}</Badge>}</div></td>
-                <td className="p-2 tabular-nums">{i.valid_offers}</td>
+                <td className="p-2 tabular-nums">{f.num(i.valid_offers)}</td>
                 <td className="p-2"><div className="flex flex-col gap-0.5">{i.best_prices.map((b) => <Money key={`${b.currency}${b.unit_group}`} amount={b.unit_price} currency={b.currency} per={b.price_per_quantity} unit={unitLabel(b.unit_code, b.unit_text)} />)}</div></td>
                 <td className="p-2 text-end">{!i.no_coverage_confirmed && !COVERED.includes(i.status) && <Button variant="ghost" onClick={() => setMarking(i.item_id)}>{t("sourcing.markNoCoverage")}</Button>}</td>
               </tr>

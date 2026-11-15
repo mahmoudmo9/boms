@@ -12,7 +12,7 @@ const css = readFileSync("src/design/tokens.css", "utf-8");
 describe("themes", () => {
   const light = readTheme(css, "light"), dark = readTheme(css, "dark");
   const shared = ["duration-fast", "duration", "duration-slow", "ease-out", "ease-in-out", "z-sticky", "z-rail", "z-drawer", "z-modal", "z-popover",
-    "z-toast", "z-palette", "rail-width", "rail-width-collapsed", "topbar-height", "target"];
+    "z-toast", "z-palette", "rail-width", "rail-width-max", "rail-width-collapsed", "topbar-height", "target"];
   it("define exactly the same tokens", () => {
     const themed = (t: Record<string, string>) => Object.keys(t).filter((k) => !shared.includes(k)).sort();
     expect(themed(dark)).toEqual(themed(light));

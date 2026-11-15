@@ -61,14 +61,59 @@ export function parseDateInput(text: string, calendar: Calendar): Date | null {
   return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d ? date : null;
 }
 
+const numberFormats = new Map<string, Intl.NumberFormat>();
+function numberFormat(locale: string, options: Intl.NumberFormatOptions): Intl.NumberFormat {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let nf = numberFormats.get(key);
+  if (!nf) { nf = new Intl.NumberFormat(locale, options); numberFormats.set(key, nf); }
+  return nf;
+}
+
+/** v0.10.1 section 3.3: Intl.NumberFormat — fa-IR gives Persian digits, «٬» (U+066C) grouping and «٫» (U+066B)
+ * decimals. Decimal strings are formatted exactly (no float rounding of large amounts). */
 export function formatNumber(value: number | string | null | undefined, digits: Digits, maxFraction = 4): string {
   if (value === null || value === undefined || value === "") return "";
-  const text = String(value);
-  const [intPart, fracPart] = text.replace(/^-/, "").split(".");
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const frac = fracPart ? fracPart.slice(0, maxFraction).replace(/0+$/, "") : "";
-  const result = (text.startsWith("-") ? "-" : "") + grouped + (frac ? `.${frac}` : "");
-  return digits === "fa" ? toFaDigits(result).replace(/,/g, "٬").replace(".", "٫") : result;
+  const text = typeof value === "number" ? value : String(value).trim();
+  if (typeof text === "string" && !/^-?\d+(\.\d+)?$/.test(text)) return digits === "fa" ? toFaDigits(text) : text;
+  return numberFormat(digits === "fa" ? "fa-IR" : "en-US", { maximumFractionDigits: maxFraction })
+    .format(text as unknown as number);   // a decimal string is accepted (Intl.NumberFormat v3) and kept exact
+}
+
+/** Currencies shown without decimals: the rial (and the toman) have no minor unit in use (section 1.5). */
+export const NO_DECIMALS = new Set(["IRR", "IRT"]);
+
+export function moneyFraction(currency: string | null | undefined, fallback = 2): number {
+  return currency && NO_DECIMALS.has(currency) ? 0 : fallback;
+}
+
+/** The compact form split into the figure and its magnitude word («۴٫۱» + «میلیارد», «4.1» + «B»), so a tile can
+ * show the figure large and the word with the currency beside it. */
+export function compactParts(value: number | string | null | undefined, digits: Digits): { figure: string; magnitude: string } {
+  const n = Number(value);
+  if (value === null || value === undefined || value === "" || !Number.isFinite(n)) return { figure: "", magnitude: "" };
+  const locale = digits === "fa" ? "fa-IR" : "en-US";
+  if (Math.abs(n) < 1_000_000) return { figure: numberFormat(locale, { maximumFractionDigits: 0 }).format(n), magnitude: "" };
+  const parts = numberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).formatToParts(n);
+  return { figure: parts.filter((p) => p.type !== "compact" && p.type !== "literal").map((p) => p.value).join(""),
+    magnitude: parts.filter((p) => p.type === "compact").map((p) => p.value).join("") };
+}
+
+/** The Persian name of a common currency for compact figures («ریال», «دلار»); other codes stay as they are. */
+const CURRENCY_FA: Record<string, string> = { IRR: "ریال", IRT: "تومان", USD: "دلار", EUR: "یورو", AED: "درهم", CNY: "یوان", GBP: "پوند", TRY: "لیر", RUB: "روبل", INR: "روپیه" };
+export function currencyName(currency: string | null | undefined, lang: string): string {
+  if (!currency) return "";
+  return lang === "fa" ? CURRENCY_FA[currency] ?? currency : currency;
+}
+
+/** Compact numbers for tiles, rings and chart labels (section 3.2): «۴٫۱ میلیارد», «521.5M». Values under a million
+ * keep their full grouped form («۱٬۳۷۳»). */
+export function formatCompact(value: number | string | null | undefined, digits: Digits, maxFraction = 0): string {
+  if (value === null || value === undefined || value === "") return "";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  const locale = digits === "fa" ? "fa-IR" : "en-US";
+  if (Math.abs(n) < 1_000_000) return numberFormat(locale, { maximumFractionDigits: maxFraction }).format(n);
+  return numberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(n);
 }
 
 const UNITS = ["B", "KB", "MB", "GB", "TB"];

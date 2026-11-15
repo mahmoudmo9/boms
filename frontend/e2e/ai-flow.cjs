@@ -70,7 +70,7 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       { name: `Valve ${tag}`, quantity: '4', unit_code: 'pc' }] })).items;
     const offer = await ok('POST', '/api/offers', { case_id: kase.id, party_id: sup.id, channel: 'email', currency: 'USD', valid_until: soon(60),
       no_followup_reason: 'browser check', items: items.map((i) => ({ line_item_id: i.id, unit_price: '100' })) });
-    for (const [i, it] of items.entries()) await ok('POST', `/api/line-items/${it.id}/select`, { offer_item_id: offer.items[i].id });
+    for (const [i, it] of items.entries()) await ok('POST', `/api/line-items/${it.id}/select`, { offer_item_id: offer.items.find((r) => r.line_item_id === it.id).id });
     const sheet = await ok('POST', '/api/cost-sheets', { case_id: kase.id, deal_type: 'import', pricing_currency: 'USD' });
     for (const line of sheet.lines) {
       if (line.kind === 'purchase') continue;

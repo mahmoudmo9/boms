@@ -246,8 +246,10 @@ export function Stepper({ steps, label }: { steps: { key: string; label: ReactNo
 const TONE_TEXT: Record<Tone, string> = { neutral: "text-title", success: "text-success", danger: "text-danger", warning: "text-warning", accent: "text-accent", info: "text-info" };
 
 /** One figure of a dashboard: a label, the big number with its unit, a note, and room for a small chart. */
-export function KpiTile({ label, value, unit, note, tone = "neutral", children, estimated, testId, emphasis }: {
-  label: ReactNode; value: ReactNode; unit?: ReactNode; note?: ReactNode; tone?: Tone; children?: ReactNode; estimated?: boolean; testId?: string; emphasis?: boolean }) {
+export function KpiTile({ label, value, unit, note, tone = "neutral", children, estimated, testId, emphasis, full }: {
+  label: ReactNode; value: ReactNode; unit?: ReactNode; note?: ReactNode; tone?: Tone; children?: ReactNode; estimated?: boolean; testId?: string; emphasis?: boolean;
+  /** v0.10.1: the full value, as the tooltip of a compact one. */
+  full?: string }) {
   const { t } = useTranslation();
   return (
     <article data-testid={testId} className={`flex min-w-0 flex-col gap-2.5 rounded-2xl border px-5 py-4.5 ${emphasis ? "border-accent-line bg-linear-to-br from-card-accent-from to-card-accent-to" : "border-line bg-surface"}`}>
@@ -256,7 +258,7 @@ export function KpiTile({ label, value, unit, note, tone = "neutral", children, 
         {estimated && <span className="rounded-sm border border-warning-line px-1.5 text-2xs text-warning">{t("ds.kpi.estimated")}</span>}
       </span>
       <span className="flex flex-wrap items-baseline gap-2">
-        <span className={`text-4xl font-light tabular-nums ${TONE_TEXT[tone]}`}>{value}</span>
+        <span className={`min-w-0 whitespace-nowrap text-4xl font-light tabular-nums ${TONE_TEXT[tone]}`} title={full} data-full={full}>{value}</span>
         {unit && <span className="text-sm text-muted">{unit}</span>}
       </span>
       {children}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatBytes, formatDate, formatNumber, parseDateInput, toFaDigits, toLatinDigits } from "./format";
+import { compactParts, formatBytes, formatCompact, formatDate, formatNumber, moneyFraction, parseDateInput, toFaDigits, toLatinDigits } from "./format";
 
 describe("digits", () => {
   it("converts both ways", () => {
@@ -63,5 +63,26 @@ describe("digits follow the UI language (v0.9.0)", () => {
     expect(digitsFor("fa")).toBe("fa");
     expect(formatNumber("1234.5", digitsFor("en"))).toBe("1,234.5");
     expect(formatNumber("1234.5", digitsFor("fa"))).toBe("۱٬۲۳۴٫۵");
+  });
+});
+
+describe("v0.10.1 numbers (sections 1.3, 1.5, 3.2, 3.3)", () => {
+  it("formats with Intl fa-IR: Persian digits, U+066C grouping and U+066B decimals", () => {
+    expect(formatNumber("1234.5", "fa")).toBe("۱٬۲۳۴٫۵");
+    expect(formatNumber("12345678901234567.25", "fa")).toBe("۱۲٬۳۴۵٬۶۷۸٬۹۰۱٬۲۳۴٬۵۶۷٫۲۵");   // exact, no float rounding
+    expect(formatNumber("1234.5", "latin")).toBe("1,234.5");
+  });
+  it("shows the rial without decimals and keeps other currencies' cents", () => {
+    expect(formatNumber("215174999.4000", "latin", moneyFraction("IRR"))).toBe("215,174,999");
+    expect(formatNumber("-215174999.4", "fa", moneyFraction("IRR"))).not.toContain("٫");
+    expect(formatNumber("1373.50", "latin", moneyFraction("USD"))).toBe("1,373.5");
+  });
+  it("compacts large figures for tiles and keeps small ones whole", () => {
+    expect(formatCompact("4130299990", "fa").replace(/\u00a0/g, " ")).toBe("۴٫۱ میلیارد");
+    expect(formatCompact("521500000", "fa").replace(/\u00a0/g, " ")).toBe("۵۲۱٫۵ میلیون");
+    expect(formatCompact("1373", "fa")).toBe("۱٬۳۷۳");
+    expect(formatCompact("4130299990", "latin")).toBe("4.1B");
+    expect(compactParts("-4130299990", "fa").magnitude).toBe("میلیارد");
+    expect(compactParts("-4130299990", "latin")).toEqual({ figure: "-4.1", magnitude: "B" });
   });
 });

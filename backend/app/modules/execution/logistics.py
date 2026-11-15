@@ -37,6 +37,39 @@ EVENT_SUGGESTIONS = ("booked", "loaded", "departed", "transshipment", "arrived",
                      "delay", "other")
 STATUS_EVENT = {"booked": "booked", "in_transit": "departed", "arrived": "arrived", "at_customs": "customs_entry",
                 "cleared": "released", "delivered": "delivered"}
+# v0.10.1 section 1.6: the shipment status follows the recorded actual dates. ATD set means at least departed
+# («در راه»), ATA set means at least arrived; ATA is never before ATD; the status cannot move back behind them.
+STATUS_ORDER = ("planned", "booked", "in_transit", "arrived", "at_customs", "cleared", "delivered")
+
+
+def status_floor(atd, ata) -> str:
+    return "arrived" if ata else "in_transit" if atd else "planned"
+
+
+def date_rule(s) -> dict:
+    """What the dates say about the status: the lowest status they allow, the one to suggest and the conflicts. Read
+    only, for existing records too (a record that breaks the rule is flagged, never changed silently)."""
+    floor = status_floor(s.atd, s.ata)
+    conflicts = []
+    if s.atd and s.ata and s.ata < s.atd:
+        conflicts.append("ata_before_atd")
+    if s.status != "cancelled" and s.status in STATUS_ORDER and STATUS_ORDER.index(s.status) < STATUS_ORDER.index(floor):
+        conflicts.append("status_behind_dates")
+    current = s.status if s.status in STATUS_ORDER else None
+    suggested = floor if current is None or STATUS_ORDER.index(current) < STATUS_ORDER.index(floor) else current
+    return {"floor": floor, "suggested_status": suggested, "conflicts": conflicts}
+
+
+def _check_date_rule(s) -> None:
+    rule = date_rule(s)
+    if "ata_before_atd" in rule["conflicts"]:
+        raise AppError("ata_before_atd", "The arrival date is before the departure date",
+                       {"atd": s.atd.isoformat(), "ata": s.ata.isoformat()}, status=422)
+    if "status_behind_dates" in rule["conflicts"]:
+        raise AppError("status_behind_dates", "The status is behind the recorded actual dates",
+                       {"status": s.status, "floor": rule["floor"]}, status=422)
+
+
 INSPECTION_FIELDS = ("kind", "inspector_party_id", "planned_on", "done_on", "result", "report_document_id", "items", "notes",
                      "shipment_id", "purchase_order_id")
 
@@ -114,8 +147,9 @@ def _set_items(db: Session, shipment: Shipment, rows: list[dict]) -> None:
 
 
 def _add_event(db: Session, shipment: Shipment, kind: str, note: str | None, at: datetime | None = None,
-               document_id=None) -> ShipmentEvent:
-    row = ShipmentEvent(shipment_id=shipment.id, at=at or clock.now(), kind=kind, note=note, document_id=document_id)
+               document_id=None, details: dict | None = None) -> ShipmentEvent:
+    row = ShipmentEvent(shipment_id=shipment.id, at=at or clock.now(), kind=kind, note=note, document_id=document_id,
+                        details=details)
     db.add(row)
     db.flush()
     return row
@@ -135,6 +169,9 @@ def create_shipment(db: Session, data: dict, source: str, actor: str | None = No
                         **{k: data[k] for k in SHIPMENT_FIELDS if data.get(k) is not None})
     shipment.incoterm = shipment.incoterm or (po.incoterm if po else None)
     shipment.first_eta = shipment.eta
+    if "status" not in data or data.get("status") is None:
+        shipment.status = date_rule(shipment)["suggested_status"] if (shipment.atd or shipment.ata) else (shipment.status or "planned")
+    _check_date_rule(shipment)
     db.add(shipment)
     flush(db, "invalid_shipment")
     _set_items(db, shipment, data.get("items") or [])
@@ -156,13 +193,22 @@ def update_shipment(db: Session, shipment_id: uuid.UUID, changes: dict, source: 
     changed = diff(shipment, {k: v for k, v in changes.items() if k in SHIPMENT_FIELDS})
     if shipment.first_eta is None and shipment.eta is not None:
         shipment.first_eta = shipment.eta
+    if {"atd", "ata"} & set(changed) and "status" not in changes:
+        # a recorded actual date is the evidence: the status follows it (never backwards), with its status event
+        suggested = date_rule(shipment)["suggested_status"]
+        if shipment.status != "cancelled" and suggested != shipment.status:
+            changed["status"] = {"old": shipment.status, "new": suggested}
+            shipment.status = suggested
+    if {"atd", "ata", "status"} & set(changed):
+        _check_date_rule(shipment)          # only a change to these is checked: an old record stays editable (flagged)
     flush(db, "invalid_shipment")
     for field in ("etd", "eta"):
         new = getattr(shipment, field)
         if field in changed and old[field] is not None:
             later = field == "eta" and new is not None and new > old[field]
-            _add_event(db, shipment, "delay" if later else f"{field}_change",
-                       f"{field.upper()}: {old[field].isoformat()} → {new.isoformat() if new else '—'}")
+            # v0.10.1 section 1.7: structured (dates as dates), rendered in the user's calendar and digits
+            _add_event(db, shipment, "delay" if later else f"{field}_change", None,
+                       details={"field": field, "old": old[field].isoformat(), "new": new.isoformat() if new else None})
     if "status" in changed and shipment.status in STATUS_EVENT:
         _add_event(db, shipment, STATUS_EVENT[shipment.status], None)
     if items is not None:
@@ -355,7 +401,7 @@ def shipment_out(db: Session, s: Shipment) -> dict:
                      "events": [row_snapshot(e) for e in shipment_events(db, s.id)],
                      "documents": [row_snapshot(d) for d in shipment_documents(db, s.id)],
                      "container_units": [row_snapshot(c) for c in shipment_containers(db, s.id)], "route": route_out(db, s),
-                     "tracking": tracking(db, s)})
+                     "tracking": tracking(db, s), "date_rule": date_rule(s)})
 
 
 def tracking(db: Session, s: Shipment) -> dict | None:

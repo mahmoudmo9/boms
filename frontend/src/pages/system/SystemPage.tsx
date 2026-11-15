@@ -9,6 +9,7 @@ import { Badge, Bdi, Button, buttonClass, Card, DataTable, ErrorNote, PageHeader
 import { devMode, setDevMode } from "./devMode";
 import { useJobRunner } from "../../shell/LiveUpdates";
 import { api, type Page } from "../../lib/api";
+import { useListView } from "../../lib/listView";
 import { useFormat } from "../../lib/prefs";
 import type { BackupRun, Health, Job } from "../../lib/types";
 
@@ -35,8 +36,11 @@ export function SystemPage() {
   const f = useFormat();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const [backupPage, setBackupPage] = useState(1);
-  const [jobPage, setJobPage] = useState(1);
+  const [backupView, setBackupView] = useListView({ size: 10 }, "b");   // v0.10.1: pages live in the URL
+  const [jobView, setJobView] = useListView({ size: 10 }, "j");
+  const backupPage = backupView.page, jobPage = jobView.page;
+  const setBackupPage = (n: number) => setBackupView({ page: n });
+  const setJobPage = (n: number) => setJobView({ page: n });
 
   const health = useQuery({
     queryKey: ["system", "health"],

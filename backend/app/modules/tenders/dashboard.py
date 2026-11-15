@@ -23,6 +23,9 @@ def summary(db: Session, today: date) -> dict:
     soon = list(db.scalars(select(TenderDate).where(TenderDate.tender_id.in_(list(by_id)), TenderDate.at >= now,
                                                     TenderDate.at <= now + timedelta(days=SOON_DAYS))
                            .order_by(TenderDate.at))) if by_id else []
+    # v0.10.1 section 1.8: once the proposal is submitted its deadlines are no longer a countdown
+    submitted = {t.id for t, _ in active if t.submitted_at}
+    soon = [d for d in soon if not (d.tender_id in submitted and d.kind in ("proposal_deadline", "documents_deadline"))]
     dates_soon = [{"tender_id": d.tender_id, "case_id": by_id[d.tender_id][0].case_id, "case_title": by_id[d.tender_id][1],
                    "tender_no": by_id[d.tender_id][0].tender_no, "kind": d.kind, "label": date_label(d.kind, d.label), "at": d.at}
                   for d in soon]

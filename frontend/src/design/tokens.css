@@ -218,8 +218,9 @@
   --z-palette: 70;
 
   /* layout */
-  --rail-width: 17rem;
-  --rail-width-collapsed: 4.25rem;
+  --rail-width: 17rem;            /* the expanded rail at least; it widens to fit its longest label */
+  --rail-width-max: 24rem;
+  --rail-width-collapsed: 4.5rem;   /* v0.10.1: the icon rail, 72 px */
   --topbar-height: 3.75rem;
   --target: 2.5rem; /* the smallest pointer target, 40 px */
 }

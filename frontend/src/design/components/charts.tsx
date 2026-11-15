@@ -58,9 +58,10 @@ export function Bars({ items, label, height = 64, format = String, highlight }: 
 
 /** The profit bridge: plan -> FX effect -> cost groups -> actual. Totals in the accent, gains and losses with their
  * sign, a mark («+» / «−») and their own colour, so the direction is never by colour alone. */
-export function ProfitBridge({ steps, label, format = String, height = 220, estimated = [] }: {
+export function ProfitBridge({ steps: all, label, format = String, height = 220, estimated = [] }: {
   steps: BridgeStep[]; label: string; format?: Fmt; height?: number; estimated?: string[] }) {
   const { t } = useTranslation();
+  const steps = all.filter((s) => s.kind === "total" || s.value !== 0);   // v0.10.1 section 3.6: zero groups hidden
   const width = Math.max(steps.length * 110, 320);
   const plot = height - 58;
   const bars = bridgeBars(steps, width, plot);

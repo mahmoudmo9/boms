@@ -53,7 +53,7 @@ export function Money({ amount, currency, per, unit }: { amount: string | null |
   const f = useFormat();
   if (amount === null || amount === undefined) return null;
   const basis = per && Number(per) !== 1 ? ` / ${f.num(per)}` : "";
-  return <Bdi ltr className="tabular-nums whitespace-nowrap">{f.num(amount)} {currency ?? ""}{basis}{unit ? ` ${unit}` : ""}</Bdi>;
+  return <Bdi ltr className="tabular-nums whitespace-nowrap">{currency ? f.money(amount, currency) : f.num(amount)} {currency ?? ""}{basis}{unit ? ` ${unit}` : ""}</Bdi>;
 }
 
 export function productName(p: { name_fa: string | null; name_en: string | null }, lang: string) {
@@ -126,7 +126,7 @@ export function HistoryCard({ entityType, entityId, title }: { entityType: strin
     queryKey: ["events", entityType, entityId],
     queryFn: () => api<Page<EventItem>>("/api/events", { query: { entity_type: entityType, entity_id: entityId, page_size: 200 } }),
   });
-  return <Card padded={false} title={title}><EventList items={events.data?.items ?? []} compact /></Card>;
+  return <Card padded={false} title={title}><EventList items={events.data?.items ?? []} compact caseId={entityType === "case" ? entityId : null} /></Card>;
 }
 
 /** Spec-key suggestions (keys used before), for the <datalist> of the specs editor. */

@@ -7,7 +7,8 @@ import type { ExecutionSummary, ProcessRow } from "../../../lib/types";
 
 // the components format numbers and dates through useFormat (which needs a signed-in user): a plain stand-in
 vi.mock("../../../lib/prefs", () => ({
-  useFormat: () => ({ lang: i18n.language, calendar: "gregorian", digits: "latin", num: (v: unknown) => String(Number(v)), day: (v: string) => `day:${v}`,
+  useFormat: () => ({ lang: i18n.language, calendar: "gregorian", digits: "latin", num: (v: unknown) => String(Number(v)), money: (v: unknown) => String(Number(v)), compact: (v: unknown) => String(Number(v)),
+    compactMoney: (v: unknown, c?: string) => ({ text: `${c} ${Number(v)}`, full: `${c} ${Number(v)}`, figure: String(Number(v)), unit: c ?? "" }), day: (v: string) => `day:${v}`,
     date: (v: string) => `date:${v}`, bytes: (v: number) => String(v) }),
 }));
 
@@ -42,9 +43,11 @@ describe("cash position display", () => {
     const html = renderToStaticMarkup(<CashCard cash={{ actual: { USD: { received: "1000", paid: "600", net_tied_up: "-400" } },
       outstanding: { USD: { in: "0", out: "900" } }, plan: { exposure: "5000", currency: "IRR" } }} />);
     expect(html).toContain("Received from the customer") ;
-    expect(html).toContain("Cash tied up");
+    // v0.10.1 section 1.4: paid 600 < received 1000 is the customer's advance, never a negative «cash tied up»
+    expect(html).toContain("Customer advance");
+    expect(html).not.toContain("-400");
     expect(html).toContain('data-currency="USD"');
-    expect(html).toContain("Cost sheet exposure (plan)");
+    expect(html).toContain("Open exposure (cost sheet)");
     expect(html).toContain("Still expected: in 0 · out 900 USD");
   });
   it("says so when nothing was paid yet, in Persian", async () => {

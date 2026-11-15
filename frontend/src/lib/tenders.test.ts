@@ -68,3 +68,13 @@ describe("guarantee steps", () => {
     expect(nextGuaranteeSteps("released")).toEqual([]);
   });
 });
+
+describe("tender clock (v0.10.1 section 1.8)", async () => {
+  const { tenderClock } = await import("./tenders");
+  it("counts down only before submission and shows the result once there is one", () => {
+    expect(tenderClock({ result: null, result_on: null, submitted_at: null })).toEqual({ mode: "countdown" });
+    expect(tenderClock({ result: null, result_on: null, submitted_at: "2026-11-10T10:00:00Z" })).toEqual({ mode: "submitted", at: "2026-11-10T10:00:00Z" });
+    expect(tenderClock({ result: "lost", result_on: "2026-11-12", submitted_at: "2026-11-10T10:00:00Z" })).toEqual({ mode: "result", result: "lost", on: "2026-11-12" });
+    expect(tenderClock({ result: "cancelled", result_on: null, submitted_at: null }).mode).toBe("result");   // never a countdown
+  });
+});

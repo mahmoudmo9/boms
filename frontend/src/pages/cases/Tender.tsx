@@ -10,7 +10,7 @@ import { TimeLeftBadge, useNow, useTimeLeftText } from "../../components/TimeLef
 import { api, ApiError } from "../../lib/api";
 import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
-import { blockerMessage, combineDateTime, nextGuaranteeSteps, parseReminderDays, progressText, stepper, timeOf } from "../../lib/tenders";
+import { blockerMessage, combineDateTime, nextGuaranteeSteps, parseReminderDays, progressText, RESULT_TONE, stepper, tenderClock, timeOf } from "../../lib/tenders";
 import type { Blocker, CaseDetail, CompanyDocumentRow, EnvelopeItemRow, GuaranteeRow, ProposalRow, ResultReasonRow, TenderDetail, TenderStage } from "../../lib/types";
 import { PartyName } from "../parties/shared";
 import { Money } from "../sourcing/shared";
@@ -53,8 +53,9 @@ export function TenderHeaderFacts({ caseId }: { caseId: string }) {
   const p = progressText(d.envelope_progress.all);
   return (
     <span className="inline-flex flex-wrap items-center gap-2" data-testid="tender-header">
-      {d.next_date && <span className="inline-flex items-center gap-1">{t(`tenders.dateKinds.${d.next_date.kind}`)}: <span className="tabular-nums">{f.date(d.next_date.at, true)}</span>
-        <TimeLeftBadge at={d.next_date.at} /></span>}
+      {d.result ? <Badge tone={RESULT_TONE[d.result]} data-testid="tender-result-chip">{t(`tenders.result.results.${d.result}`)}</Badge>
+        : d.next_date && <span className="inline-flex items-center gap-1">{t(`tenders.dateKinds.${d.next_date.kind}`)}: <span className="tabular-nums">{f.date(d.next_date.at, true)}</span>
+        {!d.submitted_at && <TimeLeftBadge at={d.next_date.at} />}</span>}
       <Badge tone={p.complete ? "success" : "neutral"}>{t("tenders.envelopes.progress", { done: f.num(p.done), total: f.num(p.total) })}</Badge>
       {d.bid_bond && <Badge tone={STATUS_TONE[d.bid_bond.status] ?? "neutral"}>{t("tenders.guarantee.bidBond")}: {t(`tenders.guarantee.statuses.${d.bid_bond.status}`)}</Badge>}
     </span>
@@ -115,10 +116,32 @@ function TenderHero({ d }: { d: TenderDetail }) {
   const text = deadline ? left(deadline.at, now)?.text ?? "" : "";
   const passed = deadline ? new Date(deadline.at).getTime() < now.getTime() : false;
   const pct = deadline ? Math.max(0, Math.min(100, ((new Date(deadline.at).getTime() - now.getTime()) / (14 * 86400_000)) * 100)) : 0;
+  const clock = tenderClock(d);
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12" data-testid="tender-hero">
       <article className="flex items-center gap-6 rounded-3xl border border-accent-line bg-linear-to-br from-card-accent-from to-card-accent-to p-6 lg:col-span-4">
-        {deadline ? (
+        {clock.mode === "result" ? (
+          <>
+            <ProgressRing value={100} size={120} stroke={8} tone={RESULT_TONE[clock.result]} label={t(`tenders.result.results.${clock.result}`)}>
+              <span className="max-w-20 text-center text-sm leading-tight text-title" data-testid="tender-ring-result">{t(`tenders.result.results.${clock.result}`)}</span>
+            </ProgressRing>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <span className="text-xs tracking-wide text-accent">{t("tenders.result.title")}</span>
+              {clock.on && <span className="font-display text-xl font-semibold text-title tabular-nums">{f.day(clock.on)}</span>}
+            </div>
+          </>
+        ) : clock.mode === "submitted" ? (
+          <>
+            <ProgressRing value={100} size={120} stroke={8} tone="success" label={t("tenders.hero.submitted")}>
+              <span className="max-w-20 text-center text-sm leading-tight text-title" data-testid="tender-ring-submitted">{t("tenders.hero.submitted")}</span>
+            </ProgressRing>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <span className="text-xs tracking-wide text-accent">{t("tenders.hero.submittedOn")}</span>
+              <span className="font-display text-xl font-semibold text-title tabular-nums">{f.date(clock.at, true)}</span>
+              <span className="text-xs text-muted">{t("tenders.hero.waitingResult")}</span>
+            </div>
+          </>
+        ) : deadline ? (
           <>
             <ProgressRing value={pct} size={120} stroke={8} tone={passed ? "danger" : "accent"} label={`${label(deadline)}: ${text}`}>
               <span className="max-w-20 text-center text-sm leading-tight text-title">{text}</span>
@@ -557,7 +580,7 @@ function GuaranteesCard({ d, caseData }: { d: TenderDetail; caseData: CaseDetail
               <ul>{g.history.map((h) => <li key={h.id}><span className="tabular-nums">{f.day(h.on_date)}</span> · {t(`tenders.guarantee.statuses.${h.new_status ?? "to_request"}`)}{h.valid_until ? ` · ${f.day(h.valid_until)}` : ""}{h.reason ? ` · ${h.reason}` : ""}</li>)}</ul></details>}
           </li>))}</ul>
       )}
-      {tied.length > 0 && <p className="border-t border-line px-4 py-2 text-xs text-muted" data-testid="tied-up">{t("tenders.guarantee.tiedUp")}: {tied.map(([cur, v]) => `${f.num(v.total)} ${cur}`).join("، ")}</p>}
+      {tied.length > 0 && <p className="border-t border-line px-4 py-2 text-xs text-muted" data-testid="tied-up">{t("tenders.guarantee.tiedUp")}: {tied.map(([cur, v]) => `${f.money(v.total, cur)} ${cur}`).join("، ")}</p>}
       <ErrorNote error={remove.error} />
       {form && <GuaranteeForm initial={form} busy={save.isPending} error={save.error} onClose={() => setForm(null)} onSave={(b) => save.mutate(b)} />}
       {step && <StatusDialog g={step.g} status={step.status} onClose={() => setStep(null)} onDone={refresh} />}
@@ -590,7 +613,7 @@ function CostsCard({ d, run }: { d: TenderDetail; run: Run }) {
           </li>))}</ul>
       )}
       <div className="border-t border-line px-4 py-2 text-xs" data-testid="cost-totals">
-        {Object.entries(d.cost_totals).map(([cur, v]) => <p key={cur}>{t("tenders.costs.totals", { spent: f.num(v.spent), out: f.num(v.refundable_outstanding), net: f.num(v.net), cur })}</p>)}
+        {Object.entries(d.cost_totals).map(([cur, v]) => <p key={cur}>{t("tenders.costs.totals", { spent: f.money(v.spent, cur), out: f.money(v.refundable_outstanding, cur), net: f.money(v.net, cur), cur })}</p>)}
       </div>
       <div className="flex flex-wrap items-end gap-2 border-t border-line px-4 py-2">
         <Select aria-label={t("tenders.costs.kind")} className="w-auto" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>

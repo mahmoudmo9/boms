@@ -330,6 +330,7 @@ class ShipmentEvent(Timestamps, Base):
     note: Mapped[str | None] = mapped_column(Text)
     document_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
     location_id: Mapped[uuid.UUID | None] = mapped_column(UUID)   # v0.9.0: a transshipment port
+    details: Mapped[dict | None] = mapped_column(JSONB)             # v0.10.1: {field, old, new} of a generated event
 
 
 class ShipmentContainer(Timestamps, Base):

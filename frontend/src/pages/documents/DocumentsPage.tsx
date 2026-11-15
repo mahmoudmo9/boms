@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
 import { Badge, Bdi, Button, Card, DataTable, errorMessage, ErrorNote, Icon, Input, PageHeader, Pagination, Select, type SortState, Spinner } from "../../design/components";
+import { FileType } from "../../components/FileType";
 import { api, ApiError, type Page } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { DocumentDetail, DocumentItem } from "../../lib/types";
@@ -86,7 +87,7 @@ export function DocumentsPage() {
         header: t("documents.title"),
         cell: ({ row }) => (
           <Link to={`/documents/${row.original.id}`} className="font-medium text-accent hover:underline">
-            {row.original.title}
+            <bdi>{row.original.title}</bdi>
           </Link>
         ),
       },
@@ -95,7 +96,7 @@ export function DocumentsPage() {
         header: t("documents.filename"),
         cell: ({ row }) => <Bdi className="text-muted">{row.original.original_filename}</Bdi>,
       },
-      { id: "type", header: t("documents.type"), cell: ({ row }) => <Bdi className="text-xs text-muted">{row.original.mime_type}</Bdi> },
+      { id: "type", header: t("documents.type"), cell: ({ row }) => <FileType mime={row.original.mime_type} name={row.original.original_filename} /> },
       { id: "size_bytes", header: t("documents.size"), cell: ({ row }) => <span className="tabular-nums">{f.bytes(row.original.size_bytes)}</span> },
       { id: "uploaded_at", header: t("documents.uploadedAt"), cell: ({ row }) => <span className="tabular-nums">{f.date(row.original.uploaded_at, true)}</span> },
       {

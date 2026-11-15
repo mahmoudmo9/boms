@@ -39,7 +39,7 @@ export function QuickAddTask({ caseId, focus }: { caseId?: string; focus?: boole
         </Field>
         {!caseId && (
           <Field label={t("tasks.case")} htmlFor="task-case">
-            <Select id="task-case" className="w-56" value={forCase} onChange={(e) => setForCase(e.target.value)}>
+            <Select id="task-case" className="w-64" value={forCase} onChange={(e) => setForCase(e.target.value)}>
               <option value="">—</option>
               {(cases.data?.items ?? []).map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </Select>
@@ -78,7 +78,7 @@ export function TasksPage() {
       <Card title={t("tasks.quickAdd")}><QuickAddTask focus={params.get("new") === "1"} /></Card>
       <div className="flex flex-wrap items-end gap-2">
         <Field label={t("tasks.case")} htmlFor="tasks-filter-case">
-          <Select id="tasks-filter-case" className="w-56" value={caseId} onChange={(e) => set("case", e.target.value)}>
+          <Select id="tasks-filter-case" className="w-64" value={caseId} onChange={(e) => set("case", e.target.value)}>
             <option value="">{t("tasks.allCases")}</option>
             {(cases.data?.items ?? []).map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
           </Select>

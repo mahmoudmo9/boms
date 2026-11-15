@@ -62,7 +62,8 @@ def test_shipment_quantity_limit_eta_events_documents(client):
     out = r.json()
     kinds = [e["kind"] for e in out["events"]]
     assert "delay" in kinds and "departed" in kinds and out["first_eta"] == day(30)
-    assert f"{day(30)} → {day(36)}" in next(e["note"] for e in out["events"] if e["kind"] == "delay")
+    # v0.10.1 section 1.7: the old -> new dates are structured fields (rendered in the user's calendar), not text
+    assert next(e["details"] for e in out["events"] if e["kind"] == "delay") == {"field": "eta", "old": day(30), "new": day(36)}
     r = client.post(f"/api/shipments/{s1['id']}/events", json={"kind": "transshipment", "note": "Jebel Ali"})
     assert r.status_code == 201 and r.json()["events"][-1]["kind"] == "transshipment"
     doc = a_document(client, "bl.pdf")

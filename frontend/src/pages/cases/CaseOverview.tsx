@@ -5,11 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import { EventSentence } from "../../components/EventSentence";
 
 import { Card, DescriptionList, EmptyState, ProgressRing, Stepper, Timeline } from "../../design/components";
 import { RouteLine } from "../../design/components/charts";
 import { api, type Page } from "../../lib/api";
 import { pathPercent, pathSteps } from "../../lib/dealPath";
+import { cashFigure } from "../../lib/execution";
 import { useFormat } from "../../lib/prefs";
 import type { CaseCosting, CaseDetail, CaseQuotes, EventItem, ShipmentRow } from "../../lib/types";
 import type { TaskRow } from "../../lib/tasks";
@@ -85,7 +87,7 @@ export function CaseSide({ c }: { c: CaseDetail }) {
           { label: t("costing.computedExposure"), value: cur?.exposure !== undefined ? <Money amount={cur.exposure} currency={cur.currency} /> : null },
           { label: t("case.side.marginMarkup"), value: cur?.margin_percent ? <span className="tabular-nums">{f.num(cur.margin_percent, 1)}٪ · {f.num(cur.markup_percent ?? "", 1)}٪</span> : null },
           { label: t("quotes.latest"), value: latest ? <span><bdi dir="ltr">{latest.number}</bdi> · {t(`sourcing.status.quote.${latest.status}`, { defaultValue: latest.status })}</span> : null },
-          ...cash.map(([currency, v]) => ({ label: `${t("execution.cash.net")} (${currency})`, value: <Money amount={v.net_tied_up} currency={currency} /> })),
+          ...cash.map(([currency, v]) => { const c = cashFigure(v); return { label: `${t(`execution.cash.${c.kind}`)} (${currency})`, value: <Money amount={c.amount} currency={currency} /> }; }),
           { label: t("case.side.opened"), value: <span className="tabular-nums">{f.date(c.created_at)}</span> },
         ]} />
       </Card>
@@ -102,7 +104,7 @@ export function CaseSide({ c }: { c: CaseDetail }) {
       <Card title={t("case.side.story")} actions={<Link to={`?tab=history`} className="text-sm text-accent hover:underline">{t("case.side.all")}</Link>} testId="case-story">
         {(history.data?.items ?? []).length === 0 ? <EmptyState compact icon="clock">{t("case.side.noHistory")}</EmptyState> : (
           <Timeline label={t("case.side.story")} items={(history.data?.items ?? []).map((e) => ({
-            key: String(e.id), when: f.date(e.occurred_at), title: t(`events.actions.${e.action}`, { defaultValue: e.action }), detail: e.actor, state: "done" as const }))} />
+            key: String(e.id), when: f.date(e.occurred_at), title: <EventSentence event={e} caseId={c.id} />, detail: e.actor, state: "done" as const }))} />
         )}
       </Card>
     </>

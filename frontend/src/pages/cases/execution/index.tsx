@@ -2,7 +2,7 @@
 import { useTranslation } from "react-i18next";
 
 import { Badge, Bdi } from "../../../design/components";
-import { SO_TONE } from "../../../lib/execution";
+import { cashFigure, SO_TONE } from "../../../lib/execution";
 import { useFormat } from "../../../lib/prefs";
 import { Money } from "../../sourcing/shared";
 import { useExecution } from "./shared";
@@ -25,8 +25,8 @@ export function ExecutionHeaderFacts({ caseId }: { caseId: string }) {
       {h.items_total > 0 && <Badge tone={h.items_delivered === h.items_total ? "success" : "neutral"}>{t("execution.order.itemsDelivered", { done: f.num(h.items_delivered), total: f.num(h.items_total) })}</Badge>}
       {h.next && <span className={`text-xs ${h.next.overdue ? "text-danger" : ""}`}>{t("execution.header.next")}: {h.next.kind === "step"
         ? <span dir="auto">{f.lang === "fa" ? h.next.label_fa : h.next.label_en}</span> : t("execution.header.deliveryDue")}{h.next.due_on && <> · <span className="tabular-nums">{f.day(h.next.due_on)}</span></>}</span>}
-      {Object.entries(h.cash).map(([cur, v]) => <span key={cur} className="text-xs">{t("execution.cash.net")}: <Money amount={v.net_tied_up} currency={cur} /></span>)}
-      {h.warnings > 0 && <Badge tone="danger">{t("execution.header.warnings", { n: f.num(h.warnings) })}</Badge>}
+      {Object.entries(h.cash).map(([cur, v]) => { const c = cashFigure(v); return <span key={cur} className="text-xs">{t(`execution.cash.${c.kind}`)}: <Money amount={c.amount} currency={cur} /></span>; })}
+      {h.warnings > 0 && <Badge tone="danger">{t("execution.header.warnings", { count: h.warnings, n: f.num(h.warnings) })}</Badge>}
     </span>
   );
 }

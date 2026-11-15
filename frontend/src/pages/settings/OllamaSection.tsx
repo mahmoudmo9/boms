@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button, Checkbox, ErrorNote, Field, InlineAlert, Input, Status } from "../../design/components";
+import { Button, Checkbox, ErrorNote, Field, InlineAlert, Input, Isolated, Status } from "../../design/components";
 import { api } from "../../lib/api";
 import { type OllamaModel, type Placement, placementView, type Provider } from "../../lib/ai";
 import { useFormat } from "../../lib/prefs";
@@ -67,9 +67,9 @@ export function OllamaSection({ p, placement, onChanged }: { p: Provider; placem
       <details className="text-xs text-muted">
         <summary className="cursor-pointer text-sm text-fg-2">{t("ai.ollama.helpTitle")}</summary>
         <ol className="mt-2 list-decimal ps-5 leading-6">
-          {(["install", "pull", "run", "list"] as const).map((k) => <li key={k}>{t(`ai.ollama.help.${k}`)}</li>)}
+          {(["install", "pull", "run", "list"] as const).map((k) => <li key={k}><Isolated text={t(`ai.ollama.help.${k}`)} /></li>)}
         </ol>
-        <p className="mt-2">{t("ai.ollama.recommend")}</p>
+        <p className="mt-2"><Isolated text={t("ai.ollama.recommend")} /></p>
         <p className="mt-1 text-warning">{t("ai.ollama.cloudWarning")}</p>
       </details>
       <ErrorNote error={list.error ?? choose.error ?? saveOptions.error} />

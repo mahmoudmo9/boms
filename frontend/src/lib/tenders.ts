@@ -74,3 +74,18 @@ export function timeOf(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
+
+/** v0.10.1 section 1.8: what the tender's ring shows. A countdown only while the proposal is still to be sent; it
+ * stops at submission and is replaced by the result once there is one. */
+export type TenderClock =
+  | { mode: "result"; result: "won" | "lost" | "cancelled" | "no_result"; on: string | null }
+  | { mode: "submitted"; at: string }
+  | { mode: "countdown" };
+
+export function tenderClock(d: { result: "won" | "lost" | "cancelled" | "no_result" | null; result_on: string | null; submitted_at: string | null }): TenderClock {
+  if (d.result) return { mode: "result", result: d.result, on: d.result_on };
+  if (d.submitted_at) return { mode: "submitted", at: d.submitted_at };
+  return { mode: "countdown" };
+}
+
+export const RESULT_TONE = { won: "success", lost: "danger", cancelled: "neutral", no_result: "neutral" } as const;

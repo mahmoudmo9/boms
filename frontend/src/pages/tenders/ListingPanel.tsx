@@ -216,9 +216,9 @@ export function ListingPanel({ id, onClose, onConvert, tab, onTab, refreshKey }:
             ...(tender && l.document_price !== null ? [{ key: "price", label: t("listings.documentPrice"),
               value: <bdi dir="ltr" className="tabular-nums">{Number(l.document_price) === 0 ? t("listings.free") : `${f.num(l.document_price)} IRR`}</bdi> }] : []),
             ...(l.guarantee_amount !== null ? [{ key: "guarantee", label: t("listings.guaranteeAmount"),
-              value: <span><bdi dir="ltr" className="tabular-nums">{f.num(l.guarantee_amount)}</bdi> {l.guarantee_currency}{l.guarantee_description ? <span className="block text-xs text-muted" dir="auto">{l.guarantee_description}</span> : null}</span> }] : []),
+              value: <span><bdi dir="ltr" className="tabular-nums">{f.money(l.guarantee_amount, l.guarantee_currency)}</bdi> {l.guarantee_currency}{l.guarantee_description ? <span className="block text-xs text-muted" dir="auto">{l.guarantee_description}</span> : null}</span> }] : []),
             ...(l.estimate !== null ? [{ key: "estimate", label: t("listings.estimateAmount"),
-              value: <span><bdi dir="ltr" className="tabular-nums">{f.num(l.estimate)}</bdi> {l.estimate_currency}</span> }] : []),
+              value: <span><bdi dir="ltr" className="tabular-nums">{f.money(l.estimate, l.estimate_currency)}</bdi> {l.estimate_currency}</span> }] : []),
           ]} />
         )}
         {current === "items" && (<>

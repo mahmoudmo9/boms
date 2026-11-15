@@ -8,7 +8,8 @@ import { agingBucket, profitLines, signed, unexplained, varianceTone, type Check
 import { groupTasks, type TaskRow } from "../../../lib/tasks";
 
 vi.mock("../../../lib/prefs", () => ({
-  useFormat: () => ({ lang: i18n.language, calendar: "gregorian", digits: "latin", num: (v: unknown) => String(Number(v)), day: (v: string) => `day:${v}`,
+  useFormat: () => ({ lang: i18n.language, calendar: "gregorian", digits: "latin", num: (v: unknown) => String(Number(v)), money: (v: unknown) => String(Number(v)), compact: (v: unknown) => String(Number(v)),
+    compactMoney: (v: unknown, c?: string) => ({ text: `${c} ${Number(v)}`, full: `${c} ${Number(v)}`, figure: String(Number(v)), unit: c ?? "" }), day: (v: string) => `day:${v}`,
     date: (v: string) => `date:${v}`, bytes: (v: number) => String(v) }),
 }));
 

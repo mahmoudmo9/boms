@@ -238,10 +238,10 @@ function PrivacyLog() {
           <tr key={c.id} className="border-b border-line last:border-b-0 hover:bg-surface-2">
             <td className="px-3 py-2">{f.date(c.at, true)}</td>
             <td className="px-3 py-2">{t(`ai.tasks.${c.task}`, { defaultValue: c.task })}</td>
-            <td className="px-3 py-2"><bdi>{c.provider}</bdi> <span className="font-mono text-muted" dir="ltr">{c.model}</span></td>
+            <td className="px-3 py-2"><bdi>{c.provider}</bdi> <bdi className="font-mono text-muted" dir="ltr">{c.model}</bdi></td>
             <td className="px-3 py-2">{t("ai.settings.log.inputDesc", { files: d.files, pages: d.pages, characters: f.num(d.characters), images: d.images })}</td>
-            <td className="px-3 py-2">{Object.entries(c.redactions).map(([k, n]) => `${k}×${n}`).join(" ") || "—"}</td>
-            <td className="px-3 py-2" dir="ltr">{c.tokens_in ?? "—"} / {c.tokens_out ?? "—"}</td>
+            <td className="px-3 py-2">{Object.entries(c.redactions).map(([k, n]) => `${t(`ai.privacy.kinds.${k}`, { defaultValue: k })}×${f.num(n)}`).join(" ") || "—"}</td>
+            <td className="px-3 py-2 tabular-nums">{c.tokens_in != null ? f.num(c.tokens_in) : "—"} / {c.tokens_out != null ? f.num(c.tokens_out) : "—"}</td>
             <td className="px-3 py-2">{c.subscription ? t("ai.settings.log.subscription") : c.cost_usd ? `$${f.num(c.cost_usd)}` : "—"}</td>
             <td className="px-3 py-2"><Status tone={c.status === "ok" ? "success" : c.status === "skipped" ? "neutral" : "danger"}>{c.status}</Status></td>
           </tr>);

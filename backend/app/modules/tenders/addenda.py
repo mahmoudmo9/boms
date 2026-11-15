@@ -36,7 +36,8 @@ def addenda_of(db: Session, tender_id: uuid.UUID) -> list[TenderAddendum]:
 def _reason(row: TenderAddendum) -> str:
     kind = {"extension": "تمدید", "change": "اصلاحیه", "clarification": "توضیحات", "question_answer": "پرسش و پاسخ",
             "cancellation": "لغو", "other": "الحاقیه"}[row.kind]
-    return f"{kind} {row.number or ''}".strip() + f" ({row.received_on.isoformat()})"
+    # v0.10.1 section 1.7: no date inside the sentence; the change keeps addendum_id, whose date the page shows
+    return f"{kind} {row.number or ''}".strip()
 
 
 def add_addendum(db: Session, tender_id: uuid.UUID, data: dict, source: str, actor: str | None = None) -> TenderAddendum:

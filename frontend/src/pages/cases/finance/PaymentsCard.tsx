@@ -29,11 +29,11 @@ function AllocateDialog({ caseId, record, onClose }: { caseId: string; record: P
         onClick={() => void run.mutateAsync({ path: `/api/payment-records/${record.id}/allocations`, body: { allocations: chosen.map((x) => ({
           ...target(x.s), amount: x.amount, ...(x.s.needs_rate ? { fx_rate: x.rate } : {}) })) } }).then(onClose)}>{t("finance.payments.confirm")}</Button></>}>
       <div className="flex flex-col gap-2 text-sm" data-testid="allocation-dialog">
-        <p className="text-muted">{t("finance.payments.unallocatedOf", { amount: f.num(record.unallocated), cur: record.amount_currency })}</p>
+        <p className="text-muted">{t("finance.payments.unallocatedOf", { amount: f.money(record.unallocated, record.amount_currency), cur: record.amount_currency })}</p>
         {rows.length === 0 && <EmptyState>{t("finance.payments.nothingOpen")}</EmptyState>}
         {rows.map((s, i) => (
           <div key={i} className="flex flex-wrap items-end gap-2 rounded-xl border border-line px-3 py-2">
-            <span className="min-w-40" dir="auto">{s.label}</span>
+            <span className="min-w-40" dir="auto"><bdi>{s.label}</bdi></span>
             <span className="text-xs text-muted">{t("finance.balance")}: <Money amount={s.balance} currency={s.currency} />{s.due_date && ` · ${f.day(s.due_date)}`}</span>
             <Field label={`${t("finance.amount")} (${record.amount_currency})`} htmlFor={`al-${i}`}>
               <Input id={`al-${i}`} className="w-36" dir="ltr" inputMode="decimal" value={amounts[i] ?? s.amount ?? ""} onChange={(e) => setAmounts({ ...amounts, [i]: e.target.value })} /></Field>

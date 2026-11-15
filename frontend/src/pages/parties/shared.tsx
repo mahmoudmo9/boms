@@ -172,7 +172,7 @@ export function FollowupDialog({ mode, followup, onClose }: {
       }
     >
       <div className="flex flex-col gap-3">
-        <p className="text-sm"><span className="text-muted">{t("followups.action")}:</span> {followup.action}</p>
+        <p className="text-sm"><span className="text-muted">{t("followups.action")}:</span> <bdi>{followup.action}</bdi></p>
         {mode === "reschedule" && (
           <Field label={t("followups.newDue")} htmlFor="fu-due"><DueDatePicker id="fu-due" value={due} onChange={setDue} /></Field>
         )}

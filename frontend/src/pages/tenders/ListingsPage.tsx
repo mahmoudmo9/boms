@@ -14,6 +14,7 @@ import {
   paramsToRemember, parseColumns, queryBody, rememberedParams,
   selectAllResults, type Selection, selectionCount, toggleColumn, toggleRow,
 } from "../../lib/listings";
+import { keepView, type ListView, readView, writeView } from "../../lib/listView";
 import { useFormat } from "../../lib/prefs";
 import { finishedJobs, listingJobState, type TrackedJob } from "../../lib/setadFields";
 import type { ListingDetail, ListingPage, ListingRow } from "../../lib/types";
@@ -90,9 +91,18 @@ export function ListingsPage() {
   const [params, setParams] = useSearchParams();
   const filters = useMemo(() => filtersFromParams(params), [params]);
   const panelId = params.get("listing");
-  const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" }>({ key: "deadline", dir: "asc" });
-  const [pageSize, setPageSize] = useState(() => Number(load("boms.listings.pageSize")) || 200);
+  // v0.10.1 section 1.10: page, page size and sort are in the URL (with the filters and the open row); the page
+  // goes back to 1 only on a filter or sort change. Before, an effect reset it on every URL change — opening a row
+  // or a live update that moved the open row rewrote the URL, and «صفحهٔ بعد» jumped back to page 1.
+  const viewDefaults = useMemo(() => {
+    const stored = Number(load("boms.listings.pageSize"));
+    return { size: PAGE_SIZES.includes(stored) ? stored : 200, sort: "deadline", dir: "asc" as const, sizes: PAGE_SIZES };
+  }, []);
+  const view = readView(params, viewDefaults);
+  const page = view.page, pageSize = view.size;
+  const sort = { key: view.sort, dir: view.dir };
+  const setView = (next: Partial<ListView>) => setParams((prev) => writeView(prev, next, viewDefaults), { replace: next.page === undefined });
+  const setPage = (n: number) => setView({ page: n });
   const [columns, setColumns] = useState<Column[]>(() => parseColumns(load(`boms.listings.columns.${filters.source}`), filters.source));
   const [chooser, setChooser] = useState(false);
   const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
@@ -102,7 +112,8 @@ export function ListingsPage() {
   const [panelTab, setPanelTab] = useState<PanelTab>("fields");
   const [search, setSearch] = useState(filters.q);
   useEffect(() => { setColumns(parseColumns(load(`boms.listings.columns.${filters.source}`), filters.source)); }, [filters.source]);
-  useEffect(() => { setPage(1); setSelection(EMPTY_SELECTION); }, [params]);
+  const filterKey = filtersToParams(filters).toString();
+  useEffect(() => { setSelection(EMPTY_SELECTION); }, [filterKey, page]);
   // v0.6.0: open with the tab's remembered filters (default: deadline open, sorted by deadline) unless the link
   // carries its own; remember every change per tab
   useEffect(() => {
@@ -117,13 +128,13 @@ export function ListingsPage() {
     save(filterStorageKey(filters.source), paramsToRemember(filters));
   }, [filters]);
   const switchTab = (source: ListingSource) => {
-    const p = rememberedParams(source, load(filterStorageKey(source)));
+    const p = keepView(params, rememberedParams(source, load(filterStorageKey(source))));
     setSearch(p.get("q") ?? "");
     setParams(p, { replace: true });
   };
 
   const update = (next: Partial<ListingFilters>) => {
-    const p = filtersToParams({ ...filters, ...next });
+    const p = keepView(params, filtersToParams({ ...filters, ...next }));     // a filter change: page 1, sort kept
     if (panelId) p.set("listing", panelId);
     setParams(p, { replace: true });
   };
@@ -142,6 +153,16 @@ export function ListingsPage() {
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const counts = data?.counts;
+  // a live update refreshes this page in place; rows that arrived meanwhile (they sort onto page 1) show as a chip
+  const [fresh, setFresh] = useState(0);
+  const seenTotal = useRef<{ key: string; total: number } | null>(null);
+  useEffect(() => {
+    if (!data || list.isPlaceholderData) return;
+    const prev = seenTotal.current;
+    if (prev && prev.key === filterKey && data.total > prev.total) setFresh((n) => n + data.total - prev.total);
+    if (!prev || prev.key !== filterKey) setFresh(0);
+    seenTotal.current = { key: filterKey, total: data.total };
+  }, [data, filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const bulk = useMutation({
     mutationFn: async ({ action, reason }: { action: string; reason?: string }) => {
       if (action === "export_csv") {
@@ -169,7 +190,7 @@ export function ListingsPage() {
   );
   const pageIds = (data?.items ?? []).map((r) => r.id);
   const allOnPage = pageIds.length > 0 && pageIds.every((id) => isSelected(selection, id));
-  const setSortKey = (key: string) => setSort((s) => ({ key, dir: s.key === key && s.dir === "asc" ? "desc" : "asc" }));
+  const setSortKey = (key: string) => setView({ sort: key, dir: sort.key === key && sort.dir === "asc" ? "desc" : "asc" });
   /** Open a row in the panel; a click refreshes its cached detail in the background, keyboard moves do not. */
   const openPanel = (id: string | null, refresh = true) => {
     const p = new URLSearchParams(params);
@@ -181,9 +202,13 @@ export function ListingsPage() {
   // v0.6.0: keyboard up/down moves the selected row; a row that left the filter hands the selection to the next one
   const items = data?.items ?? [];
   const prevIds = useRef<string[]>([]);
+  const prevPage = useRef(page);
   useEffect(() => {
     const ids = items.map((r) => r.id);
-    if (panelId && ids.length && !ids.includes(panelId) && !list.isPlaceholderData) {
+    // only a row that left the filter on the same page hands over the panel; a page change keeps the open row
+    const samePage = prevPage.current === page;
+    prevPage.current = page;
+    if (samePage && panelId && ids.length && !ids.includes(panelId) && !list.isPlaceholderData) {
       const at = prevIds.current.indexOf(panelId);
       if (at >= 0) openPanel(ids[Math.min(at, ids.length - 1)] ?? null);
     }
@@ -304,6 +329,10 @@ export function ListingsPage() {
             </span>
           </div>
           <ErrorNote error={list.error} />
+          {fresh > 0 && page > 1 && (
+            <div className="flex shrink-0 justify-center py-1.5">
+              <Chip onClick={() => { setFresh(0); setPage(1); }} data-testid="listings-fresh">{t("listings.fresh", { count: fresh, n: f.num(fresh) })}</Chip>
+            </div>)}
           <div ref={scroller} className="min-h-0 flex-1 overflow-auto" data-testid="table-scroll">
             {data && data.items.length === 0 ? <EmptyState>{t("listings.empty")}</EmptyState> : (
               <table className="w-full text-sm" data-testid="listing-table">
@@ -335,7 +364,7 @@ export function ListingsPage() {
             <Button variant="ghost" disabled={page >= pages} onClick={() => setPage(page + 1)}>{t("listings.next")}</Button>
             <Button variant="ghost" disabled={page >= pages} onClick={() => setPage(pages)}>»</Button>
             <Select aria-label={t("listings.pageSize")} className="ms-auto w-auto min-w-24" value={pageSize}
-              onChange={(e) => { const v = Number(e.target.value); setPageSize(v); save("boms.listings.pageSize", String(v)); setPage(1); }}>
+              onChange={(e) => { const v = Number(e.target.value); save("boms.listings.pageSize", String(v)); setView({ size: v }); }}>
               {PAGE_SIZES.map((n) => <option key={n} value={n}>{f.num(n)}</option>)}
             </Select>
           </div>
@@ -414,7 +443,7 @@ function Row({ row, n, columns, active, checked, comfortable, job, jobKind, onCh
       case "number": return <Bdi ltr className="font-mono text-xs">{row.external_no}</Bdi>;
       case "title": return <span className={`flex min-w-0 ${comfortable ? "flex-col" : "items-center gap-1.5"}`}>
         <button type="button" className={`block max-w-[22rem] text-start font-medium hover:underline ${clip}`} onClick={onOpen} dir="auto" title={row.title}>
-          {row.is_new && !columns.includes("row") && <span className="me-1 inline-block h-2 w-2 rounded-full bg-accent" aria-label={t("listings.new")} />}{row.title}</button>
+          {row.is_new && !columns.includes("row") && <span className="me-1 inline-block h-2 w-2 rounded-full bg-accent" aria-label={t("listings.new")} />}<bdi>{row.title}</bdi></button>
         {row.warn.length > 0 && <span className="shrink-0 text-xs text-danger" title={row.warn.join("، ")}>⚠{comfortable && <> <Bdi>{row.warn.join("، ")}</Bdi></>}</span>}
         {job && <span className="shrink-0 rounded bg-accent-soft px-1.5 text-2xs text-accent" data-testid="row-job">
           {job.state === "queued" ? t(`listings.job.${jobKind}QueuedShort`) : job.total ? t(`listings.job.${jobKind}RunningShort`, { n: f.num(job.done ?? 0), total: f.num(job.total) }) : t(`listings.job.${jobKind}StartedShort`)}</span>}</span>;

@@ -133,7 +133,7 @@ export function ItemDialog({ owner, item, ownerDocuments, onClose, onSaved }: {
               <UnitField id="it-unit" code={form.unit_code} text={form.unit_text} onChange={set} /></SuggestedValue></Field>
           <Field label={t("sourcing.item.targetPrice")} htmlFor="it-price">
             <SuggestedValue current={form.target_price} suggestion={sp.last_purchase}
-              render={(p) => t("smart.lastPurchase", { price: `${f.num(p.unit_price)} ${p.currency}`, supplier: p.supplier ?? "" })}
+              render={(p) => t("smart.lastPurchase", { price: `${f.money(p.unit_price, p.currency)} ${p.currency}`, supplier: p.supplier ?? "" })}
               onAccept={(p) => set({ target_price: String(p.unit_price), target_currency: p.currency })}>
               <div className="flex gap-1.5"><Input id="it-price" dir="ltr" inputMode="decimal" value={form.target_price ?? ""} onChange={(e) => set({ target_price: e.target.value || null })} />
                 <CurrencyField value={form.target_currency} onChange={(v) => set({ target_currency: v })} /></div></SuggestedValue>

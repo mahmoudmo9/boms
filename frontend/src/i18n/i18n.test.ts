@@ -44,7 +44,8 @@ describe("translations", () => {
       for (const match of readFileSync(file, "utf-8").matchAll(/\bt\(\s*"([a-zA-Z0-9_.]+)"/g)) used.add(match[1]);
     }
     expect(used.size).toBeGreaterThan(50);
-    expect([...used].filter((k) => !enKeys.includes(k))).toEqual([]);
+    // a plural key exists as key_one / key_other (v0.10.1: Intl.PluralRules through i18next)
+    expect([...used].filter((k) => !enKeys.includes(k) && !enKeys.includes(`${k}_other`))).toEqual([]);
   });
 
   it("every workspace and backend error code used by the UI is translated", () => {
@@ -74,5 +75,27 @@ describe("translations", () => {
       expect(enKeys).toContain(`parties.roles.${role}`);
       for (const code of codes) expect(enKeys).toContain(`funnel.stages.${role}.${code}`);
     }
+  });
+});
+
+describe("numbers inside translations (v0.10.1 section 3.3)", () => {
+  it("formats a number passed to t() with Persian digits in fa and Latin in en", async () => {
+    const { default: i18n } = await import("./index");
+    await i18n.changeLanguage("fa");
+    expect(i18n.t("ai.settings.cap.warning", { level: 80 })).toBe("هشدار ۸۰٪");
+    expect(i18n.t("ai.settings.cap.subscription", { count: 1234 })).toContain("۱٬۲۳۴");
+    await i18n.changeLanguage("en");
+    expect(i18n.t("ai.settings.cap.subscription", { count: 1234 })).toContain("1,234");
+  });
+});
+
+describe("English plurals (v0.10.1 section 3.5)", () => {
+  it("never writes «(s)»: counts use plural keys (Intl.PluralRules through i18next)", async () => {
+    const text = readFileSync(join(__dirname, "en.json"), "utf-8");
+    expect(text.match(/\(s\)|\(es\)/g) ?? []).toEqual([]);
+    const { default: i18n } = await import("./index");
+    await i18n.changeLanguage("en");
+    expect(i18n.t("execution.header.warnings", { count: 1, n: "1" })).toBe("1 delay warning");
+    expect(i18n.t("execution.header.warnings", { count: 3, n: "3" })).toBe("3 delay warnings");
   });
 });

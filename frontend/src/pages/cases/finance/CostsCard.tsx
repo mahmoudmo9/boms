@@ -52,7 +52,7 @@ export function CostsCard({ caseId, costs, readOnly }: { caseId: string; costs: 
       {costs.length === 0 ? <EmptyState>{t("finance.costs.none")}</EmptyState> : (
         <ul className="max-h-96 divide-y divide-line overflow-y-auto">{costs.map((c) => (
           <li key={`${c.source}-${c.id ?? c.source_id}`} className="flex flex-wrap items-center gap-2 px-4 py-2 text-sm" data-testid="actual-cost">
-            <Badge>{t(`finance.profit.lines.${c.kind}`)}</Badge><span dir="auto" className="min-w-0 flex-1 truncate">{c.description}</span>
+            <Badge>{t(`finance.profit.lines.${c.kind}`)}</Badge><span dir="auto" className="min-w-0 flex-1 truncate"><bdi>{c.description}</bdi></span>
             {c.read_only && <Badge tone="neutral">{t(`finance.costs.sources.${c.source}`)}</Badge>}
             <Money amount={c.amount} currency={c.currency} />
             {c.currency !== "IRR" && c.base_amount && <span className="text-xs text-muted"><Money amount={c.base_amount} currency="IRR" /></span>}

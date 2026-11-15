@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.errors import AppError
 from app.core.schemas import ApiModel, Page, page_params
-from app.modules.events import service
+from app.modules.events import service, subjects
 from app.modules.system.auth import CurrentUser
 
 router = APIRouter(prefix="/api/events", tags=["events"])
@@ -22,6 +22,7 @@ class EventOut(ApiModel):
     action: str
     data: dict[str, Any]
     source: str
+    subject: dict[str, Any] | None = None   # v0.10.1: the object the sentence names (type, id, code, name)
 
 
 @router.get("", response_model=Page[EventOut])
@@ -42,7 +43,9 @@ def list_events(
                                           date_from=date_from, date_to=date_to, page=page, page_size=page_size)
     except ValueError as exc:
         raise AppError("invalid_date", str(exc), status=422) from exc
-    return Page(items=[EventOut.model_validate(r) for r in rows], total=total, page=page, page_size=page_size)
+    named = subjects.subjects(db, rows)
+    items = [EventOut.model_validate(r).model_copy(update={"subject": s}) for r, s in zip(rows, named)]
+    return Page(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.get("/facets")

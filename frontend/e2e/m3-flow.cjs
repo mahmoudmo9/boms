@@ -52,10 +52,13 @@ const BASE = 'http://127.0.0.1:8765';
         check('theme class', (await page.evaluate(() => document.documentElement.classList.contains('dark'))) === (theme === 'dark'));
         check('direction', (await page.evaluate(() => document.documentElement.dir)) === (lang === 'fa' ? 'rtl' : 'ltr'));
         check('current module marked', (await page.locator('[data-testid=nav-cases]').getAttribute('aria-current')) === 'page');
-        await page.locator('[data-testid=nav-collapse]').click();
-        check('sidebar collapses to icons', await page.locator('[data-testid=sidebar][data-collapsed]').count() === 1);
+        // v0.10.1: the sidebar is an icon rail by default; pinning keeps it open (e2e/rail.cjs checks hover and reload)
+        await page.mouse.move(900, 500); await page.locator('#main').focus();
+        check('sidebar is an icon rail', await poll(async () => (await page.locator('[data-testid=sidebar][data-collapsed]').count()) === 1, 3000));
         await page.screenshot({ path: `${OUT}/${lang}-${theme}-collapsed.png` });
-        await page.locator('[data-testid=nav-collapse]').click();
+        await page.locator('[data-testid=nav-pin]').click();
+        check('pinned open', await page.locator('[data-testid=sidebar][data-pinned]').count() === 1);
+        await page.locator('[data-testid=nav-pin]').click();
         check('live updates connected', await poll(async () => (await page.locator('[data-testid=live]').getAttribute('data-transport')) === 'stream', 8000));
 
         step = `${lang}/${theme} palette`;

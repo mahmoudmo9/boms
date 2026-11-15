@@ -23,6 +23,9 @@ describe("cash position display", () => {
     expect(rows.map((r) => r.currency)).toEqual(["EUR", "IRR", "USD"]);
     expect(rows.find((r) => r.currency === "USD")).toMatchObject({ received: "1000.0000", net: "-400.0000", tone: "success", outstandingOut: "900" });
     expect(rows.find((r) => r.currency === "IRR")?.tone).toBe("warning");
+    expect(rows.find((r) => r.currency === "USD")?.figure).toEqual({ kind: "advance", amount: "400.0000" });
+    expect(rows.find((r) => r.currency === "IRR")?.figure).toEqual({ kind: "tied_up", amount: "5000" });
+    expect(rows.find((r) => r.currency === "EUR")?.figure).toEqual({ kind: "tied_up", amount: "0" });
     expect(rows.find((r) => r.currency === "EUR")).toMatchObject({ received: "0", net: "0", tone: "neutral", outstandingIn: "10" });
     expect(cashRows(null)).toEqual([]);
   });
@@ -53,5 +56,14 @@ describe("small helpers", () => {
   it("the statuses a PO can be moved to by hand", () => {
     expect(manualPoSteps("confirmed")).toEqual(["in_production", "ready", "shipped"]);
     expect(manualPoSteps("draft")).toEqual([]);
+  });
+});
+
+describe("shipment date changes (v0.10.1 section 1.7)", () => {
+  it("reads the structured details, and old generated notes back into dates", async () => {
+    const { dateChangeOf } = await import("./execution");
+    expect(dateChangeOf({ note: null, details: { field: "eta", old: "2026-12-07", new: "2026-12-14" } })).toMatchObject({ field: "eta", old: "2026-12-07", new: "2026-12-14" });
+    expect(dateChangeOf({ note: "ETA: 2026-12-07 → 2026-12-14" })).toEqual({ field: "eta", old: "2026-12-07", new: "2026-12-14", legacy: true });
+    expect(dateChangeOf({ note: "Jebel Ali" })).toBeNull();
   });
 });

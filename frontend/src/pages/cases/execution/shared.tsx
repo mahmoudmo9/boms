@@ -40,7 +40,7 @@ export function partyName(p: PartyRef | null | undefined, lang: string): string 
 export function PartyLink({ party }: { party: PartyRef | null | undefined }) {
   const f = useFormat();
   if (!party) return <span>—</span>;
-  return <Link to={`/parties/${party.id}`} className="text-accent hover:underline" dir="auto">{partyName(party, f.lang)}</Link>;
+  return <Link to={`/parties/${party.id}`} className="text-accent hover:underline" dir="auto"><bdi>{partyName(party, f.lang)}</bdi></Link>;
 }
 
 /** Choose a file: it goes into the document store (an identical file already stored is reused). */
@@ -77,7 +77,7 @@ export function OutputButtons({ base, outputs, language }: { base: string; outpu
         href={`${base}/print${language ? `?language=${language}` : ""}`} target="_blank" rel="noreferrer">{t("quotes.printView")}</a>
       <Button icon="download" busy={make.isPending && make.variables === "pdf"} onClick={() => make.mutate("pdf")}>PDF</Button>
       <Button icon="download" busy={make.isPending && make.variables === "docx"} onClick={() => make.mutate("docx")}>Word</Button>
-      {outputs.length > 0 && <span className="text-xs text-muted">{t("execution.outputs", { n: outputs.length })}</span>}
+      {outputs.length > 0 && <span className="text-xs text-muted">{t("execution.outputs", { count: outputs.length, n: outputs.length })}</span>}
       <ErrorNote error={make.error} />
     </span>
   );

@@ -12,7 +12,7 @@ import { Bars, CashFlow } from "../../design/components/charts";
 import { capTone } from "../../lib/ai";
 import { useAuth } from "../../lib/auth";
 import { useFormat } from "../../lib/prefs";
-import { focus, mainCurrency, moments, type Overview, timeLeftPercent, todayLine } from "../../lib/today";
+import { focus, lineCounts, mainCurrency, moments, type Overview, timeLeftPercent, todayLine } from "../../lib/today";
 import type { CommandCenter } from "../../lib/types";
 
 function FocusCard({ cc }: { cc: CommandCenter }) {
@@ -53,7 +53,7 @@ function TodayLine({ cc }: { cc: CommandCenter }) {
   const now = useNow();
   const line = todayLine(moments(cc, i18n.language), now);
   return (
-    <Card className="lg:col-span-7" title={t("cc.line.title")} subtitle={t("cc.line.count", { n: f.num(line.length) })} testId="cc-today-line">
+    <Card className="lg:col-span-7" title={t("cc.line.title")} subtitle={lineCounts(line).map((c) => t(`cc.line.kinds.${c.kind}`, { count: c.n, n: f.num(c.n) })).join(" · ") || undefined} testId="cc-today-line">
       {line.length === 0 ? <EmptyState compact icon="calendar">{t("cc.line.empty")}</EmptyState> : (
         <DatedTimeline label={t("cc.line.title")} items={line.map((m) => ({
           key: m.key, state: m.state, when: m.allDay ? t("cc.line.allDay") : f.date(m.at, true).slice(-5),
@@ -72,18 +72,24 @@ function Kpis({ o }: { o: Overview }) {
     : t("cc.kpi.season", { name: t(`cc.kpi.seasons.${o.profit_quarter.jalali.season}`), year: f.num(String(o.profit_quarter.jalali.year)).replace(/[٬,]/g, "") });
   const [main, ...rest] = period.by_currency;
   const tied = o.tied_up.by_currency;
+  const advance = o.tied_up.advance_by_currency ?? [];
+  const profit = main ? f.compactMoney(main.profit, main.currency) : null;
+  const tiedMain = tied[0] ? f.compactMoney(tied[0].amount, tied[0].currency) : null;
   const months = o.win_rate.months.map((m) => ({ key: m.month, label: f.lang === "fa" ? m.month.slice(5, 7) : m.month.slice(5, 7), value: m.won + m.lost }));
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label={t("cc.kpi.title")} data-testid="cc-kpis">
       <KpiTile label={t("cc.kpi.profit")} testId="kpi-profit" emphasis={Boolean(main)}
-        value={main ? f.num(main.profit, 0) : "—"} unit={main ? <bdi dir="ltr">{main.currency}</bdi> : undefined}
-        note={main ? `${periodLabel} · ${t("cc.kpi.deals", { n: f.num(period.deals) })}${rest.length ? ` · ${rest.map((r) => `${f.num(r.profit, 0)} ${r.currency}`).join("، ")}` : ""}` : t("cc.kpi.noClosed", { period: periodLabel })} />
+        value={main ? profit!.figure : "—"} unit={main ? profit!.unit : undefined} full={profit?.full}
+        note={main ? `${periodLabel} · ${t("cc.kpi.deals", { n: f.num(period.deals) })}${rest.length ? ` · ${rest.map((r) => f.compactMoney(r.profit, r.currency).text).join("، ")}` : ""}` : t("cc.kpi.noClosed", { period: periodLabel })} />
       <KpiTile label={t("cc.kpi.winRate")} testId="kpi-win" value={o.win_rate.percent === null ? "—" : `${f.num(o.win_rate.percent, 0)}٪`.replace("٪", f.lang === "fa" ? "٪" : "%")}
         note={o.win_rate.decided ? t("cc.kpi.winNote", { won: f.num(o.win_rate.won), decided: f.num(o.win_rate.decided) }) : t("cc.kpi.noDecided")}>
         {o.win_rate.decided > 0 && <Bars label={t("cc.kpi.winRate")} items={months} highlight={months[months.length - 1]?.key} format={(n) => f.num(n)} height={44} />}
       </KpiTile>
-      <KpiTile label={t("cc.kpi.tiedUp")} testId="kpi-tied" value={tied[0] ? f.num(tied[0].amount, 0) : "—"} unit={tied[0] ? <bdi dir="ltr">{tied[0].currency}</bdi> : undefined}
-        note={tied.length ? `${t("cc.kpi.tiedCases", { n: f.num(o.tied_up.cases) })}${tied.length > 1 ? ` · ${tied.slice(1).map((r) => `${f.num(r.amount, 0)} ${r.currency}`).join("، ")}` : ""}` : t("cc.kpi.nothingTied")} />
+      <KpiTile label={t("cc.kpi.tiedUp")} testId="kpi-tied" value={tiedMain ? tiedMain.figure : "—"} unit={tiedMain?.unit} full={tiedMain?.full}
+        note={<>
+          {tied.length ? `${t("cc.kpi.tiedCases", { count: o.tied_up.cases, n: f.num(o.tied_up.cases) })}${tied.length > 1 ? ` · ${tied.slice(1).map((r) => f.compactMoney(r.amount, r.currency).text).join("، ")}` : ""}` : t("cc.kpi.nothingTied")}
+          {advance.length > 0 && <span className="block text-muted" data-testid="kpi-advance">{t("cc.kpi.advance")}: {advance.map((r) => f.compactMoney(r.amount, r.currency).text).join("، ")}</span>}
+        </>} />
       <KpiTile label={t("cc.kpi.setad")} testId="kpi-setad" value={f.num(o.setad_today.count)} unit={t("cc.kpi.setadUnit")}
         note={o.setad_today.count ? undefined : t("cc.kpi.setadNone")}>
         {o.setad_today.keywords.length > 0 && (
@@ -106,7 +112,7 @@ function CashCard({ o }: { o: Overview }) {
       actions={cf.currencies.length > 1 ? <Segmented size="sm" label={t("ds.money.currency")} value={shown?.currency ?? ""} onChange={setCurrency}
         options={cf.currencies.map((c) => ({ value: c.currency, label: <bdi dir="ltr">{c.currency}</bdi> }))} /> : undefined}>
       {!shown ? <EmptyState compact icon="coins">{t("cc.cash.empty")}</EmptyState> : (
-        <CashFlow label={`${t("cc.cash.title")} (${shown.currency})`} format={(n) => `${f.num(n, 0)}`}
+        <CashFlow label={`${t("cc.cash.title")} (${shown.currency})`} format={(n) => f.compact(n)}
           legend={{ cashIn: t("cc.cash.in"), cashOut: t("cc.cash.out"), balance: t("cc.cash.net"), lowest: t("cc.cash.lowest") }}
           points={shown.weeks.map((w, i) => ({ key: w.week, label: weekLabel(w.week, i), cashIn: Number(w.in), cashOut: Number(w.out) }))} />
       )}
