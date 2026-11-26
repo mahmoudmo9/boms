@@ -160,9 +160,9 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       await page.getByRole('button', { name: t('execution.shipments.add') }).first().click();
       const dlg = page.locator('[data-testid=shipment-dialog]');
       await dlg.locator('[data-testid=sh-origin-location] input').fill('SHA');
-      await page.locator('[role=option]', { hasText: 'CNSHA' }).first().waitFor(); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+      await page.locator('[role=option]', { hasText: 'CNSHA' }).first().click();   // the exact code, whatever the list order
       await dlg.locator('[data-testid=sh-destination-location] input').fill('BUZ');
-      await page.locator('[role=option]', { hasText: 'IRBUZ' }).first().waitFor(); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+      await page.locator('[role=option]', { hasText: 'IRBUZ' }).first().click();
       await dlg.locator('[data-testid=sh-add-container]').click();
       await dlg.locator('[data-testid=sh-container-number] input').fill('CSQU3054384');
       check('wrong check digit shown', await dlg.locator('[data-testid=sh-container-number][data-state=invalid]').count() === 1);

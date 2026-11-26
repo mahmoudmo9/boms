@@ -256,7 +256,7 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       step = `${lang} command center`;
       await page.goto(`${BASE}/command-center`);
       await page.locator('[data-testid=cc-finance]').waitFor();
-      await page.locator('[data-testid=cc-tasks]').waitFor();
+      await page.locator('[data-testid=cc-attention-tasks]').waitFor();   // v0.10.1 (4.1): tasks are in «توجه»
       await shot(`${lang}-command-center`);
       r.caseId = caseId;
     }

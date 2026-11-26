@@ -177,7 +177,7 @@ function Overview({ d, run }: { d: TenderDetail; run: Run }) {
       {d.tender_type && <span className="text-sm font-normal text-muted" dir="auto">{d.tender_type}</span>}</span>}>
       <TenderStepper stage={d.stage} hint={d.stage_hint} onPick={(stage) => patch({ stage })} />
       {d.stage_hint !== d.stage && <p className="mb-3 text-xs text-warning" data-testid="stage-hint">{t("tenders.hintText", { stage: t(`tenders.stages.${d.stage_hint}`) })}</p>}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
         <Field label={t("tenders.participation")} htmlFor="t-part">
           <Select id="t-part" value={d.participation} onChange={(e) => e.target.value !== "no" ? patch({ participation: e.target.value }) : patch({ participation: "no", participation_reason: reason || null })}>
             {(["undecided", "yes", "no"] as const).map((v) => <option key={v} value={v}>{t(`tenders.participations.${v}`)}</option>)}

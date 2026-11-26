@@ -47,6 +47,12 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
     // 1. connect: the agent starts (headless fake browser) and logs in
     step = 'connect';
     await page.goto(`${BASE}/tenders`);
+    // a run that crashed earlier can leave the agent connected: start from a disconnected agent
+    if ((await call('GET', '/api/setad/agent')).body.connected) {
+      await page.getByRole('button', { name: t('setad.disconnect') }).click();
+      await poll(async () => !(await call('GET', '/api/setad/agent')).body.connected, 30000);
+      await page.reload();
+    }
     let t0 = Date.now();
     await page.getByRole('button', { name: t('setad.connect') }).click();
     check('connected', await poll(async () => (await page.locator('[data-testid=agent-state]').innerText()).includes(t('setad.connected')), 90000));
@@ -77,8 +83,12 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
     const panel = page.locator('[data-testid=listing-panel]');
     const rows = page.locator('[data-testid=listing-table] tbody tr');
     for (let i = 0; i < Math.min(await rows.count(), 15); i++) {
-      await rows.nth(i).locator('button').first().click();
+      const opener = rows.nth(i).locator('button').first();
+      const title = (await opener.textContent()).trim();
+      await opener.click();
       await panel.waitFor();
+      // the panel switches listings asynchronously: read its buttons only once it shows the clicked row
+      await panel.locator('h2', { hasText: title }).first().waitFor();
       if (await panel.getByRole('button', { name: `★ ${t('listings.star')}` }).count()) break;
     }
     const id = new URL(page.url()).searchParams.get('listing');

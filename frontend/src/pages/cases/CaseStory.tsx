@@ -8,7 +8,7 @@ import { Link } from "react-router";
 
 import { EventSentence } from "../../components/EventSentence";
 import { FileType } from "../../components/FileType";
-import { Button, buttonClass, Card, Chip, EmptyState, ErrorNote, FileDrop, Icon, ProgressRing, Status } from "../../design/components";
+import { Button, buttonClass, Card, Chip, CodeChip, EmptyState, ErrorNote, FileDrop, Icon, ProgressRing, Status } from "../../design/components";
 import { ApiError, api, type Page } from "../../lib/api";
 import { pathPercent, pathSteps } from "../../lib/dealPath";
 import { cashFigure } from "../../lib/execution";
@@ -94,9 +94,11 @@ export function CaseFacts({ c, children }: { c: CaseDetail; children?: ReactNode
   const ex = useExecution(c.id);
   const h = ex.data?.header;
   const latest = quotes.data?.summary.latest;
+  const costing = useQuery({ queryKey: ["costing", c.id], queryFn: () => api<CaseCosting>(`/api/cases/${c.id}/costing`) });
+  const exposure = costing.data?.current?.exposure;
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid="case-facts">
-      {c.code && <Chip><bdi dir="ltr">{c.code}</bdi></Chip>}
+      {c.code && <CodeChip code={c.code} />}
       {h?.order && <Chip><bdi dir="ltr">{h.order.number}</bdi> · {t(`execution.order.statuses.${h.order.status}`)}</Chip>}
       {latest && <Chip>{t("quotes.latest")}: <bdi dir="ltr">{latest.number}</bdi> · {t(`sourcing.status.quote.${latest.status}`, { defaultValue: latest.status })}</Chip>}
       {h && h.items_total > 0 && <Chip>{t("execution.order.itemsDelivered", { done: f.num(h.items_delivered), total: f.num(h.items_total) })}</Chip>}
@@ -105,6 +107,8 @@ export function CaseFacts({ c, children }: { c: CaseDetail; children?: ReactNode
         if (fig.kind === "advance" && Number(fig.amount) === 0) return null;
         return <Chip key={cur}>{t(`execution.cash.${fig.kind}`)}: <span className="tabular-nums">{f.compactMoney(fig.amount, cur).text}</span></Chip>;
       })}
+      {c.exposure_estimate && <Chip>{t("sourcing.decision.exposure")}: <span className="tabular-nums">{f.compactMoney(c.exposure_estimate, c.exposure_currency).text}</span></Chip>}
+      {exposure !== undefined && exposure !== null && <span data-testid="computed-exposure"><Chip>{t("costing.computedExposure")}: <span className="tabular-nums">{f.compactMoney(exposure, costing.data!.current!.currency).text}</span></Chip></span>}
       {h && h.warnings > 0 && <Status tone="danger">{t("execution.header.warnings", { count: h.warnings, n: f.num(h.warnings) })}</Status>}
       {children}
       {c.inquiry_id && <Link to={`/sourcing/inquiries/${c.inquiry_id}`} className="text-xs text-accent hover:underline">{t("sourcing.case.fromInquiry")}</Link>}

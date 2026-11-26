@@ -151,10 +151,11 @@ def test_manual_task_lifecycle_and_my_tasks_groups_and_filters(client):
     later = client.post("/api/tasks", json={"title": "بعداً", "due_on": day(30)}).json()
     r = client.post("/api/tasks", json={"title": "x", "due_on": day(0), "bogus": 1})
     assert r.status_code == 422
-    groups = client.get("/api/tasks").json()["groups"]
-    ids = {k: {t["id"] for t in v} for k, v in groups.items()}
-    assert late["id"] in ids["overdue"] and today["id"] in ids["today"] and week["id"] in ids["week"]
-    assert later["id"] in ids["later"]
+    # each task looked up by its own title: the shared test database holds more open tasks than one page (500)
+    def group_of(task):
+        groups = client.get("/api/tasks", params={"q": task["title"]}).json()["groups"]
+        return next(k for k, v in groups.items() if task["id"] in {t["id"] for t in v})
+    assert [group_of(x) for x in (late, today, week, later)] == ["overdue", "today", "week", "later"]
     flt = client.get("/api/tasks", params={"case_id": case["id"]}).json()["groups"]
     assert {t["id"] for v in flt.values() for t in v} == {late["id"], today["id"]}
     assert all(t["case_title"] == "Tasks case" for t in flt["overdue"])

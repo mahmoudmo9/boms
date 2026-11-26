@@ -209,6 +209,9 @@ const psql = (sql) => execFileSync('psql', ['-h', '127.0.0.1', '-U', process.env
       // ---- 4. process steps: order registration and kotaj numbers ----
       step = `${lang} process`;
       await page.goto(`${BASE}/cases/${caseId}?tab=logistics`);
+      // v0.10.1 (4.5): the checklist is compact rows; a step's form opens under its row, one at a time
+      const openStep = async (code) => { await page.locator(`[data-testid=process-row][data-code=${code}] > button`).click(); };
+      await openStep('order_registration');
       const reg = page.locator('[data-testid=process-step][data-code=order_registration]');
       await reg.waitFor();
       const regRef = reg.locator('input[id^="ref-"]');
@@ -217,6 +220,7 @@ const psql = (sql) => execFileSync('psql', ['-h', '127.0.0.1', '-U', process.env
       await page.locator('h1').first().click();
       await pick(reg, await reg.locator('input[type=file]').getAttribute('id'), 'order-registration.pdf');
       await reg.locator('select').selectOption('done');
+      await openStep('declaration_kotaj');
       const kotaj = page.locator('[data-testid=process-step][data-code=declaration_kotaj]');
       await kotaj.locator('input[id^="ref-"]').fill('KTJ-' + tag); await page.locator('h1').first().click();
       await kotaj.locator('select').selectOption('done');                 // needs a document: the reason field appears
@@ -246,6 +250,7 @@ const psql = (sql) => execFileSync('psql', ['-h', '127.0.0.1', '-U', process.env
       const sh = page.locator('[data-testid=shipment]');
       await sh.waitFor();
       const shId = await sh.getAttribute('data-shipment');
+      await page.getByTestId('shipment-edit').first().click();     // v0.10.1 (4.5): the card's fields open from «ویرایش»
       await sh.locator(`input[id^="sh-eta-"]`).fill(await typed(lang, 32)); await sh.locator(`input[id^="sh-eta-"]`).blur();
       check('ETA delay event and warning', await poll(async () => {
         const s = (await ex(caseId)).shipments[0];
@@ -289,7 +294,9 @@ const psql = (sql) => execFileSync('psql', ['-h', '127.0.0.1', '-U', process.env
       check('order delivered', await poll(async () => (await ex(caseId)).sales_orders[0].status === 'delivered'));
       check('items delivered', await poll(async () => (await ok('GET', `/api/cases/${caseId}`)).items.every((i) => i.status === 'delivered')));
       await page.reload(); await page.locator('[data-testid=delivery-tab]').waitFor();
-      check('header shows delivery progress', (await page.locator('[data-testid=execution-header]').innerText()).length > 0);
+      // v0.10.1 (4.2): the delivery progress chip is one of the case facts under the hero
+      const facts = await page.locator('[data-testid=case-facts]').innerText();
+      check('header shows delivery progress', facts.includes(lang === 'fa' ? 'قلم تحویل شد' : 'items delivered'), facts);
       await shot(`${lang}-delivery`, true);
 
       // ---- 8. command center ----
