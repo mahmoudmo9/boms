@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultPhoneRegion, detectPhoneRegion, flagEmoji, phoneInputChange, type PhoneRegion } from "./phone";
+import { defaultPhoneRegion, detectPhoneRegion, dialCode, phoneInputChange, type PhoneRegion } from "./phone";
 
 const REGIONS: PhoneRegion[] = [
   { iso2: "AE", name_fa: "امارات", name_en: "United Arab Emirates", calling_code: 971 },
@@ -42,8 +42,6 @@ describe("phone input", () => {
   });
 
   it("builds flag emoji", () => {
-    expect(flagEmoji("IR")).toBe("🇮🇷");
-    expect(flagEmoji("ae")).toBe("🇦🇪");
-    expect(flagEmoji("")).toBe("");
+    expect(dialCode({ calling_code: 98 })).toBe("+98");   // v0.10.1 (0.4.5): no emoji flags; the dial code is a signed value
   });
 });

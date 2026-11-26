@@ -97,6 +97,16 @@ const TONES: Record<Tone, string> = {
 };
 const TONE_ICON: Record<Tone, string> = { neutral: "minus", success: "checkCircle", danger: "xCircle", warning: "alert", accent: "sparkle", info: "info" };
 
+/** v0.10.1 (0.4.5): a country flag from the local SVG set (public/flags, flag-icons, MIT), 4:3. Never an emoji:
+ * Windows draws regional-indicator pairs as two letters. The country name is the accessible name; pass
+ * `decorative` when the name is written next to it. */
+export function Flag({ code, name, decorative, className = "" }: { code: string | null | undefined; name?: string; decorative?: boolean; className?: string }) {
+  const iso = (code ?? "").trim().toLowerCase();
+  if (!/^[a-z]{2}$/.test(iso)) return null;
+  return <img src={`/flags/${iso}.svg`} alt={decorative ? "" : (name ?? iso.toUpperCase())} aria-hidden={decorative || undefined} loading="lazy" draggable={false}
+    data-testid="flag" data-code={iso} className={`inline-block aspect-4/3 w-5 shrink-0 rounded-xs object-cover shadow-xs ring-1 ring-line ${className}`} />;
+}
+
 /** A small label. `icon` adds a mark so the tone is never the only signal. */
 export function Badge({ tone = "neutral", icon, children, className = "" }: { tone?: Tone; icon?: string | true; children: ReactNode; className?: string }) {
   return (

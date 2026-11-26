@@ -61,9 +61,10 @@ export function Textarea({ className = "", ...props }: TextareaHTMLAttributes<HT
 }
 
 /** The native select (the platform's keyboard and screen-reader behaviour) in the system's frame. */
-export function Select({ className = "", children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({ className = "", children, dir, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <span className={`relative inline-flex min-w-0 ${width(className)} ${className}`}>
+    // v0.10.1 (0.4.4): `dir` on the wrapper so the chevron and the reserved padding share one side
+    <span className={`relative inline-flex min-w-20 ${width(className)} ${className}`} dir={dir} data-icons={1}>
       <select {...props} className={`${CONTROL} w-full min-w-0 cursor-pointer appearance-none pe-9`}>{children}</select>
       <Icon name="chevronDown" size={15} className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted" />
     </span>
@@ -138,7 +139,16 @@ export function Segmented<T extends string>({ value, options, onChange, label, s
 
 // ---- Combobox ----------------------------------------------------------------------------------------------------------
 
-export type Option = { value: string; label: string; code?: string | null; hint?: string | null };
+/** `leading`: a mark before the label (a flag); `keywords`: more text the search matches (other-language name, dial code). */
+export type Option = { value: string; label: string; code?: string | null; hint?: string | null; leading?: ReactNode; keywords?: string };
+
+/** «name (code)» for the chosen option inside an input. A signed code («+98», «-1») is wrapped in Unicode isolates
+ * (LRI … PDI): an input cannot hold <bdi>, and without them a right-to-left field shows «98+». */
+export function optionText(o: Option): string {
+  if (!o.code || o.code === o.label) return o.label;
+  const code = /^[+\-−]/.test(o.code) ? `\u2066${o.code}\u2069` : o.code;
+  return `${o.label} (${code})`;
+}
 
 /** The list part shared by Combobox and LookupField: options with `role="option"`, the active one marked. */
 export function OptionList({ id, options, active, selected, onPick, onHover, empty, labelledBy }: {
@@ -152,6 +162,7 @@ export function OptionList({ id, options, active, selected, onPick, onHover, emp
           onMouseDown={(e) => { e.preventDefault(); onPick(o); }} onMouseEnter={() => onHover?.(i)}
           ref={i === active ? (el) => el?.scrollIntoView?.({ block: "nearest" }) : undefined}
           className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-sm ${i === active ? "bg-accent-soft text-title" : "text-fg"}`}>
+          {o.leading}
           <span className="flex min-w-0 flex-1 flex-col">
             <bdi className="truncate">{o.label}</bdi>
             {o.hint && <bdi className="truncate text-xs text-muted">{o.hint}</bdi>}
@@ -176,12 +187,17 @@ export function Combobox({ options, value, onChange, placeholder, id, ariaLabel,
   const [text, setText] = useState<string | null>(null);       // null = showing the chosen value
   const [state, setState] = useState({ open: false, active: -1 });
   const chosen = options.find((o) => o.value === value) ?? null;
-  const shownLabel = chosen ? (chosen.code && chosen.code !== chosen.label ? `${chosen.label} (${chosen.code})` : chosen.label) : "";
+  const shownLabel = chosen ? optionText(chosen) : "";
+  const clearShown = Boolean(clearable && value && !disabled);
   const filtered = useMemo(() => {
     const q = (text ?? "").trim().toLowerCase();
     if (!q) return options;
-    const starts = options.filter((o) => o.code?.toLowerCase() === q || o.label.toLowerCase().startsWith(q) || o.code?.toLowerCase().startsWith(q));
-    const contains = options.filter((o) => !starts.includes(o) && (o.label.toLowerCase().includes(q) || (o.hint ?? "").toLowerCase().includes(q)));
+    const bare = q.replace(/^\+/, "");
+    const codeOf = (o: Option) => (o.code ?? "").toLowerCase().replace(/^\+/, "");
+    const exact = options.filter((o) => o.value.toLowerCase() === q || codeOf(o) === bare);          // «ir», «+98», «USD»
+    const starts = [...exact, ...options.filter((o) => !exact.includes(o) && (o.label.toLowerCase().startsWith(q) || (bare !== "" && codeOf(o).startsWith(bare))))];
+    const contains = options.filter((o) => !starts.includes(o) && (o.label.toLowerCase().includes(q) || (o.hint ?? "").toLowerCase().includes(q)
+      || (o.keywords ?? "").toLowerCase().includes(q)));
     return [...starts, ...contains];
   }, [options, text]);
   const pick = (o: Option) => { onChange(o.value, o); setText(null); setState({ open: false, active: -1 }); };
@@ -195,16 +211,20 @@ export function Combobox({ options, value, onChange, placeholder, id, ariaLabel,
     else if (e.key === "Escape") setText(null);
   };
   return (
-    <span className={`relative inline-flex min-w-0 ${width(className)} ${className}`}>
+    // v0.10.1 (0.4.4): a `dir` goes on the wrapper, never on the input alone, so the reserved padding and the icons
+    // are always on the same side; the input reserves room for exactly the icons it shows
+    // the smallest a combobox gets: its icons plus room for a short value (a flag needs more)
+    <span className={`relative inline-flex ${chosen?.leading ? "min-w-40" : "min-w-28"} ${width(className)} ${className}`} dir={dir} data-icons={clearShown ? 2 : 1}>
+      {chosen?.leading && text === null && <span className="pointer-events-none absolute start-3 top-1/2 flex -translate-y-1/2 items-center" data-slot="leading">{chosen.leading}</span>}
       <input id={id} role="combobox" data-value={value ?? ""} aria-label={ariaLabel} aria-expanded={state.open} aria-controls={listId} aria-autocomplete="list" autoComplete="off"
-        aria-activedescendant={state.open && state.active >= 0 ? `${listId}-${state.active}` : undefined} disabled={disabled} dir={dir} data-testid={testId}
+        aria-activedescendant={state.open && state.active >= 0 ? `${listId}-${state.active}` : undefined} disabled={disabled} data-testid={testId}
         value={text ?? shownLabel} placeholder={placeholder}
         onChange={(e) => { setText(e.target.value); setState({ open: true, active: 0 }); }}
         onFocus={(e) => e.target.select()} onClick={() => setState((s) => ({ open: true, active: s.active }))}
         onBlur={() => { setText(null); setState({ open: false, active: -1 }); }} onKeyDown={onKey}
-        className={`${CONTROL} w-full min-w-0 pe-16`} />
-      <span className="absolute end-1 top-1/2 flex -translate-y-1/2 items-center">
-        {clearable && value && !disabled && (
+        className={`${CONTROL} w-full min-w-0 ${clearShown ? "pe-16" : "pe-9"} ${chosen?.leading && text === null ? "ps-10" : ""}`} />
+      <span className="absolute end-1 top-1/2 flex -translate-y-1/2 items-center" data-slot="icons">
+        {clearShown && (
           <button type="button" tabIndex={-1} aria-label={t("smart.clear")} onMouseDown={(e) => { e.preventDefault(); onChange(null); setText(null); }}
             className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md text-muted hover:bg-hover hover:text-fg"><Icon name="x" size={13} /></button>
         )}

@@ -6,6 +6,8 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Badge, Button, Card, Checkbox, Chip, CodeChip, Combobox, ConfirmDialog, DataTable, DatedTimeline, DatePicker, DescriptionList, Drawer, EmptyState, ErrorState, Field, FileDrop, Icon, ICON_NAMES, IconButton, InlineAlert, Input, Kbd, KpiTile, Loading, Menu, Modal, MoneyInput, PageHeader, Pagination, Popover, ProgressBar, ProgressRing, QuantityInput, RadioGroup, Section, Segmented, Select, Skeleton, SourceChip, Spinner, Stat, Status, Stepper, Switch, Tabs, Textarea, TextLink, Timeline, Tooltip, useToast, ValidatedInput } from "../../design/components";
+import { CountryField } from "../../components/fields";
+import { PhoneInput } from "../../components/PhoneInput";
 import { Bars, CashFlow, ProfitBridge, RouteLine, Sparkline } from "../../design/components/charts";
 import tokensCss from "../../design/tokens.css?raw";
 import { contrastTable, readTheme } from "../../design/tokens";
@@ -73,6 +75,8 @@ function Forms() {
   const [date, setDate] = useState<Date | null>(new Date(2026, 10, 12));
   const [money, setMoney] = useState<{ amount: string | null; currency: string | null }>({ amount: "6250", currency: "USD" });
   const [qty, setQty] = useState<{ amount: string | null; unit: string | null }>({ amount: "4", unit: "pc" });
+  const [country, setCountry] = useState("IR");
+  const [phone, setPhone] = useState({ value: "+98 912 345 6789", region: "IR" });
   const [iban, setIban] = useState("DE89 3704 0044 0532 0130 00");
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -80,11 +84,14 @@ function Forms() {
       <Field label="Input (error)" htmlFor="ds-err" error="این مقدار درست نیست" required><Input id="ds-err" defaultValue="x" /></Field>
       <Field label="Input (disabled)" htmlFor="ds-dis"><Input id="ds-dis" disabled defaultValue="disabled" /></Field>
       <Field label="Select" htmlFor="ds-sel"><Select id="ds-sel" defaultValue="foreign"><option value="domestic">داخلی</option><option value="foreign">خارجی</option></Select></Field>
-      <Field label="Combobox" htmlFor="ds-cb" source={<SourceChip>از PO-1405-0007</SourceChip>}><Combobox id="ds-cb" options={CURRENCIES} value={cur} onChange={setCur} dir="ltr" /></Field>
+      <Field label="Combobox" htmlFor="ds-cb" source={<SourceChip>از PO-1405-0007</SourceChip>}><Combobox id="ds-cb" options={CURRENCIES} value={cur} onChange={setCur} /></Field>
       <Field label="DatePicker" htmlFor="ds-date"><DatePicker id="ds-date" value={date} onChange={setDate} /></Field>
       <Field label="MoneyInput" htmlFor="ds-money"><MoneyInput id="ds-money" amount={money.amount} currency={money.currency} currencies={CURRENCIES} onChange={setMoney} /></Field>
       <Field label="QuantityInput" htmlFor="ds-qty"><QuantityInput id="ds-qty" amount={qty.amount} unit={qty.unit} units={UNITS} onChange={setQty} /></Field>
       <Field label="ValidatedInput (IBAN)" htmlFor="ds-iban"><ValidatedInput id="ds-iban" kind="iban" value={iban} onChange={setIban} /></Field>
+      {/* v0.10.1 (0.4.5): SVG flags (never emoji) and the dial code isolated left-to-right */}
+      <Field label="CountryField" htmlFor="ds-country"><CountryField id="ds-country" value={country} onChange={setCountry} /></Field>
+      <Field label="PhoneInput" htmlFor="ds-phone"><PhoneInput id="ds-phone" value={phone.value} region={phone.region} onChange={setPhone} /></Field>
       <Field label="Textarea" htmlFor="ds-ta"><Textarea id="ds-ta" rows={2} defaultValue="متن چندخطی" /></Field>
       <div className="flex flex-col gap-1">
         <Checkbox label="Checkbox" checked={check} onChange={setCheck} hint="با توضیح" />

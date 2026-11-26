@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { AmountInWords, Button, Combobox, ErrorNote, Input, LookupField, type Option } from "../design/components";
+import { AmountInWords, Button, Combobox, ErrorNote, Flag, Input, LookupField, type Option } from "../design/components";
 import { api } from "../lib/api";
 import { INCOTERMS, sortCurrencies, useCountries, useCurrencies, useIncoterms, useUnits } from "../lib/basedata";
 import { useFormat } from "../lib/prefs";
@@ -25,7 +25,7 @@ export function CurrencyField({ value, onChange, id, allowEmpty = true, classNam
   const currencies = useCurrencies();
   const options: Option[] = sortCurrencies(currencies.data?.items ?? []).map((c) => ({ value: c.code, label: c.code, hint: f.lang === "fa" ? c.name_fa : c.name_en }));
   if (value && !options.some((o) => o.value === value)) options.unshift({ value, label: value });
-  return <Combobox id={id} options={options} value={value} onChange={(v) => onChange(v)} clearable={allowEmpty} dir="ltr" placeholder="USD"
+  return <Combobox id={id} options={options} value={value} onChange={(v) => onChange(v)} clearable={allowEmpty} placeholder="USD"
     ariaLabel={ariaLabel ?? t("sourcing.currency")} className={className} testId={id ? `${id}-field` : undefined} />;
 }
 
@@ -57,7 +57,7 @@ export function IncotermField({ value, onChange, id }: { value: string | null; o
   const rules = useIncoterms();
   const rows = rules.data ?? INCOTERMS.map((code) => ({ code, name_en: "", name_fa: "" }));
   const options: Option[] = rows.map((r) => ({ value: r.code, label: r.code, hint: (i18n.language === "fa" ? r.name_fa : r.name_en) || null }));
-  return <Combobox id={id} options={options} value={value} onChange={(v) => onChange(v)} dir="ltr" placeholder="FOB" className="w-32 shrink-0"
+  return <Combobox id={id} options={options} value={value} onChange={(v) => onChange(v)} placeholder="FOB" className="w-32 shrink-0"
     ariaLabel={t("sourcing.incoterm")} testId={id ? `${id}-field` : undefined} />;
 }
 
@@ -67,7 +67,8 @@ export function CountryField({ value, onChange, id, allowEmpty = true, emptyLabe
   const { t } = useTranslation();
   const f = useFormat();
   const countries = useCountries();
-  const options: Option[] = (countries.data?.items ?? []).map((c) => ({ value: c.iso2, label: f.lang === "fa" ? c.name_fa : c.name_en, code: c.iso2 }));
+  const options: Option[] = (countries.data?.items ?? []).map((c) => ({ value: c.iso2, label: f.lang === "fa" ? c.name_fa : c.name_en, code: c.iso2,
+    leading: <Flag code={c.iso2} decorative />, keywords: `${c.name_fa} ${c.name_en}` }));   // v0.10.1 (0.4.5): SVG flag
   return <Combobox id={id} options={options} value={value || null} onChange={(v) => onChange(v ?? "")} clearable={allowEmpty}
     placeholder={emptyLabel ?? (allowEmpty ? t("common.all") : undefined)} ariaLabel={t("parties.country")} className={className} testId={id ? `${id}-field` : undefined} />;
 }

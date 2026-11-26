@@ -70,9 +70,9 @@ export function LookupField({ kind, value, onChange, placeholder, filters, ariaL
     );
   }
   return (
-    <div className={`relative ${width(className)} ${className}`} data-testid={testId}>
+    <div className={`relative min-w-28 ${width(className)} ${className}`} data-testid={testId} data-icons={1}>
       <input ref={input} id={id} role="combobox" aria-expanded={state.open} aria-controls={listId} aria-autocomplete="list" aria-label={ariaLabel} autoComplete="off"
-        aria-activedescendant={state.open && state.active >= 0 ? `${listId}-${state.active}` : undefined} dir="auto" value={text} disabled={disabled}
+        aria-activedescendant={state.open && state.active >= 0 ? `${listId}-${state.active}` : undefined} value={text} disabled={disabled}
         placeholder={placeholder ?? t("smart.typeNameOrCode")} onFocus={() => setState({ open: true, active: -1 })}
         onClick={() => setState((s) => (s.open ? s : { open: true, active: -1 }))}
         onBlur={() => window.setTimeout(() => setState({ open: false, active: -1 }), 150)}
@@ -126,9 +126,11 @@ export function ValidatedInput({ kind, value, onChange, id, ariaLabel, testId, c
   const v = VALIDATORS[kind](value);
   return (
     <div className={`flex min-w-0 flex-col gap-1 ${width(className)} ${className}`} data-testid={testId} data-state={v.state}>
-      <span className="relative">
+      {/* v0.10.1 (0.4.4): no dir="ltr" on the input: its padding and the state icon follow the page direction, and the
+          code reads as one left-to-right run at the inline start */}
+      <span className="relative min-w-28" data-icons={1}>
         <input id={id} aria-label={ariaLabel} aria-invalid={v.state === "invalid" || undefined} aria-describedby={v.state === "invalid" || v.state === "valid" ? noteId : undefined}
-          dir="ltr" value={value} placeholder={placeholder} autoComplete="off"
+          value={value} placeholder={placeholder} autoComplete="off"
           onChange={(e) => onChange(e.target.value, VALIDATORS[kind](e.target.value))}
           onBlur={() => { if (v.state === "valid" && v.normalized && v.normalized !== value) onChange(v.normalized, v); }}
           className={`${CONTROL} w-full pe-9 font-mono tracking-wide ${v.state === "valid" ? "border-success" : ""}`} />

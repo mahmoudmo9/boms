@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Bdi, Button, Card, Checkbox, CodeChip, DateInput, Drawer, EmptyState, errorMessage, ErrorNote, ErrorState, Field, Icon, IconButton, InlineAlert, Input, KpiTile, Loading, Modal, PageHeader, Segmented, Select, Status, Tabs, Textarea, useToast, ValidatedInput } from "../../design/components";
+import { Badge, Bdi, Button, Card, Checkbox, CodeChip, DateInput, Drawer, EmptyState, Flag, errorMessage, ErrorNote, ErrorState, Field, Icon, IconButton, InlineAlert, Input, KpiTile, Loading, Modal, PageHeader, Segmented, Select, Status, Tabs, Textarea, useToast, ValidatedInput } from "../../design/components";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
@@ -696,7 +696,8 @@ function CountryName({ code }: { code: string }) {
   const f = useFormat();
   const countries = useCountries();
   const c = countries.data?.items.find((x) => x.iso2 === code);
-  return <span className="inline-flex items-center gap-1"><Icon name="globe" size={13} />{c ? (f.lang === "fa" ? c.name_fa : c.name_en) : <bdi dir="ltr">{code}</bdi>}</span>;
+  // v0.10.1 (0.4.5): the SVG flag beside the name (decorative: the name is written next to it)
+  return <span className="inline-flex items-center gap-1.5" data-testid="party-country"><Flag code={code} decorative />{c ? (f.lang === "fa" ? c.name_fa : c.name_en) : <bdi dir="ltr">{code}</bdi>}</span>;
 }
 
 /** v0.10.1 (ProParty): the ratings ring and the four supplier tiles; a buyer without supplier data shows its order

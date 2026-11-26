@@ -15,10 +15,10 @@ const MAIN_REGION: Record<number, string> = {
   590: "GP", 599: "CW",
 };
 
-/** "IR" -> regional-indicator flag emoji. */
-export function flagEmoji(iso2: string): string {
-  if (!/^[A-Za-z]{2}$/.test(iso2)) return "";
-  return String.fromCodePoint(...iso2.toUpperCase().split("").map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+/** v0.10.1 (0.4.5): the dial code as written everywhere: «+98». It is a signed value: show it inside <bdi dir="ltr">
+ * (options use the Combobox code slot, which does that, and isolates it inside the input). */
+export function dialCode(r: Pick<PhoneRegion, "calling_code">): string {
+  return `+${r.calling_code}`;
 }
 
 /** Persian/Arabic-Indic digits -> ASCII. */
