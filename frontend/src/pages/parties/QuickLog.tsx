@@ -4,23 +4,27 @@ import { createContext, type DragEvent, type ReactNode, useCallback, useContext,
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { Bdi, Button, Checkbox, DateInput, errorMessage, ErrorNote, Field, Icon, Input, Modal, Select, Spinner, Textarea, useToast } from "../../design/components";
+import { Badge, Bdi, Button, Checkbox, DateInput, errorMessage, ErrorNote, Field, Icon, Input, Modal, Select, Spinner, Textarea, useToast } from "../../design/components";
 import { api, ApiError} from "../../lib/api";
 import { canSaveQuickLog } from "../../lib/followups";
 import type { Contact, DocumentDetail, Party, PartyDetail} from "../../lib/types";
 import { CHANNELS, DueDatePicker, stageLabel, useStages } from "./shared";
 import { ContactField, PartyField } from "../../components/fields";
+import { EmlError, type EmlPreview, readEml } from "../../components/EmlIntake";
+
+/** v0.10.1 (0.4.6): «ثبت مکاتبه» from a case, an RFQ recipient, a quote or a PO pre-fills the case and the record */
+export interface QuickLogFor { caseId?: string | null; refType?: string | null; refId?: string | null; contactId?: string | null; label?: string | null }
 
 interface QuickLogContextValue {
-  open: (partyId?: string) => void;
+  open: (partyId?: string, context?: QuickLogFor) => void;
 }
 
 const QuickLogContext = createContext<QuickLogContextValue>({ open: () => undefined });
 export const useQuickLog = () => useContext(QuickLogContext);
 
 export function QuickLogProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<{ open: boolean; partyId?: string; key: number }>({ open: false, key: 0 });
-  const open = useCallback((partyId?: string) => setState((s) => ({ open: true, partyId, key: s.key + 1 })), []);
+  const [state, setState] = useState<{ open: boolean; partyId?: string; context?: QuickLogFor; key: number }>({ open: false, key: 0 });
+  const open = useCallback((partyId?: string, context?: QuickLogFor) => setState((s) => ({ open: true, partyId, context, key: s.key + 1 })), []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -37,7 +41,7 @@ export function QuickLogProvider({ children }: { children: ReactNode }) {
     <QuickLogContext.Provider value={{ open }}>
       {children}
       {state.open && (
-        <QuickLogDialog key={state.key} initialPartyId={state.partyId} onClose={() => setState((s) => ({ ...s, open: false }))} />
+        <QuickLogDialog key={state.key} initialPartyId={state.partyId} context={state.context} onClose={() => setState((s) => ({ ...s, open: false }))} />
       )}
     </QuickLogContext.Provider>
   );
@@ -52,7 +56,7 @@ interface Attachment {
   error?: unknown;
 }
 
-function QuickLogDialog({ initialPartyId, onClose }: { initialPartyId?: string; onClose: () => void }) {
+function QuickLogDialog({ initialPartyId, context, onClose }: { initialPartyId?: string; context?: QuickLogFor; onClose: () => void }) {
   const { t } = useTranslation();
   const toast = useToast();
   const navigate = useNavigate();
@@ -78,6 +82,23 @@ function QuickLogDialog({ initialPartyId, onClose }: { initialPartyId?: string; 
   const [noFollowupReason, setNoFollowupReason] = useState("");
   const [moveRole, setMoveRole] = useState("");
   const [moveStage, setMoveStage] = useState("");
+  // v0.10.1 (0.4.6): the case and record this is about, and the .eml it was read from
+  const [about, setAbout] = useState<QuickLogFor>(context ?? {});
+  const [rawDocumentId, setRawDocumentId] = useState<string | null>(null);
+  const [emlError, setEmlError] = useState<unknown>(null);
+  useEffect(() => { if (context?.contactId) setContactId(context.contactId); }, [context?.contactId]);
+  const fromEml = (p: EmlPreview) => {
+    setEmlError(null);
+    setRawDocumentId(p.document_id);
+    setChannel("email");
+    setDirection("in");
+    if (p.subject) setSubject(p.subject);
+    if (p.body) setBody(p.body);
+    if (p.date) { const d = new Date(p.date); setDay(d); setTime(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`); }
+    if (!party && p.match.party_id) void api<PartyDetail>(`/api/parties/${p.match.party_id}`).then(setParty);
+    if (p.match.contact_id) setContactId(p.match.contact_id);
+    if (!about.caseId && p.match.case_id) setAbout({ caseId: p.match.case_id, refType: p.match.ref_type, refId: p.match.ref_id, label: p.match.code });
+  };
 
   useEffect(() => {
     if (initialPartyId) void api<PartyDetail>(`/api/parties/${initialPartyId}`).then(setParty);
@@ -101,6 +122,10 @@ function QuickLogDialog({ initialPartyId, onClose }: { initialPartyId?: string; 
 
   const addFiles = async (files: File[]) => {
     for (const file of files) {
+      if (/\.(eml|msg)$/i.test(file.name)) {        // an e-mail fills the form instead of being one more attachment
+        try { fromEml(await readEml(file)); } catch (err) { setEmlError(err); }
+        continue;
+      }
       setAttachments((list) => [...list, { name: file.name, status: "uploading" }]);
       const form = new FormData();
       form.append("file", file);
@@ -134,13 +159,14 @@ function QuickLogDialog({ initialPartyId, onClose }: { initialPartyId?: string; 
           no_followup_reason: noFollowup ? noFollowupReason.trim() : null,
           move_stage: moveRole && moveStage ? { role: moveRole, stage: moveStage } : null,
           document_ids: attachments.filter((a) => a.status === "ok" && a.id).map((a) => a.id),
+          case_id: about.caseId ?? null, ref_type: about.refType ?? null, ref_id: about.refId ?? null, raw_document_id: rawDocumentId,
         },
       }),
     onSuccess: (res) => {
       toast(t("quicklog.saved"), "success");
-      for (const key of ["command-center", "parties", "party", "interactions"]) void queryClient.invalidateQueries({ queryKey: [key] });
+      for (const key of ["command-center", "parties", "party", "interactions", "case-thread", "rfqs", "events"]) void queryClient.invalidateQueries({ queryKey: [key] });
       onClose();
-      navigate(`/parties/${res.party_id}?tab=interactions`);
+      if (!about.caseId) navigate(`/parties/${res.party_id}?tab=interactions`);   // from a case: stay on it
     },
   });
 
@@ -160,6 +186,13 @@ function QuickLogDialog({ initialPartyId, onClose }: { initialPartyId?: string; 
       }
     >
       <div className="flex max-h-[65vh] flex-col gap-3 overflow-y-auto pe-1">
+        {(about.caseId || rawDocumentId) && (
+          <p className="flex flex-wrap items-center gap-2 text-xs" data-testid="ql-about">
+            {about.caseId && <Badge tone="accent">{t("quicklog.forCase")}{about.label ? <> · <Bdi ltr>{about.label}</Bdi></> : null}</Badge>}
+            {rawDocumentId && <Badge icon="inbox">{t("quicklog.fromEml")}</Badge>}
+          </p>
+        )}
+        <EmlError error={emlError} />
         <Field label={t("quicklog.party")} htmlFor="ql-party"><PartyField value={party} onChange={(p) => { setParty(p); setContactId(""); setMoveRole(""); }} /></Field>
         {party?.do_not_contact && (
           <p className="rounded-md bg-danger-soft px-2.5 py-1.5 text-sm text-danger">{t("parties.dncWarning")} {party.do_not_contact_reason}</p>

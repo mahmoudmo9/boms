@@ -12,6 +12,8 @@ import { useFormat } from "../../lib/prefs";
 import { personName, rfqDefaultOpen, sortRfqs } from "../../lib/sourcing";
 import type { CaseDetail, Rfq, RfqRecipient, SupplierChoice } from "../../lib/types";
 import { DueDatePicker, PartyName, stageLabel, SupplierTypeChip } from "../parties/shared";
+import { useQuickLog } from "../parties/QuickLog";
+import { ChaseDialog, ReplyDialog } from "./RecipientReplies";
 import { ContactName, RFQ_CHANNELS, StatusBadge, useInvalidateSourcing } from "../sourcing/shared";
 
 const LANGS = ["en", "fa"];
@@ -218,7 +220,9 @@ function RecipientRow({ recipient, rfq, onChanged }: { recipient: RfqRecipient; 
   };
   const textDir = recipient.language === "fa" ? "rtl" : "ltr";
   const bodyId = `rcp-${recipient.id}`;
-  const waiting = ["sent", "no_response"].includes(recipient.status);
+  const waiting = ["sent", "no_response", "question"].includes(recipient.status);
+  const quickLog = useQuickLog();
+  const [dialog, setDialog] = useState<"reply" | "chase" | null>(null);
   return (
     <li className="rounded-xl border border-line" data-recipient={recipient.id}>
       <div className="flex flex-wrap items-center gap-2 px-2.5 py-1.5">
@@ -231,14 +235,21 @@ function RecipientRow({ recipient, rfq, onChanged }: { recipient: RfqRecipient; 
           <Badge>{t(`common.languageNames.${recipient.language}`)}</Badge>
           <StatusBadge group="recipient" status={recipient.status} />
           {recipient.sent_at && <span className="text-xs text-muted tabular-nums">{f.date(recipient.sent_at, true)}</span>}
+          {(recipient.chase_count ?? 0) > 0 && <span className="text-xs text-muted tabular-nums" data-testid="chase-count">
+            {t("rfqChase.count", { count: recipient.chase_count, date: recipient.last_chased_at ? f.date(recipient.last_chased_at) : "" })}</span>}
         </button>
         {draft && rfq.status !== "cancelled" && <DraftMessageButton target="rfq_recipient" targetId={recipient.id} language={recipient.language}
           hasEditedText={Boolean(recipient.text_edited) || dirty} onCommitted={applyChosen}
           prepare={dirty ? () => save.mutateAsync({ subject, message_text: text }) : undefined} />}
         {draft && rfq.status !== "cancelled" && <Button variant="primary" icon="check" onClick={() => setSending(true)}>{t("sourcing.rfq.markSent")}</Button>}
-        {waiting && rfq.status !== "cancelled" && (
-          <Button onClick={() => setParams({ tab: "offers", record: recipient.party_id })}>{t("sourcing.rfq.recordOffer")}</Button>
-        )}
+        {waiting && rfq.status !== "cancelled" && <>
+          {/* v0.10.1 (0.4.6): «پیشنهاد است» / «پاسخ بدون قیمت» / «پیگیری» / «ثبت مکاتبه» */}
+          <Button onClick={() => setParams({ tab: "offers", record: recipient.party_id })} data-testid="reply-offer">{t("sourcing.rfq.recordOffer")}</Button>
+          <Button onClick={() => setDialog("reply")} data-testid="reply-no-price">{t("rfqReply.button")}</Button>
+          <Button onClick={() => setDialog("chase")} data-testid="chase-open">{t("rfqChase.button")}</Button>
+          <Button variant="ghost" onClick={() => quickLog.open(recipient.party_id, { caseId: rfq.case_id, refType: "rfq_recipient", refId: recipient.id,
+            contactId: recipient.contact_id, label: rfq.code })} data-testid="recipient-log">{t("case.thread.log")}</Button>
+        </>}
       </div>
       {open && (
         <div id={bodyId} className="border-t border-line p-2.5">
@@ -275,6 +286,8 @@ function RecipientRow({ recipient, rfq, onChanged }: { recipient: RfqRecipient; 
           <ErrorNote error={save.error || decline.error || remove.error} />
         </div>
       )}
+      {dialog === "reply" && <ReplyDialog recipient={recipient} onClose={() => setDialog(null)} />}
+      {dialog === "chase" && <ChaseDialog recipient={recipient} onClose={() => setDialog(null)} />}
       {sending && <MarkSentDialog recipient={{ ...recipient, message_text: text, subject }} rfq={rfq} onClose={() => setSending(false)} onDone={onChanged} />}
     </li>
   );

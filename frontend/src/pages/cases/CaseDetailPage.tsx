@@ -6,6 +6,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Button, ErrorNote, ErrorState, Field, Input, Loading, Modal, PageGrid, ScrollTabs, Select, Textarea } from "../../design/components";
 import { CaseRoute, DealPath } from "./CaseOverview";
 import { CaseFacts, CaseHero, CaseTrio, DealStoryRail, NextStepCard } from "./CaseStory";
+import { CorrespondenceTab } from "./Correspondence";
 import { CaseFolderButton, CaseLocalOnly } from "../../components/CaseTools";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
@@ -25,7 +26,7 @@ import { FinanceHeaderFacts, FinanceTab } from "./finance";
 import { CurrencyField } from "../../components/fields";
 
 const TABS = ["items", "tender", "rfqs", "offers", "comparison", "costing", "quotes", "order", "purchase", "logistics", "delivery", "finance",
-  "tasks", "documents", "history"] as const;
+  "correspondence", "tasks", "documents", "history"] as const;   // v0.10.1 (0.4.6): «مکاتبات»
 type Tab = (typeof TABS)[number];
 
 function EditCaseDialog({ c, onClose, onSaved }: { c: CaseDetail; onClose: () => void; onSaved: () => void }) {
@@ -119,6 +120,7 @@ export function CaseDetailPage() {
       {tab === "logistics" && <LogisticsTab caseData={c} />}
       {tab === "delivery" && <DeliveryTab caseData={c} />}
       {tab === "finance" && <FinanceTab caseData={c} />}
+      {tab === "correspondence" && <CorrespondenceTab caseData={c} />}
       {tab === "tasks" && <CaseTasksTab caseId={c.id} />}
       {tab === "documents" && <AttachedDocuments documents={c.documents} linkPath={`/api/cases/${c.id}/documents`} onChanged={refresh} />}
       {tab === "history" && <>

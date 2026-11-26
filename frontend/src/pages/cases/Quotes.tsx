@@ -15,6 +15,8 @@ import { DueDatePicker, PartyName } from "../parties/shared";
 import { ContactName, Money, StatusBadge, useInvalidateSourcing, useUnitLabel } from "../sourcing/shared";
 import { CurrencyField, IncotermField } from "../../components/fields";
 import { DraftMessageButton } from "../../components/AiActions";
+import { useQuickLog } from "../parties/QuickLog";
+import { QuoteChaseDialog } from "./RecipientReplies";
 
 const OUTCOMES: Outcome[] = ["accepted", "rejected", "no_reply", "negotiating"];
 const SEND_CHANNELS = ["email", "whatsapp", "phone", "in_person", "letter", "other"] as const;
@@ -194,7 +196,8 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
   const unitLabel = useUnitLabel();
   const quote = useQuery({ queryKey: ["quote", quoteId], queryFn: () => api<Quote>(`/api/quotes/${quoteId}`) });
   const refresh = () => { void quote.refetch(); onChanged(); };
-  const [dialog, setDialog] = useState<null | "sent" | "outcome" | "withdraw" | "validity">(null);
+  const [dialog, setDialog] = useState<null | "sent" | "outcome" | "withdraw" | "validity" | "chase">(null);
+  const quickLog = useQuickLog();
   const approve = useMutation({
     mutationFn: (reason?: string) => api<Quote>(`/api/quotes/${quoteId}/approve`, { method: "POST",
       body: reason ? { confirm_below_cost: true, reason } : undefined }),
@@ -233,6 +236,9 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
           {q.status === "approved" && <Button variant="primary" onClick={() => setDialog("sent")}>{t("quotes.markSent")}</Button>}
           {["sent", "expired", "accepted", "partially_accepted", "rejected"].includes(q.status) && <Button variant="primary" onClick={() => setDialog("outcome")}>{t("quotes.recordOutcome")}</Button>}
           {["approved", "sent", "expired", "partially_accepted", "rejected"].includes(q.status) && <Button onClick={() => action.mutate("revise")}>{t("quotes.revise")}</Button>}
+          {q.status === "sent" && <Button onClick={() => setDialog("chase")} data-testid="quote-chase">{t("rfqChase.button")}</Button>}
+          {["sent", "expired", "accepted", "partially_accepted", "rejected"].includes(q.status) && q.buyer_party_id && (
+            <Button variant="ghost" onClick={() => quickLog.open(q.buyer_party_id!, { caseId: q.case_id, refType: "quote", refId: q.id, label: q.number })}>{t("case.thread.log")}</Button>)}
           {["approved", "sent", "expired"].includes(q.status) && <Button variant="ghost" onClick={() => setDialog("withdraw")}>{t("quotes.withdraw")}</Button>}
           {draft && <Button variant="ghost" onClick={() => remove.mutate()}>{t("delete.button")}</Button>}
         </>}>
@@ -343,6 +349,7 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
       {belowCost && <BelowCostDialog rows={belowCost} currency={q.currency} busy={approve.isPending} error={null}
         onClose={() => approve.reset()} onConfirm={(reason) => approve.mutate(reason)} />}
       {dialog === "sent" && <MarkSentDialog quote={q} onClose={() => setDialog(null)} onDone={refresh} />}
+      {dialog === "chase" && <QuoteChaseDialog quoteId={q.id} language={q.language} onClose={() => { setDialog(null); refresh(); }} />}
       {dialog === "outcome" && <OutcomesDialog quote={q} onClose={() => setDialog(null)} onDone={refresh} />}
       {dialog === "validity" && <ReasonDialog title={t("costing.gate.override")} onClose={() => setDialog(null)} onConfirm={(r) => overrideValidity.mutate(r)} busy={overrideValidity.isPending} error={overrideValidity.error} />}
       {dialog === "withdraw" && <ReasonDialog title={t("quotes.withdraw")} onClose={() => setDialog(null)} onConfirm={(r) => withdraw.mutate(r)} busy={withdraw.isPending} error={withdraw.error} />}

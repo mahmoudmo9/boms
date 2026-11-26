@@ -105,7 +105,7 @@ export function PartyParseButton({ roles = [], onCommitted }: { roles?: string[]
   );
 }
 
-export type DraftTarget = "rfq_recipient" | "purchase_order" | "quote" | "inquiry_reply";
+export type DraftTarget = "rfq_recipient" | "purchase_order" | "quote" | "inquiry_reply" | "rfq_chase" | "quote_chase";
 type Chosen = { subject?: string; body?: string; mailto?: string; recipient?: Record<string, unknown> } & Record<string, unknown>;
 
 /** v0.10.1 (0.4.1): «پیش‌نویس با هوش» on every drafting action (RFQ recipient, PO cover, quotation cover, inquiry reply).

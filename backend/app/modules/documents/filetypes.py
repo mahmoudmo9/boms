@@ -54,14 +54,21 @@ def blocked_reason(filename: str, path: Path) -> str | None:
 
 
 def _is_msi(path: Path) -> bool:
-    with open(path, "rb") as fh:
-        header = fh.read(512)
-        if len(header) < 512:
-            return False
-        sector_size = 1 << int.from_bytes(header[30:32], "little")
-        first_dir_sector = int.from_bytes(header[48:52], "little")
-        fh.seek((first_dir_sector + 1) * sector_size)
-        root_entry = fh.read(128)
+    """A compound file (OLE) whose root entry is the Windows Installer's. v0.10.1: a malformed header (the sector shift
+    of a compound file is 9 or 12) or a directory past the end of the file is "not an installer" — it was a 500."""
+    try:
+        with open(path, "rb") as fh:
+            header = fh.read(512)
+            if len(header) < 512:
+                return False
+            shift = int.from_bytes(header[30:32], "little")
+            if shift not in (9, 12):
+                return False
+            first_dir_sector = int.from_bytes(header[48:52], "little")
+            fh.seek((first_dir_sector + 1) * (1 << shift))
+            root_entry = fh.read(128)
+    except (OSError, ValueError, OverflowError):
+        return False
     return len(root_entry) == 128 and root_entry[80:96] == MSI_CLSID
 
 

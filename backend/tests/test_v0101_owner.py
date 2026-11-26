@@ -546,3 +546,14 @@ def test_migration_0026_backfills_the_case_of_interactions():
         engine.dispose()
     finally:
         dbadmin.drop_database(superuser_conninfo(), name)
+
+
+def test_a_malformed_compound_file_is_not_a_500(client, tmp_path):
+    """v0.10.1: the Windows Installer check read a garbage sector shift and crashed the upload (a broken .msg/.doc)."""
+    from app.modules.documents.filetypes import _is_msi
+
+    bad = tmp_path / "x.msg"
+    bad.write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\xff" * 600)
+    assert _is_msi(bad) is False
+    r = client.post("/api/documents", files={"file": (f"broken{tag()}.msg", bad.read_bytes() + tag().encode(), "application/vnd.ms-outlook")})
+    assert r.status_code == 201, r.text

@@ -1229,7 +1229,9 @@
     "saved": "Interaction saved",
     "shortcut": "Shortcut:",
     "timesLocal": "Times are in this PC's time zone.",
-    "createPartyNamed": "New party: {{name}}"
+    "createPartyNamed": "New party: {{name}}",
+    "forCase": "For this case",
+    "fromEml": "Read from an e-mail"
   },
   "delete": {
     "button": "Delete",
@@ -1316,7 +1318,8 @@
         "replied": "Replied",
         "declined": "Declined",
         "no_response": "No response",
-        "expired": "Expired"
+        "expired": "Expired",
+        "question": "Asked a question"
       },
       "offer": {
         "active": "Active",
@@ -1461,7 +1464,8 @@
         "logistics": "Logistics",
         "delivery": "Delivery and claims",
         "tasks": "Tasks",
-        "finance": "Finance"
+        "finance": "Finance",
+        "correspondence": "Correspondence"
       },
       "cascadeHint": "For test data only: deletes this case with its items, RFQs, recipients, offers and document links. Files stay in Documents and interactions stay in the parties' history. The deletion is recorded in the event log.",
       "typeTitle": "Type the case title to confirm",
@@ -4459,7 +4463,17 @@
       "payment": {
         "in": "Receive {{amount}}",
         "out": "Pay {{amount}}"
+      },
+      "mail": {
+        "in": "Message from {{party}}",
+        "out": "Message to {{party}}"
       }
+    },
+    "thread": {
+      "title": "Case correspondence",
+      "log": "Log correspondence",
+      "party": "Party",
+      "empty": "No correspondence on this case yet. Drop an e-mail saved as .eml here, or press «Log correspondence»."
     }
   },
   "triage": {
@@ -4590,5 +4604,61 @@
       "email": "E-mail",
       "other": "File"
     }
+  },
+  "eml": {
+    "title": "Record an e-mail on the case",
+    "drop": "Drop an e-mail saved as .eml here",
+    "dropHint": "Gmail: «Download message»; Outlook on the web: «Download». A .msg file is not accepted.",
+    "from": "From",
+    "date": "Date",
+    "subject": "Subject",
+    "matched": "About",
+    "thisCase": "this case",
+    "noCase": "No case found",
+    "knownSender": "Known contact",
+    "unknownSender": "Unknown sender",
+    "party": "Party",
+    "addContact": "Add to this party's contacts",
+    "outgoing": "I sent this e-mail",
+    "followupDue": "Next follow-up (optional)",
+    "noFollowupReason": "Why no follow-up",
+    "defaultNoFollowup": "Reply recorded",
+    "defaultFollowup": "Follow up after the reply",
+    "record": "Record on the case",
+    "msgTitle": "A .msg file (Outlook's format) is not read. Save the message as .eml:",
+    "msgGmail": "Gmail: open the message › ⋮ › Download message",
+    "msgOutlook": "Outlook on the web: open the message › … › Save / Download",
+    "refs": {
+      "rfq_recipient": "RFQ",
+      "quote": "Quote",
+      "purchase_order": "Purchase order",
+      "shipment": "Shipment",
+      "offer": "Offer"
+    }
+  },
+  "rfqReply": {
+    "button": "Reply without a price",
+    "title": "Reply without a price",
+    "kind": "Reply",
+    "kinds": {
+      "replied": "Replied",
+      "declined": "Declined",
+      "question": "Asked a question"
+    },
+    "text": "Reply text",
+    "nextDue": "Next follow-up",
+    "hintClose": "The open chase of this RFQ closes with a note; no new follow-up is made.",
+    "hintQuestion": "The open chase closes and a new follow-up is due on the date you set."
+  },
+  "rfqChase": {
+    "button": "Chase",
+    "title": "Chase the RFQ",
+    "quoteTitle": "Chase the quote",
+    "hint_one": "Draft or write the chase, send it from your mail client, then press «Sent». {{count}} chase so far.",
+    "hint_other": "Draft or write the chase, send it from your mail client, then press «Sent». {{count}} chases so far.",
+    "nextDue": "Next follow-up",
+    "sent": "Sent",
+    "count_one": "{{count}} chase · last {{date}}",
+    "count_other": "{{count}} chases · last {{date}}"
   }
 }

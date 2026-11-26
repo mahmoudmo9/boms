@@ -1,6 +1,7 @@
 /** Case tab «خرید» (v0.7.0): purchase orders per supplier, approval, outputs, sending (with the customer-prepayment
  * gate), confirmation, ready date, production status, revisions, supplier milestones and receipts. */
 import { DraftMessageButton } from "../../../components/AiActions";
+import { useQuickLog } from "../../parties/QuickLog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
@@ -143,6 +144,7 @@ function ReceiptsList({ rows, po, caseId }: { rows: ReceiptRow[]; po: PurchaseOr
 function PoCard({ po, caseId, receipts }: { po: PurchaseOrderRow; caseId: string; receipts: ReceiptRow[] }) {
   const { t } = useTranslation();
   const f = useFormat();
+  const quickLog = useQuickLog();
   const m = useRun(caseId);
   const run: Run = (path, body, method = "POST") => m.mutateAsync({ path, body, method });
   const [dialog, setDialog] = useState<"send" | "confirm" | "ready" | "receipt" | "cancel" | "above" | null>(null);
@@ -198,7 +200,12 @@ function PoCard({ po, caseId, receipts }: { po: PurchaseOrderRow; caseId: string
           onChange={(e) => setTerms(e.target.value)} onBlur={() => terms !== (po.terms_text ?? "") && patch({ terms_text: terms })} /></Field>
         <OutputButtons base={`/api/purchase-orders/${po.id}`} outputs={po.outputs} />
         {/* v0.9.0: the cover message drafted by AI opens in the mail client; BOMS sends nothing */}
-        <DraftMessageButton target="purchase_order" targetId={po.id} onCommitted={(r) => { if (typeof r.mailto === "string") window.location.href = r.mailto; }} />
+        <span className="flex flex-wrap gap-1.5">
+          <DraftMessageButton target="purchase_order" targetId={po.id} onCommitted={(r) => { if (typeof r.mailto === "string") window.location.href = r.mailto; }} />
+          {/* v0.10.1 (0.4.6): correspondence about this PO, on the case */}
+          <Button variant="ghost" onClick={() => quickLog.open(po.supplier_party_id, { caseId: po.case_id, refType: "purchase_order", refId: po.id, label: po.number })}
+            data-testid="po-log">{t("case.thread.log")}</Button>
+        </span>
         {po.followups.length > 0 && <p className="text-xs text-muted" data-testid="po-followups">{po.followups.map((x) => `${x.action} · ${f.day(x.due_on)}`).join("، ")}</p>}
         {po.changes.length > 0 && <ul className="text-xs text-muted" data-testid="po-changes">{po.changes.map((c) => (
           <li key={c.id}>{t(`execution.fields.${c.field}`, { defaultValue: c.field })}: <bdi dir="ltr">{c.old_value ?? "—"}</bdi> → <bdi dir="ltr">{c.new_value ?? "—"}</bdi> · <span dir="auto">{c.reason}</span></li>))}</ul>}

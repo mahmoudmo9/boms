@@ -15,6 +15,7 @@ import { cashFigure } from "../../lib/execution";
 import { useFormat } from "../../lib/prefs";
 import type { CaseCosting, CaseDetail, CaseQuotes, DocumentDetail, EventItem } from "../../lib/types";
 import { useExecution } from "./execution/shared";
+import { type ThreadItem, useCaseThread } from "./Correspondence";
 
 export interface CaseOverviewData {
   deal_type: "import" | "export" | "domestic" | null;
@@ -263,8 +264,14 @@ export function DealStoryRail({ c }: { c: CaseDetail }) {
   const ov = useCaseOverview(c.id);
   const history = useQuery({ queryKey: ["events", "case", c.id, "rail"],
     queryFn: () => api<Page<EventItem>>("/api/events", { query: { entity_type: "case", entity_id: c.id, page_size: 12 } }) });
-  const events = [...(history.data?.items ?? [])].reverse();
+  // v0.10.1 (0.4.6): the case correspondence on the same line as the events, oldest first, each linking to the thread
+  const thread = useCaseThread(c.id);
+  type Past = { at: string; event?: EventItem; mail?: ThreadItem };
+  const past: Past[] = [...(history.data?.items ?? []).map((e) => ({ at: e.occurred_at, event: e })),
+    ...(thread.data?.items ?? []).slice(0, 8).map((m) => ({ at: m.occurred_at, mail: m }))].sort((a, b) => a.at.localeCompare(b.at)).slice(-14);
+  const events = past;
   const ahead = ov.data?.forecast ?? [];
+  const partyName = (m: ThreadItem) => ((f.lang === "fa" ? m.party_name_fa || m.party_name_en : m.party_name_en || m.party_name_fa) ?? "");
   const forecastText = (x: CaseOverviewData["forecast"][number]) => {
     if (x.kind === "eta") return t("case.story.eta", { ref: x.ref ?? "" });
     if (x.kind === "step") return f.lang === "fa" ? x.label_fa : x.label_en;
@@ -279,11 +286,18 @@ export function DealStoryRail({ c }: { c: CaseDetail }) {
       </div>
       {events.length === 0 && ahead.length === 0 ? <EmptyState compact icon="clock">{t("case.side.noHistory")}</EmptyState> : (
         <ol className="relative flex flex-col gap-4 border-s border-line ps-5">
-          {events.map((e) => (
-            <li key={e.id} className="relative flex flex-col gap-0.5 text-sm">
+          {events.map((p) => p.mail ? (
+            <li key={`m-${p.mail.id}`} className="relative flex flex-col gap-0.5 text-sm" data-testid="case-story-mail">
+              <span aria-hidden className={`absolute -start-6.5 top-1.5 size-2.5 rounded-full ${p.mail.direction === "in" ? "bg-info" : "bg-accent"}`} />
+              <span className="text-xs text-muted tabular-nums">{f.date(p.mail.occurred_at)}</span>
+              <Link to="?tab=correspondence" className="hover:text-accent hover:underline">
+                <bdi>{t(`case.story.mail.${p.mail.direction}`, { party: partyName(p.mail) })}</bdi>{p.mail.subject && <> · <bdi dir="auto" className="text-muted">{p.mail.subject}</bdi></>}</Link>
+            </li>
+          ) : (
+            <li key={p.event!.id} className="relative flex flex-col gap-0.5 text-sm">
               <span aria-hidden className="absolute -start-6.5 top-1.5 size-2.5 rounded-full bg-accent" />
-              <span className="text-xs text-muted tabular-nums">{f.date(e.occurred_at)}</span>
-              <EventSentence event={e} caseId={c.id} />
+              <span className="text-xs text-muted tabular-nums">{f.date(p.event!.occurred_at)}</span>
+              <EventSentence event={p.event!} caseId={c.id} />
             </li>))}
           <li className="relative flex items-center gap-2 text-sm font-semibold text-accent" data-testid="case-story-now">
             <span aria-hidden className="absolute -start-7 top-0.5 size-4 rounded-full border-2 border-accent bg-surface" />{t("cc.line.now")}

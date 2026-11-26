@@ -536,8 +536,10 @@ export interface RfqRecipient {
   channel: "email" | "whatsapp" | "letter" | "phone" | "other";
   language: string;
   template_id: string | null;
-  status: "draft" | "sent" | "replied" | "declined" | "no_response" | "expired";
+  status: "draft" | "sent" | "replied" | "declined" | "no_response" | "expired" | "question";
   sent_at: string | null;
+  chase_count?: number;               // v0.10.1 (0.4.6)
+  last_chased_at?: string | null;
   subject: string | null;
   message_text: string | null;
   interaction_id: string | null;
@@ -555,6 +557,7 @@ export interface RfqRecipient {
 export interface Rfq {
   id: string;
   case_id: string;
+  code?: string | null;          // v0.9.0: RFQ-1405-0009
   title: string;
   status: "draft" | "sent" | "answered" | "no_response" | "expired" | "cancelled";
   language: string;
