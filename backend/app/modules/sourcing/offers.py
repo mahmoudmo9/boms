@@ -139,7 +139,7 @@ def record_offer(db: Session, data: dict, source: str, actor: str | None = None)
         rfq_service.set_recipient_status(db, recipient, "replied", source, actor, f"offer {offer.id}")
         rfq_service.refresh_status(db, rfq_service.get_rfq(db, recipient.rfq_id), source, actor)
     if recipient is not None:      # v0.10.1 (0.4.6): the open «پیگیری پاسخ RFQ» closes (v0.10.0 left it open)
-        rfq_service.close_chase(db, recipient, f"offer recorded {offer.id}", source, actor)
+        rfq_service.close_chase(db, recipient, f"offer recorded {offer.id}", source, actor, reply_interaction_id=interaction.id)
     if previous is not None:
         previous.status, previous.superseded_by_id = "superseded", offer.id
         flush(db, "invalid_offer")

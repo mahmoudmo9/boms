@@ -291,7 +291,8 @@ def test_case_cascade_delete(client, db):
     r = client.request("DELETE", url, json={"confirm_title": case["title"]})
     assert r.status_code == 200, r.text
     assert r.json()["counts"] == {"items": 2, "rfqs": 1, "recipients": 1, "offers": 1, "offer_items": 1,
-                                  "documents": 2, "followups_cancelled": 1,
+                                  # v0.10.1 (0.4.6): the offer already closed the RFQ chase, so the delete cancels none
+                                  "documents": 2, "followups_cancelled": 0,
                                   "quotes": 0, "quote_outputs": 0, "cost_sheets": 0,
                                   "ai_drafts": 0, "ai_case_settings": 0}            # v0.9.0
     assert client.get(f"/api/cases/{case['id']}").status_code == 404

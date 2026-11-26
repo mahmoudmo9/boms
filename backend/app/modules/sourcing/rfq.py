@@ -455,7 +455,7 @@ def refresh_status(db: Session, rfq: Rfq, source: str, actor: str | None = None)
     statuses = [r.status for r in recipients_of(db, rfq.id) if r.status != "draft"]
     if not statuses:
         new = "draft"
-    elif WAITING in statuses:
+    elif WAITING in statuses or "question" in statuses:   # v0.10.1: a question is still waiting for a price
         new = "sent"
     elif "replied" in statuses or all(s == "declined" for s in statuses):
         new = "answered"
@@ -578,7 +578,7 @@ def recipient_out(db: Session, recipient: RfqRecipient) -> dict:
 
 # ---- v0.10.1 (0.4.6): replies and chases on an RFQ recipient ---------------------------------------------------------
 
-WAITING = ("sent", "no_response", "question")
+REPLY_WAITING = ("sent", "no_response", "question")   # (not WAITING: that one is "sent", above)
 REPLY_KINDS = ("replied", "declined", "question")
 
 
@@ -593,11 +593,12 @@ def chase_followups(db: Session, recipient: RfqRecipient) -> list:
 
 
 def close_chase(db: Session, recipient: RfqRecipient, note: str, source: str, actor: str | None = None,
-                keep: set | None = None) -> list[uuid.UUID]:
-    """The reply arrived: the open «پیگیری پاسخ RFQ» follow-ups of this recipient are done, with a note."""
+                keep: set | None = None, reply_interaction_id=None) -> list[uuid.UUID]:
+    """The reply arrived: the open «پیگیری پاسخ RFQ» follow-ups of this recipient are done, with a note — not the
+    follow-ups of the reply itself (an offer recorded with its own next action keeps it)."""
     closed = []
     for f in chase_followups(db, recipient):
-        if keep and f.id in keep:
+        if (keep and f.id in keep) or (reply_interaction_id and f.interaction_id == reply_interaction_id):
             continue
         party_interactions.complete_followup(db, f.id, note, None, source, actor)
         closed.append(f.id)
@@ -613,7 +614,7 @@ def record_reply(db: Session, recipient_id: uuid.UUID, data: dict, source: str, 
     kind = data["kind"]
     if kind not in REPLY_KINDS:
         raise AppError("invalid_reply", "A reply is replied, declined or question", status=422)
-    if recipient.status not in WAITING:
+    if recipient.status not in REPLY_WAITING:
         raise Conflict("recipient_not_waiting", f"The recipient is {recipient.status}", {"status": recipient.status})
     followup = None
     if kind == "question":
@@ -642,7 +643,7 @@ def record_chase(db: Session, recipient_id: uuid.UUID, data: dict, source: str, 
     the open chase follow-up is done and the next one is due on the date he chose; the recipient counts its chases."""
     recipient = get_recipient(db, recipient_id)
     rfq = get_rfq(db, recipient.rfq_id)
-    if recipient.status not in WAITING:
+    if recipient.status not in REPLY_WAITING:
         raise Conflict("recipient_not_waiting", f"The recipient is {recipient.status}", {"status": recipient.status})
     if not data.get("next_due_on"):
         raise AppError("due_required", "A chase needs the date of the next follow-up", status=422)

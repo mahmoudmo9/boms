@@ -105,7 +105,10 @@ const tr = (lang, key) => key.split('.').reduce((o, k) => o[k], L[lang]);
       check(r, 'column chooser remembered', (await page.locator('thead th', { hasText: t('listings.cols.documents') }).count()) === 1);
       // 100 rows per page (remembered), select the page, then all results; bulk star and unstar
       await page.getByLabel(t('listings.pageSize')).selectOption('100'); await settle();
-      check(r, 'page size', (await page.locator('[data-testid=listing-table] tbody tr').count()) === 100);
+      // the table re-renders after the refetch: wait for it (networkidle can come first)
+      let rows = 0;
+      for (let i = 0; i < 40 && rows !== 100; i++) { rows = await page.locator('[data-testid=listing-table] tbody tr').count(); if (rows !== 100) await page.waitForTimeout(200); }
+      check(r, 'page size', rows === 100, String(rows));
       step = `${lang} bulk star`;
       await page.getByRole('checkbox', { name: t('listings.selectPage') }).check();
       await page.locator('[data-testid=select-all-results]').click();

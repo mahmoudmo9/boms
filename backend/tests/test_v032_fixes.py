@@ -103,17 +103,19 @@ def test_case_cascade_cancels_chase_followups_only(client, db):
     chase_ids = [str(i) for i in db.execute(text(
         "SELECT id FROM core.followup WHERE interaction_id IN (:a, :b) AND status = 'open'"),
         {"a": recipient["interaction_id"], "b": off["interaction_id"]}).scalars()]
-    assert len(chase_ids) == 2
+    # v0.10.1 (0.4.6): the offer closed the RFQ chase when it was recorded; its own next action is still open
+    assert len(chase_ids) == 1
     r = client.request("DELETE", f"/api/cases/{case['id']}?cascade=true", json={"confirm_title": case["title"]})
     assert r.status_code == 200, r.text
-    assert r.json()["counts"]["followups_cancelled"] == 2
+    assert r.json()["counts"]["followups_cancelled"] == 1
     rows = dict(db.execute(text("SELECT id::text, status || '|' || coalesce(done_note, '') FROM core.followup "
                                 "WHERE party_id = :p"), {"p": party["id"]}).all())
     for fid in chase_ids:
         assert rows[fid] == "cancelled|case deleted"
         assert events(client, "followup", fid, "cancel")[0]["data"]["note"] == "case deleted"
     other = [fid for fid in rows if fid not in chase_ids]
-    assert len(other) == 1 and rows[other[0]] == "open|"
+    # the unrelated follow-up stays open; the RFQ chase was done when the offer came (v0.10.1, 0.4.6)
+    assert sorted(rows[o].split("|")[0] for o in other) == ["done", "open"]
     assert client.get(f"/api/interactions/{unrelated['id']}").status_code == 200
     assert client.get(f"/api/interactions/{recipient['interaction_id']}").status_code == 200
     snap = events(client, "case", case["id"], "delete")[0]["data"]["deleted"]
