@@ -248,7 +248,11 @@ def change_stage(db: Session, party_id: uuid.UUID, role: str, stage: str, reason
     return row
 
 
-def list_parties(db: Session, *, q: str | None = None, role: str | None = None, stage: str | None = None,
+# v0.10.1 (0.4.2): the roles that receive RFQs and offers
+SUPPLIER_SIDE = ("supplier", "manufacturer")
+
+
+def list_parties(db: Session, *, q: str | None = None, role: str | tuple | list | None = None, stage: str | None = None,
                  country: str | None = None, status: str | None = "active", sort: str = "updated_at",
                  order: str = "desc", page: int = 1, page_size: int = 50,
                  ids: set[uuid.UUID] | None = None) -> tuple[list[Party], int]:
@@ -261,8 +265,8 @@ def list_parties(db: Session, *, q: str | None = None, role: str | None = None, 
         query = query.where(Party.country_iso2 == country.upper())
     if role or stage:
         sub = select(PartyRole.party_id)
-        if role:
-            sub = sub.where(PartyRole.role == role)
+        if role:   # v0.10.1: a list of roles too («supplier side»: supplier or manufacturer)
+            sub = sub.where(PartyRole.role.in_(role) if isinstance(role, (list, tuple, set)) else PartyRole.role == role)
         if stage:
             sub = sub.where(PartyRole.stage == stage)
         query = query.where(Party.id.in_(sub))

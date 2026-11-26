@@ -8,9 +8,20 @@ import { Badge, Bdi, Button, DateInput, errorMessage, ErrorNote, Field, Input, M
 import { api, ApiError } from "../../lib/api";
 import { fromDateString, type QuickDue, quickDueDate, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
-import type { PartyRoleName, SharedWith } from "../../lib/types";
+import type { PartyRoleName, SharedWith, SupplierType } from "../../lib/types";
 
-export const ROLES: PartyRoleName[] = ["buyer", "supplier", "forwarder", "customs_broker", "agent", "other"];
+export const ROLES: PartyRoleName[] = ["buyer", "supplier", "manufacturer", "carrier", "forwarder", "customs_broker", "agent", "other"];
+/** v0.10.1 (0.4.2): the roles that receive RFQs and offers */
+export const SUPPLIER_SIDE: PartyRoleName[] = ["supplier", "manufacturer"];
+export const SUPPLIER_TYPES: SupplierType[] = ["manufacturer", "trading", "distributor", "agent"];
+
+/** v0.10.1 (0.4.2): «کارخانه / بازرگانی / توزیع‌کننده / نماینده» beside a supplier's name. */
+export function SupplierTypeChip({ type }: { type: SupplierType | null | undefined }) {
+  const { t } = useTranslation();
+  if (!type) return null;
+  return <Badge tone={type === "manufacturer" ? "accent" : "neutral"}>
+    <span data-testid="supplier-type" data-type={type}>{t(`parties.supplierType.${type}`)}</span></Badge>;
+}
 export const CHANNELS = ["whatsapp", "call", "email", "tender_portal", "in_person", "other"] as const;
 export const METHOD_TYPES = ["whatsapp", "phone", "email", "telegram", "other"] as const;
 

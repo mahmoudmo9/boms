@@ -219,9 +219,9 @@ def suggest_suppliers(db: Session, hs_codes: list[str], exclude: set[uuid.UUID] 
         party = party_rows[pid]
         if party.status != "active" or party.do_not_contact:
             continue
-        stage = next((r.stage for r in roles[pid] if r.role == "supplier"), None)
+        stage = next((r.stage for r in roles[pid] if r.role in parties.SUPPLIER_SIDE), None)
         out.append({**entry, "name_fa": party.name_fa, "name_en": party.name_en, "country_iso2": party.country_iso2,
-                    "supplier_stage": stage, "codes": sorted(set(entry["codes"]))})
+                    "supplier_stage": stage, "supplier_type": party.supplier_type, "codes": sorted(set(entry["codes"]))})
     out.sort(key=lambda e: (e["match"] != "heading", (e["name_en"] or e["name_fa"] or "")))
     from app.core.modules import load_hooks
 

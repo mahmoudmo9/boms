@@ -408,7 +408,7 @@ class ExtractIn(InputModel):
 class PartyParseIn(InputModel):
     text: Annotated[str, Field(max_length=20000)] | None = None
     document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=5)
-    roles: list[Literal["buyer", "supplier", "forwarder", "customs_broker", "agent", "other"]] = []
+    roles: list[Literal["buyer", "supplier", "forwarder", "customs_broker", "agent", "other", "manufacturer", "carrier"]] = []
     confirm_duplicate: bool = False
 
 

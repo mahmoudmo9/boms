@@ -64,7 +64,7 @@ export function PartyKpis({ party, ratings }: { party: PartyDetail; ratings: { a
   const f = useFormat();
   const sc = useScorecard(party.id).data;
   if (!sc) return null;
-  const supplier = party.roles.some((r) => r.role === "supplier") || [sc.on_time, sc.inspection, sc.response_time, sc.price_position].some((x) => x.n > 0);
+  const supplier = party.roles.some((r) => r.role === "supplier" || r.role === "manufacturer") || [sc.on_time, sc.inspection, sc.response_time, sc.price_position].some((x) => x.n > 0);
   const few = (x: Tile) => t("party.kpi.notEnough", { n: x.n, min: sc.min_sample });
   const hours = sc.response_time.value;
   const tiles = supplier ? [

@@ -1000,6 +1000,19 @@
       "other": {
         "active": "فعال",
         "dormant": "راکد"
+      },
+      "manufacturer": {
+        "identified": "شناسایی‌شده",
+        "contacted": "تماس گرفته‌شده",
+        "responded": "پاسخ داده",
+        "qualified": "تأییدشده",
+        "in_use": "در حال همکاری",
+        "blacklisted": "فهرست سیاه",
+        "dormant": "راکد"
+      },
+      "carrier": {
+        "active": "فعال",
+        "dormant": "راکد"
       }
     }
   },
@@ -1021,10 +1034,12 @@
       "label": "نقش‌ها",
       "buyer": "خریدار",
       "supplier": "تأمین‌کننده",
-      "forwarder": "حمل‌کننده",
+      "forwarder": "کارگزار حمل (فورواردر)",
       "customs_broker": "ترخیص‌کار",
       "agent": "نماینده",
-      "other": "سایر"
+      "other": "سایر",
+      "manufacturer": "تولیدکننده",
+      "carrier": "حمل‌کننده"
     },
     "allRoles": "همه نقش‌ها",
     "allStages": "همه مراحل",
@@ -1079,7 +1094,17 @@
     "archiveCancelHint": "با یادداشت «طرف بایگانی شد» بسته می‌شوند.",
     "archiveKeepHint": "با نشان «بایگانی» در مرکز فرمان می‌مانند.",
     "archiveOpenFollowups_one": "این طرف {{n}} پیگیری باز دارد.",
-    "archiveOpenFollowups_other": "این طرف {{n}} پیگیری باز دارد."
+    "archiveOpenFollowups_other": "این طرف {{n}} پیگیری باز دارد.",
+    "supplierType": {
+      "label": "نوع تأمین‌کننده",
+      "none": "مشخص نشده",
+      "manufacturer": "کارخانه",
+      "trading": "بازرگانی",
+      "distributor": "توزیع‌کننده",
+      "agent": "نماینده"
+    },
+    "trackingTemplate": "نشانی ردیابی حمل‌کننده",
+    "trackingTemplateHint": "نشانی صفحهٔ ردیابی با {number} به جای شمارهٔ بارنامه؛ BOMS آن را باز نمی‌کند، فقط پیوند می‌سازد."
   },
   "contacts": {
     "title": "اشخاص رابط",

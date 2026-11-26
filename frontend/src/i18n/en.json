@@ -1000,6 +1000,19 @@
       "other": {
         "active": "Active",
         "dormant": "Dormant"
+      },
+      "manufacturer": {
+        "identified": "Identified",
+        "contacted": "Contacted",
+        "responded": "Responded",
+        "qualified": "Qualified",
+        "in_use": "In use",
+        "blacklisted": "Blacklisted",
+        "dormant": "Dormant"
+      },
+      "carrier": {
+        "active": "Active",
+        "dormant": "Dormant"
       }
     }
   },
@@ -1024,7 +1037,9 @@
       "forwarder": "Forwarder",
       "customs_broker": "Customs broker",
       "agent": "Agent",
-      "other": "Other"
+      "other": "Other",
+      "manufacturer": "Manufacturer",
+      "carrier": "Carrier"
     },
     "allRoles": "All roles",
     "allStages": "All stages",
@@ -1079,7 +1094,17 @@
     "archiveCancelHint": "They are closed with the note “party archived”.",
     "archiveKeepHint": "They stay in the command center with an “Archived” badge.",
     "archiveOpenFollowups_one": "This party has {{n}} open follow-up.",
-    "archiveOpenFollowups_other": "This party has {{n}} open follow-ups."
+    "archiveOpenFollowups_other": "This party has {{n}} open follow-ups.",
+    "supplierType": {
+      "label": "Supplier type",
+      "none": "Not set",
+      "manufacturer": "Factory",
+      "trading": "Trading company",
+      "distributor": "Distributor",
+      "agent": "Agent"
+    },
+    "trackingTemplate": "Carrier tracking page",
+    "trackingTemplateHint": "The tracking page address with {number} where the B/L number goes; BOMS never opens it, it only makes the link."
   },
   "contacts": {
     "title": "Contacts",

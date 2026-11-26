@@ -65,13 +65,13 @@ def test_migration_0004_up_down_up():
     try:
         command.upgrade(cfg, "head")
         names, stages = tables()
-        assert new <= names and stages == 8 + 7 + 4 * 2
+        assert new <= names and stages == 8 + 7 + 4 * 2 + 7 + 2   # v0.10.1 (0024): manufacturer (the supplier stages) and carrier
         command.downgrade(cfg, "0003")
         names, _ = tables()
         assert not (new & names) and "document" in names
         command.upgrade(cfg, "head")
         names, stages = tables()
-        assert new <= names and stages == 23
+        assert new <= names and stages == 8 + 7 + 4 * 2 + 7 + 2
     finally:
         dbadmin.drop_database(superuser_conninfo(), db_name)
 

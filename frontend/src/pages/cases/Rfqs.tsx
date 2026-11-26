@@ -11,7 +11,7 @@ import { fromDateString, toDateString } from "../../lib/followups";
 import { useFormat } from "../../lib/prefs";
 import { personName, rfqDefaultOpen, sortRfqs } from "../../lib/sourcing";
 import type { CaseDetail, Rfq, RfqRecipient, SupplierChoice } from "../../lib/types";
-import { DueDatePicker, PartyName, stageLabel } from "../parties/shared";
+import { DueDatePicker, PartyName, stageLabel, SupplierTypeChip } from "../parties/shared";
 import { ContactName, RFQ_CHANNELS, StatusBadge, useInvalidateSourcing } from "../sourcing/shared";
 
 const LANGS = ["en", "fa"];
@@ -42,6 +42,7 @@ function SupplierPicker({ itemIds, chosen, onAdd }: { itemIds: string[]; chosen:
     <li key={s.party_id} className="flex flex-wrap items-center gap-2 px-2.5 py-1.5 text-sm">
       <PartyName fa={s.name_fa} en={s.name_en} dnc={s.do_not_contact} />
       {s.country_iso2 && <Bdi ltr className="font-mono text-xs text-muted">{s.country_iso2}</Bdi>}
+      <SupplierTypeChip type={s.supplier_type} />
       {s.supplier_stage && <Badge>{stageLabel(t, "supplier", s.supplier_stage)}</Badge>}
       {hint && <Badge tone="accent">{hint}</Badge>}
       <Button className="ms-auto" icon="plus" disabled={taken.has(s.party_id) || s.do_not_contact} onClick={() => onAdd(s)}>{t("common.add")}</Button>

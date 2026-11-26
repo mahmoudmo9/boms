@@ -470,13 +470,14 @@ def list_rfqs(_: CurrentUser, db: Db, case_id: uuid.UUID | None = None,
 
 @rfqs_router.get("/suppliers")
 def rfq_suppliers(_: CurrentUser, db: Db, q: str | None = None, page_size: Annotated[int, Query(le=200)] = 50):
-    """Parties with the supplier role (active), with their funnel stage and default channel/language."""
-    rows, _total = parties.list_parties(db, q=q, role="supplier", status="active", sort="name", order="asc",
+    """Parties on the supplier side (supplier or manufacturer, active), with their funnel stage, supplier type and
+    default channel/language."""
+    rows, _total = parties.list_parties(db, q=q, role=parties.SUPPLIER_SIDE, status="active", sort="name", order="asc",
                                         page=1, page_size=page_size)
     roles = parties.roles_for(db, [p.id for p in rows])
     return [{"party_id": str(p.id), "name_fa": p.name_fa, "name_en": p.name_en, "country_iso2": p.country_iso2,
-             "do_not_contact": p.do_not_contact,
-             "supplier_stage": next((r.stage for r in roles[p.id] if r.role == "supplier"), None),
+             "do_not_contact": p.do_not_contact, "supplier_type": p.supplier_type,
+             "supplier_stage": next((r.stage for r in roles[p.id] if r.role in parties.SUPPLIER_SIDE), None),
              **rfq.defaults_for_party(p)} for p in rows]
 
 

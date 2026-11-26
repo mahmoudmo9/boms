@@ -16,7 +16,7 @@ import { CapabilitiesCard } from "../sourcing/Capabilities";
 import { Money, StatusBadge } from "../sourcing/shared";
 import { useCountries } from "./PartiesPage";
 import { useQuickLog } from "./QuickLog";
-import { CancelFollowupButton, CHANNELS, DeleteButton, FollowupActions, InUseNote, METHOD_TYPES, PartyName, ROLES, SharedNumberPrompt, StageSelect, stageLabel } from "./shared";
+import { CancelFollowupButton, CHANNELS, DeleteButton, FollowupActions, InUseNote, METHOD_TYPES, PartyName, ROLES, SharedNumberPrompt, StageSelect, stageLabel, SUPPLIER_SIDE, SUPPLIER_TYPES, SupplierTypeChip } from "./shared";
 import { ContactField, CountryField, PartyField } from "../../components/fields";
 
 const TABS = ["overview", "contacts", "interactions", "documents", "quotes", "orders", "finance", "history"] as const;
@@ -47,7 +47,10 @@ function PartyEdit({ party }: { party: PartyDetail }) {
   const [form, setForm] = useState({
     name_fa: party.name_fa ?? "", name_en: party.name_en ?? "", kind: party.kind, country_iso2: party.country_iso2 ?? "",
     website: party.website ?? "", notes: party.notes ?? "", national_id: party.national_id ?? "", economic_code: party.economic_code ?? "",
+    supplier_type: party.supplier_type ?? "", tracking_url_template: party.tracking_url_template ?? "",
   });
+  const supplierSide = party.roles.some((r) => SUPPLIER_SIDE.includes(r.role));
+  const carrier = party.roles.some((r) => r.role === "carrier");
   const [dnc, setDnc] = useState(party.do_not_contact);
   const [dncReason, setDncReason] = useState(party.do_not_contact_reason ?? "");
   const [newRole, setNewRole] = useState("");
@@ -56,7 +59,8 @@ function PartyEdit({ party }: { party: PartyDetail }) {
     mutationFn: () => api(`/api/parties/${party.id}`, {
       method: "PATCH",
       body: { ...form, name_fa: form.name_fa || null, name_en: form.name_en || null, country_iso2: form.country_iso2 || null,
-        website: form.website || null, notes: form.notes || null, national_id: form.national_id || null, economic_code: form.economic_code || null, do_not_contact: dnc, do_not_contact_reason: dnc ? dncReason : null },
+        website: form.website || null, notes: form.notes || null, national_id: form.national_id || null, economic_code: form.economic_code || null, do_not_contact: dnc, do_not_contact_reason: dnc ? dncReason : null,
+        supplier_type: form.supplier_type || null, tracking_url_template: form.tracking_url_template || null },
     }),
     onSuccess: () => { toast(t("common.saved"), "success"); refresh(); },
   });
@@ -130,6 +134,14 @@ function PartyEdit({ party }: { party: PartyDetail }) {
             <ValidatedInput id="pd-nid" kind={party.country_iso2 === "CN" ? "uscc" : "national_id_ir"} value={form.national_id} testId="pd-national-id"
               onChange={(v) => setForm({ ...form, national_id: v })} /></Field>
           <Field label={t("finance.party.economicCode")} htmlFor="pd-eco"><Input id="pd-eco" dir="ltr" value={form.economic_code} onChange={(e) => setForm({ ...form, economic_code: e.target.value })} /></Field>
+          {/* v0.10.1 (0.4.2): the supplier type on the supplier side; the tracking page for a carrier (0.3.2) */}
+          {supplierSide && <Field label={t("parties.supplierType.label")} htmlFor="pd-stype">
+            <Select id="pd-stype" value={form.supplier_type} onChange={(e) => setForm({ ...form, supplier_type: e.target.value })}>
+              <option value="">{t("parties.supplierType.none")}</option>
+              {SUPPLIER_TYPES.map((x) => <option key={x} value={x}>{t(`parties.supplierType.${x}`)}</option>)}
+            </Select></Field>}
+          {carrier && <div className="sm:col-span-2"><Field label={t("parties.trackingTemplate")} htmlFor="pd-track" hint={t("parties.trackingTemplateHint")}>
+            <Input id="pd-track" dir="ltr" placeholder="https://…{number}" value={form.tracking_url_template} onChange={(e) => setForm({ ...form, tracking_url_template: e.target.value })} /></Field></div>}
           <div className="sm:col-span-2"><Field label={t("parties.website")} htmlFor="pd-web"><Input id="pd-web" dir="ltr" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></Field></div>
           <div className="sm:col-span-2"><Field label={t("parties.notes")} htmlFor="pd-notes"><Textarea id="pd-notes" dir="auto" rows={4} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field></div>
           <div className="rounded-xl border border-line p-3 sm:col-span-2">
@@ -172,7 +184,7 @@ function Overview({ party, goTab }: { party: PartyDetail; goTab: (tab: Tab) => v
         <Card title={t("parties.openFollowups")} padded={false}>
           <FollowupRows rows={party.open_followups} />
         </Card>
-        {party.roles.some((r) => r.role === "supplier") && <CapabilitiesCard partyId={party.id} />}
+        {party.roles.some((r) => SUPPLIER_SIDE.includes(r.role)) && <CapabilitiesCard partyId={party.id} />}
       </div>
     </div>
   );
@@ -709,7 +721,7 @@ function PartyScores({ party }: { party: PartyDetail }) {
   const ex = useQuery({ queryKey: ["party-execution", party.id], queryFn: () => api<{ sales_orders: unknown[]; purchase_orders: unknown[]; claims: { status: string }[] }>(`/api/parties/${party.id}/execution`) });
   const avg = Object.values(fin.data?.ratings.average ?? {}).filter((v): v is number => v !== null);
   const overall = avg.length ? avg.reduce((s, v) => s + v, 0) / avg.length : null;
-  const supplier = party.roles.some((r) => r.role === "supplier");
+  const supplier = party.roles.some((r) => SUPPLIER_SIDE.includes(r.role));
   const deals = (ex.data?.sales_orders.length ?? 0) + (ex.data?.purchase_orders.length ?? 0);
   const openClaims = ex.data?.claims.filter((c) => !["closed", "resolved", "rejected"].includes(c.status)).length ?? 0;
   return (
@@ -744,7 +756,8 @@ export function PartyDetailPage() {
       <PageHeader title={<span className="inline-flex items-center gap-4"><PartyAvatar name={p.name_en || p.name_fa} /><PartyName fa={p.name_fa} en={p.name_en} dnc={p.do_not_contact} /></span>} code={p.code}
         breadcrumb={[{ label: t("nav.parties"), to: "/parties" }, { label: p.code ?? (f.lang === "fa" ? p.name_fa || p.name_en : p.name_en || p.name_fa) ?? "" }]}
         status={<>{p.status === "archived" && <Status tone="neutral">{t("parties.archived")}</Status>}
-          {p.roles.map((r) => <Badge key={r.role} tone="accent">{t(`parties.roles.${r.role}`)} · {stageLabel(t, r.role, r.stage)}</Badge>)}</>}
+          {p.roles.map((r) => <Badge key={r.role} tone="accent">{t(`parties.roles.${r.role}`)} · {stageLabel(t, r.role, r.stage)}</Badge>)}
+          <SupplierTypeChip type={p.supplier_type} /></>}
         subtitle={<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {subtitle && <Bdi>{subtitle}</Bdi>}
           {p.country_iso2 && <CountryName code={p.country_iso2} />}

@@ -184,7 +184,9 @@ export interface SearchGroup {
 
 // ---- Phase 3: parties ---------------------------------------------------------------
 
-export type PartyRoleName = "buyer" | "supplier" | "forwarder" | "customs_broker" | "agent" | "other";
+export type PartyRoleName = "buyer" | "supplier" | "manufacturer" | "carrier" | "forwarder" | "customs_broker" | "agent" | "other";
+/** v0.10.1 (0.4.2): the supplier side of a party */
+export type SupplierType = "manufacturer" | "trading" | "distributor" | "agent";
 export type Channel = "whatsapp" | "call" | "email" | "tender_portal" | "in_person" | "other";
 export type MethodType = "whatsapp" | "phone" | "email" | "telegram" | "other";
 
@@ -209,6 +211,8 @@ export interface Party {
   kind: "company" | "person";
   country_iso2: string | null;
   website: string | null;
+  supplier_type?: SupplierType | null;          // v0.10.1 (0.4.2)
+  tracking_url_template?: string | null;        // v0.10.1 (0.3.2): a carrier's public tracking page, {number}
   national_id?: string | null;
   economic_code?: string | null;
   notes: string | null;
@@ -565,6 +569,7 @@ export interface SupplierChoice {
   country_iso2: string | null;
   do_not_contact?: boolean;
   supplier_stage: string | null;
+  supplier_type?: SupplierType | null;
   channel?: string;
   language?: string;
   match?: "heading" | "chapter";
@@ -623,6 +628,7 @@ export interface ComparisonRow {
   party_id: string;
   party_name_fa: string | null;
   party_name_en: string | null;
+  supplier_type?: SupplierType | null;   // v0.10.1 (0.4.2)
   contact_id: string | null;
   contact_name_fa: string | null;
   contact_name_en: string | null;

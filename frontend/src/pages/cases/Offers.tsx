@@ -13,7 +13,7 @@ import { useSuggestions } from "../../lib/suggest";
 import { flattenComparison, offerLineTotal, offerTotal, validityTone } from "../../lib/sourcing";
 import type { CaseDetail, ComparisonItem, Contact, Coverage, DocumentDetail, Offer, Party, Rfq } from "../../lib/types";
 
-import { DueDatePicker, PartyName } from "../parties/shared";
+import { DueDatePicker, PartyName, SupplierTypeChip } from "../parties/shared";
 import { ContactName, Money, OFFER_CHANNELS, StatusBadge, useInvalidateSourcing, useUnitLabel } from "../sourcing/shared";
 import { ContactField, CurrencyField, IncotermField, PartyField, UnitField } from "../../components/fields";
 
@@ -360,7 +360,8 @@ export function ComparisonMatrix({ item, onChanged }: { item: ComparisonItem; on
               ) : (
                 <tr key={line.offer_item_id} className={line.selected ? "bg-success-soft" : line.lowest ? "bg-accent-soft" : ""}>
                   <td className="sticky start-0 z-10 border-b border-line bg-surface p-2">
-                    <PartyName fa={line.party_name_fa} en={line.party_name_en} id={line.party_id} className="max-w-48" />
+                    <span className="flex flex-wrap items-center gap-1"><PartyName fa={line.party_name_fa} en={line.party_name_en} id={line.party_id} className="max-w-48" />
+                      <SupplierTypeChip type={line.supplier_type} /></span>
                     <ContactName fa={line.contact_name_fa} en={line.contact_name_en} className="block max-w-48 text-xs" />
                   </td>
                   <td className="border-b border-line p-2">

@@ -109,3 +109,73 @@ def test_quote_cover_and_inquiry_reply_are_drafts_for_the_mail_client(client, db
     from app.modules.ai.drafts import COMMITTERS
     from app.modules.ai.builtin import commit_items
     assert COMMITTERS["inquiry"] is commit_items
+
+
+# ---- 0.4.2 roles manufacturer and carrier, supplier type -------------------------------------------------------------
+
+def test_manufacturer_is_on_the_supplier_side_and_keeps_a_sup_code(client):
+    from tests.test_sourcing_rfq import make_case
+
+    m = make_party(client, name_en=f"Factory {tag()}", roles=["manufacturer"], country_iso2="CN", supplier_type="manufacturer")
+    assert m["code"].startswith("SUP-CN-") and m["supplier_type"] == "manufacturer"
+    assert [(r["role"], r["stage"]) for r in m["roles"]] == [("manufacturer", "identified")]   # the supplier stages
+    both = make_party(client, name_en=f"Trader {tag()}", roles=["supplier", "manufacturer"], country_iso2="TR")
+    assert both["code"].startswith("SUP-TR-")
+    found = client.get("/api/rfqs/suppliers", params={"q": m["name_en"]}).json()                 # RFQ selection
+    assert [(s["party_id"], s["supplier_type"], s["supplier_stage"]) for s in found] == [(m["id"], "manufacturer", "identified")]
+    case, items = make_case(client, [{"name": "Valve", "quantity": "1"}])
+    r = client.post("/api/rfqs", json={"case_id": case["id"], "items": [{"line_item_id": items[0]["id"]}],
+                                       "recipients": [{"party_id": m["id"]}]})
+    assert r.status_code == 201, r.text
+
+
+def test_carrier_has_its_own_stages_and_a_bp_code(client):
+    c = make_party(client, name_en=f"Caspian Lines {tag()}", roles=["carrier"], country_iso2="IR",
+                   tracking_url_template="https://track.example/?bl={number}")
+    assert c["code"].startswith("BP-IR-") and [(r["role"], r["stage"]) for r in c["roles"]] == [("carrier", "active")]
+    stages = {s["code"] for s in client.get("/api/parties/stages", params={"role": "carrier"}).json()}
+    assert stages == {"active", "dormant"}
+    assert client.post(f"/api/parties/{c['id']}/roles/carrier/stage", json={"stage": "dormant"}).status_code == 200
+    assert client.post(f"/api/parties/{c['id']}/roles/carrier/stage", json={"stage": "won"}).status_code == 422
+
+
+def test_supplier_type_is_checked_and_patchable(client):
+    p = make_party(client, name_en=f"Dist {tag()}", roles=["supplier"])
+    assert p["supplier_type"] is None
+    assert client.patch(f"/api/parties/{p['id']}", json={"supplier_type": "distributor"}).json()["supplier_type"] == "distributor"
+    assert client.patch(f"/api/parties/{p['id']}", json={"supplier_type": "wholesaler"}).status_code == 422
+
+
+def test_migration_0024_keeps_roles_on_downgrade_and_back():
+    from alembic import command
+    from sqlalchemy import create_engine
+
+    from app.cli import alembic_config
+    from app.core import dbadmin
+    from app.core.config import get_config
+    from tests.conftest import create_empty_database, superuser_conninfo
+
+    name = "boms_test_mig_0024"
+    create_empty_database(name)
+    url = get_config().db_url(name)
+    cfg = alembic_config(url)
+    try:
+        command.upgrade(cfg, "head")
+        engine = create_engine(url)
+        with engine.begin() as conn:
+            ids = [conn.execute(text("INSERT INTO core.party (name_en, supplier_type) VALUES (:n, 'manufacturer') RETURNING id"),
+                                {"n": n}).scalar() for n in ("Factory", "Lines", "Both")]
+            for pid, role, stage in ((ids[0], "manufacturer", "qualified"), (ids[1], "carrier", "dormant"),
+                                     (ids[2], "supplier", "in_use"), (ids[2], "manufacturer", "contacted")):
+                conn.execute(text("INSERT INTO core.party_role (party_id, role, stage) VALUES (:p, :r, :s)"), {"p": pid, "r": role, "s": stage})
+        command.downgrade(cfg, "0023")
+        with engine.connect() as conn:
+            roles = sorted(conn.execute(text("SELECT p.name_en, r.role, r.stage FROM core.party_role r JOIN core.party p ON p.id = r.party_id")).all())
+        assert roles == [("Both", "supplier", "in_use"), ("Factory", "supplier", "qualified"), ("Lines", "other", "dormant")]
+        command.upgrade(cfg, "head")
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT count(*) FROM core.funnel_stage WHERE role IN ('manufacturer', 'carrier')")).scalar() == 9
+            assert conn.execute(text("SELECT count(*) FROM core.party WHERE name_en = 'Factory'")).scalar() == 1
+        engine.dispose()
+    finally:
+        dbadmin.drop_database(superuser_conninfo(), name)

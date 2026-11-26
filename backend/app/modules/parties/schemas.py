@@ -8,7 +8,9 @@ from pydantic import Field, model_validator
 
 from app.core.schemas import ApiModel, InputModel
 
-Role = Literal["buyer", "supplier", "forwarder", "customs_broker", "agent", "other"]
+Role = Literal["buyer", "supplier", "forwarder", "customs_broker", "agent", "other", "manufacturer", "carrier"]
+# v0.10.1 (0.4.2): the supplier side of a party — a factory, a trading company, a distributor or an agent
+SupplierType = Literal["manufacturer", "trading", "distributor", "agent"]
 Kind = Literal["company", "person"]
 MethodType = Literal["whatsapp", "phone", "email", "telegram", "other"]
 Channel = Literal["whatsapp", "call", "email", "tender_portal", "in_person", "other"]
@@ -45,6 +47,7 @@ class PartyCreate(_Names):
     website: ShortText | None = None
     # v0.10.1: a carrier's public tracking page, {number} where the B/L, AWB or CMR number goes
     tracking_url_template: Annotated[str, Field(max_length=500, pattern=r"^https?://\S*\{number\}\S*$")] | None = None
+    supplier_type: SupplierType | None = None  # v0.10.1 (0.4.2)
     notes: LongText | None = None
     national_id: ShortText | None = None       # v0.8.0: required on a domestic invoice to this buyer
     economic_code: ShortText | None = None
@@ -67,6 +70,7 @@ class PartyPatch(_Names):
     website: ShortText | None = None
     # v0.10.1: a carrier's public tracking page, {number} where the B/L, AWB or CMR number goes
     tracking_url_template: Annotated[str, Field(max_length=500, pattern=r"^https?://\S*\{number\}\S*$")] | None = None
+    supplier_type: SupplierType | None = None  # v0.10.1 (0.4.2)
     notes: LongText | None = None
     national_id: ShortText | None = None       # v0.8.0: required on a domestic invoice to this buyer
     economic_code: ShortText | None = None
@@ -105,6 +109,7 @@ class PartyOut(ApiModel):
     country_iso2: str | None
     website: str | None
     tracking_url_template: str | None = None
+    supplier_type: str | None = None
     notes: str | None
     do_not_contact: bool
     do_not_contact_reason: str | None

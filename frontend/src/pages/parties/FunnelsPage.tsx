@@ -8,7 +8,7 @@ import { useFormat } from "../../lib/prefs";
 import type { FunnelBoard, FunnelCard } from "../../lib/types";
 import { PartyName, stageLabel } from "./shared";
 
-type FunnelRole = "buyer" | "supplier";
+type FunnelRole = "buyer" | "supplier" | "manufacturer";   // v0.10.1 (0.4.2): manufacturers have the supplier stages
 
 function Card({ card, role, stages }: { card: FunnelCard; role: FunnelRole; stages: string[] }) {
   const { t } = useTranslation();
@@ -46,14 +46,16 @@ export function FunnelsPage() {
   const { t } = useTranslation();
   const f = useFormat();
   const [params, setParams] = useSearchParams();
-  const role: FunnelRole = params.get("role") === "supplier" ? "supplier" : "buyer";
+  const asked = params.get("role");
+  const role: FunnelRole = asked === "supplier" || asked === "manufacturer" ? asked : "buyer";
   const board = useQuery({ queryKey: ["funnel", role], queryFn: () => api<FunnelBoard>(`/api/parties/funnel/${role}`) });
   const codes = board.data?.stages.map((s) => s.code) ?? [];
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("funnel.title.board")} subtitle={t("funnel.subtitle")}
         actions={<Segmented value={role} label={t("funnel.role")} onChange={(v) => setParams({ role: v }, { replace: true })}
-          options={[{ value: "buyer", label: t("parties.roles.buyer") }, { value: "supplier", label: t("parties.roles.supplier") }]} />} />
+          options={[{ value: "buyer", label: t("parties.roles.buyer") }, { value: "supplier", label: t("parties.roles.supplier") },
+            { value: "manufacturer", label: t("parties.roles.manufacturer") }]} />} />
       {board.isLoading && <Loading />}
       <ErrorNote error={board.error} />
       {board.data && (
