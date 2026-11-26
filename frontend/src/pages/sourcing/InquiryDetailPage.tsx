@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from "react-router";
 
 import { Badge, Button, Card, Checkbox, ErrorNote, ErrorState, Field, Icon, Input, Loading, Modal, PageHeader, Segmented, Select, Textarea } from "../../design/components";
 import { TimeLeftBadge } from "../../components/TimeLeft";
+import { DraftMessageButton } from "../../components/AiActions";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { Check, CaseDetail, Decision, InquiryDetail } from "../../lib/types";
@@ -160,6 +161,8 @@ export function InquiryDetailPage() {
           {(inq.delivery_province || inq.delivery_city) && <span>{t("sourcing.inquiry.deliveryPlace")}: <span dir="auto">{[inq.delivery_province, inq.delivery_city].filter(Boolean).join("، ")}</span></span>}
         </span>}
         actions={<>
+          {/* v0.10.1 (0.4.1): the reply to the buyer, drafted with the owner's instruction */}
+          {open && <DraftMessageButton target="inquiry_reply" targetId={inq.id} />}
           {open && (
             <Select className="w-48" aria-label={t("sourcing.status.label")} value={inq.status} onChange={(e) => patch.mutate(e.target.value)}>
               {(["new", "needs_info", "ready_for_screening", "no_reply"] as const).map((s) => <option key={s} value={s}>{t(`sourcing.status.inquiry.${s}`)}</option>)}

@@ -541,6 +541,8 @@ export interface RfqRecipient {
   contact_name_en: string | null;
   mailto: string | null;
   email: string | null;
+  /** v0.10.1 (0.4.1): the text differs from its template's (an AI draft then asks: replace or append) */
+  text_edited?: boolean;
 }
 
 export interface Rfq {

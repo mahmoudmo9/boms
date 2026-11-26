@@ -191,6 +191,21 @@ function RecipientRow({ recipient, rfq, onChanged }: { recipient: RfqRecipient; 
   const [subject, setSubject] = useState(recipient.subject ?? "");
   const [sending, setSending] = useState(false);
   const dirty = text !== (recipient.message_text ?? "") || subject !== (recipient.subject ?? "");
+  // v0.10.1 (0.4.1): the editor follows the stored text whenever it changes on the server (a chosen AI draft, a
+  // re-render) and the owner has nothing unsaved — v0.10.0 kept the first copy, so a chosen draft never showed
+  const server = useRef({ text: recipient.message_text ?? "", subject: recipient.subject ?? "" });
+  useEffect(() => {
+    const was = server.current;
+    const next = { text: recipient.message_text ?? "", subject: recipient.subject ?? "" };
+    if (text === was.text && subject === was.subject) { setText(next.text); setSubject(next.subject); }
+    server.current = next;
+  }, [recipient.message_text, recipient.subject]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const applyChosen = (r: Record<string, unknown>) => {
+    const rec = r.recipient as RfqRecipient | undefined;
+    if (rec) { setText(rec.message_text ?? ""); setSubject(rec.subject ?? ""); server.current = { text: rec.message_text ?? "", subject: rec.subject ?? "" }; }
+    setOpen(true);
+    onChanged();
+  };
   const save = useMutation({
     mutationFn: (body: Record<string, unknown>) => api<RfqRecipient>(`/api/rfqs/recipients/${recipient.id}`, { method: "PATCH", body }),
     onSuccess: (r) => { setText(r.message_text ?? ""); setSubject(r.subject ?? ""); onChanged(); },
@@ -216,7 +231,9 @@ function RecipientRow({ recipient, rfq, onChanged }: { recipient: RfqRecipient; 
           <StatusBadge group="recipient" status={recipient.status} />
           {recipient.sent_at && <span className="text-xs text-muted tabular-nums">{f.date(recipient.sent_at, true)}</span>}
         </button>
-        {draft && rfq.status !== "cancelled" && <DraftMessageButton target="rfq_recipient" targetId={recipient.id} onCommitted={() => onChanged()} />}
+        {draft && rfq.status !== "cancelled" && <DraftMessageButton target="rfq_recipient" targetId={recipient.id} language={recipient.language}
+          hasEditedText={Boolean(recipient.text_edited) || dirty} onCommitted={applyChosen}
+          prepare={dirty ? () => save.mutateAsync({ subject, message_text: text }) : undefined} />}
         {draft && rfq.status !== "cancelled" && <Button variant="primary" icon="check" onClick={() => setSending(true)}>{t("sourcing.rfq.markSent")}</Button>}
         {waiting && rfq.status !== "cancelled" && (
           <Button onClick={() => setParams({ tab: "offers", record: recipient.party_id })}>{t("sourcing.rfq.recordOffer")}</Button>

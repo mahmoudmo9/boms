@@ -66,6 +66,7 @@ def interactions_of(client, party_id):
 # ---- templates and rendering ------------------------------------------------------------------
 
 def test_render_with_all_placeholders_en_and_fa(client):
+    client.patch("/api/me", json={"digits": "latin"})   # the owner's digit setting (another test may leave it on fa)
     client.patch("/api/settings", json={"company.name": "Kimia Trading",
                                         "company.signature": {"en": "Best regards,\nKimia Trading", "fa": "با احترام\nبازرگانی کیمیا"}})
     case, items = make_case(client, [

@@ -494,6 +494,9 @@ def _summary_text(db: Session, quote: Quote) -> str:
     return "\n".join(lines)
 
 
+summary_text = _summary_text   # v0.10.1: public, for the AI quotation cover message
+
+
 def _cancel_chases(db: Session, quote: Quote, note: str, source: str, actor: str | None) -> list[uuid.UUID]:
     if not quote.interaction_id:
         return []

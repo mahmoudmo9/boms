@@ -119,21 +119,61 @@ def render_values(db: Session, rfq: Rfq, recipient: RfqRecipient) -> dict[str, s
     }
 
 
-def render_recipient(db: Session, rfq: Rfq, recipient: RfqRecipient) -> None:
+def generated_text(db: Session, rfq: Rfq, recipient: RfqRecipient) -> tuple[uuid.UUID, str | None, str]:
+    """(template id, subject, text) the recipient's template gives today; changes nothing."""
     template = (templates.get_template(db, recipient.template_id) if recipient.template_id
                 else templates.default_template(db, recipient.language, recipient.channel))
     if template is None:
         raise AppError("no_template", "No message template for this language and channel",
                        {"language": recipient.language, "channel": recipient.channel}, status=422)
-    recipient.template_id = template.id
     values = render_values(db, rfq, recipient)
     from app.modules.documents import naming
 
     subject = templates.render(template.subject_template, values).strip()
-    recipient.subject = naming.subject(rfq.code, subject) if subject else None   # v0.9.0: [RFQ-1405-0009] …
-    recipient.message_text = templates.render(template.body_template, values)
+    text = templates.render(template.body_template, values)
     if recipient.channel == "letter":                                           # v0.9.0: «شماره» / «تاریخ»
-        recipient.message_text = letter_head(db, rfq.code, recipient.language) + recipient.message_text
+        text = letter_head(db, rfq.code, recipient.language) + text
+    return template.id, (naming.subject(rfq.code, subject) if subject else None), text   # v0.9.0: [RFQ-1405-0009] …
+
+
+def render_recipient(db: Session, rfq: Rfq, recipient: RfqRecipient) -> None:
+    recipient.template_id, recipient.subject, recipient.message_text = generated_text(db, rfq, recipient)
+
+
+def text_edited(db: Session, recipient: RfqRecipient) -> bool:
+    """v0.10.1 (0.4.1): the draft text differs from what its template gives — the owner (or an AI draft he chose) wrote
+    it, so a new AI draft asks whether to replace or append."""
+    if recipient.status != "draft" or not (recipient.message_text or "").strip():
+        return False
+    try:
+        _tid, subject, text = generated_text(db, get_rfq(db, recipient.rfq_id), recipient)
+    except AppError:
+        return True
+    return (recipient.message_text or "").strip() != text.strip() or (recipient.subject or "") != (subject or "")
+
+
+def apply_draft(db: Session, recipient_id: uuid.UUID, subject: str | None, body: str | None, mode: str, source: str,
+                actor: str | None = None) -> RfqRecipient:
+    """v0.10.1 (0.4.1): a chosen AI draft into the recipient's subject and message. The subject keeps the «[CODE]»
+    prefix; ``append`` adds the body under the current text and keeps a subject the owner already has."""
+    from app.modules.documents import naming
+
+    recipient = get_recipient(db, recipient_id)
+    rfq = get_rfq(db, recipient.rfq_id)
+    changes: dict = {}
+    if subject and (mode == "replace" or not recipient.subject):
+        changes["subject"] = naming.subject(rfq.code, _strip_code(subject))
+    if body:
+        current = (recipient.message_text or "").rstrip()
+        changes["message_text"] = f"{current}\n\n{body.strip()}" if mode == "append" and current else body.strip()
+    return update_recipient(db, recipient_id, changes, source, actor)
+
+
+def _strip_code(subject: str) -> str:
+    """A model may echo «[RFQ-1405-0009]» (or a wrong code) at the start: one prefix, BOMS's own."""
+    import re
+
+    return re.sub(r"^\s*\[[A-Z]{2,5}-\d{4}-\d{3,5}\]\s*", "", subject).strip()
 
 
 def letter_head(db: Session, code: str | None, lang: str) -> str:
@@ -528,4 +568,5 @@ def recipient_out(db: Session, recipient: RfqRecipient) -> dict:
     return {**row_snapshot(recipient), "party_name_fa": party.name_fa, "party_name_en": party.name_en,
             "contact_name_fa": contact.name_fa if contact else None,
             "contact_name_en": contact.name_en if contact else None,
-            "party_country": party.country_iso2, "mailto": mailto(db, recipient), "email": email_of(db, recipient)}
+            "party_country": party.country_iso2, "mailto": mailto(db, recipient), "email": email_of(db, recipient),
+            "text_edited": text_edited(db, recipient)}

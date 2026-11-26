@@ -376,6 +376,18 @@ def commit_draft(draft_id: uuid.UUID, request: Request, user: CurrentUser, db: D
     return {"result": jsonable(result), **drafts.out(db, drafts.get(db, draft_id))}
 
 
+class ChooseDraftIn(InputModel):
+    mode: Literal["replace", "append"] = "replace"
+
+
+@router.post("/drafts/{draft_id}/choose")
+def choose_draft(draft_id: uuid.UUID, body: ChooseDraftIn, request: Request, user: CurrentUser, db: Db):
+    """v0.10.1 (0.4.1): «انتخاب این متن» on a message draft (subject and body in one step, replace or append)."""
+    result = drafts.choose(db, draft_id, body.mode, request_source(request), user.username)
+    db.commit()
+    return {"result": jsonable(result), **drafts.out(db, drafts.get(db, draft_id))}
+
+
 @router.post("/drafts/{draft_id}/reject")
 def reject_draft(draft_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
     drafts.reject(db, draft_id, request_source(request), user.username)
@@ -401,9 +413,12 @@ class PartyParseIn(InputModel):
 
 
 class DraftMessageIn(InputModel):
-    target_type: Literal["rfq_recipient", "purchase_order"]
+    target_type: Literal["rfq_recipient", "purchase_order", "quote", "inquiry_reply"]
     target_id: uuid.UUID
     language: Literal["en", "fa"] | None = None
+    # v0.10.1 (0.4.1): «دستور به هوش» — free text (the preset chips fill it); none: the usual automatic draft
+    instruction: Annotated[str, Field(max_length=1000)] | None = None
+
 
 
 def _ensure_tasks() -> None:
@@ -447,7 +462,7 @@ def draft_message(body: DraftMessageIn, request: Request, user: CurrentUser, db:
 
     _ensure_tasks()
     draft = builtin.start_drafting(db, target_type=body.target_type, target_id=body.target_id, language=body.language,
-                                   source=request_source(request), actor=user.username)
+                                   instruction=body.instruction, source=request_source(request), actor=user.username)
     db.commit()
     return drafts.out(db, draft)
 

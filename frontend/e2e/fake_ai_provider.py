@@ -39,7 +39,12 @@ def answer(body: dict) -> str:
     if "e-mail signature" in text:
         return json.dumps(PARTY, ensure_ascii=False)
     if "You draft business messages" in text:
-        return json.dumps(DRAFT, ensure_ascii=False)
+        # v0.10.1 (0.4.1): the owner's instruction is echoed into the body, so a check can see that it reached the model
+        import re
+        found = re.search(r"Owner's instruction: (.*?)\\n", text)
+        instruction = found.group(1) if found and found.group(1) != "none" else None
+        body = DRAFT["body"] + (f"\n[instruction: {instruction}]" if instruction else "")
+        return json.dumps({**DRAFT, "body": body}, ensure_ascii=False)
     return "{}"
 
 

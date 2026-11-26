@@ -14,6 +14,7 @@ import type { CaseDetail, CaseQuotes, Outcome, OutcomeReason, Quote, QuoteItem }
 import { DueDatePicker, PartyName } from "../parties/shared";
 import { ContactName, Money, StatusBadge, useInvalidateSourcing, useUnitLabel } from "../sourcing/shared";
 import { CurrencyField, IncotermField } from "../../components/fields";
+import { DraftMessageButton } from "../../components/AiActions";
 
 const OUTCOMES: Outcome[] = ["accepted", "rejected", "no_reply", "negotiating"];
 const SEND_CHANNELS = ["email", "whatsapp", "phone", "in_person", "letter", "other"] as const;
@@ -227,6 +228,8 @@ function QuoteEditor({ quoteId, onChanged, onSelect }: { quoteId: string; onChan
         {q.setad && <Badge tone="accent">{t("quotes.setadNumber", { number: q.setad.setad_number })}</Badge>}</span>}
         actions={<>
           {draft && <Button variant="primary" busy={approve.isPending} disabled={!q.approval?.ok} onClick={() => approve.mutate(undefined)}>{t("quotes.approve")}</Button>}
+          {/* v0.10.1 (0.4.1): the cover message of the quotation, drafted with the owner's instruction */}
+          {["approved", "sent"].includes(q.status) && <DraftMessageButton target="quote" targetId={q.id} language={q.language} />}
           {q.status === "approved" && <Button variant="primary" onClick={() => setDialog("sent")}>{t("quotes.markSent")}</Button>}
           {["sent", "expired", "accepted", "partially_accepted", "rejected"].includes(q.status) && <Button variant="primary" onClick={() => setDialog("outcome")}>{t("quotes.recordOutcome")}</Button>}
           {["approved", "sent", "expired", "partially_accepted", "rejected"].includes(q.status) && <Button onClick={() => action.mutate("revise")}>{t("quotes.revise")}</Button>}

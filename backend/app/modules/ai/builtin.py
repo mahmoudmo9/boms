@@ -509,49 +509,93 @@ def _po_record(db: Session, po_id) -> tuple[str, dict, Any]:
     return record, {"language": po.language}, po.case_id
 
 
-def start_drafting(db: Session, *, target_type: str, target_id, language: str | None, source: str, actor: str | None):
+def _quote_record(db: Session, quote_id) -> tuple[str, dict, Any]:
+    from app.modules.parties import service as parties
+    from app.modules.quotes import service as quotes
+
+    q = quotes.get_quote(db, quote_id)
+    party = parties.get_party(db, q.buyer_party_id) if q.buyer_party_id else None
+    buyer = (party.name_en or party.name_fa) if party else "the buyer"
+    record = f"Quotation (proforma) to {buyer}\n{quotes.summary_text(db, q)}"
+    return record, {"language": q.language}, q.case_id
+
+
+def _inquiry_record(db: Session, inquiry_id) -> tuple[str, dict, Any]:
+    from app.modules.parties import service as parties
+    from app.modules.sourcing import inquiries, items as sourcing_items
+
+    inq = inquiries.get_inquiry(db, inquiry_id)
+    party = parties.get_party(db, inq.party_id) if inq.party_id else None
+    lines = "\n".join(f"- {i.name}: {i.quantity or ''} {i.unit_code or i.unit_text or ''}"
+                      for i in sourcing_items.items_of(db, inquiry_id=inq.id))
+    record = (f"Reply to the inquiry {inq.code or ''} «{inq.subject or ''}» from {(party.name_en or party.name_fa) if party else 'a buyer'}"
+              f"\nReceived {inq.received_at.date().isoformat()}; reply due {inq.response_due_on or ''}\nItems asked for:\n{lines}")
+    lang = "fa" if party is None or (party.country_iso2 or "IR") == "IR" else "en"
+    return record, {"language": lang}, None
+
+
+# v0.10.1 (0.4.1): every drafting action — kind for the prompt and the record it is written from
+DRAFT_TARGETS: dict[str, tuple[str, Any]] = {
+    "rfq_recipient": ("RFQ message", _rfq_record),
+    "purchase_order": ("PO cover message", _po_record),
+    "quote": ("quotation cover message", _quote_record),
+    "inquiry_reply": ("reply to the buyer's inquiry (acknowledge it, say when the quotation follows, ask what is unclear)", _inquiry_record),
+}
+INSTRUCTION_MAX = 1000
+
+
+def start_drafting(db: Session, *, target_type: str, target_id, language: str | None, source: str, actor: str | None,
+                   instruction: str | None = None):
     from app.modules.system import settings
 
-    if target_type not in ("rfq_recipient", "purchase_order"):
-        raise AppError("invalid_target", "Drafts are written for an RFQ recipient or a purchase order", status=422)
-    record, meta, case_id = (_rfq_record if target_type == "rfq_recipient" else _po_record)(db, target_id)
-    lang = language or settings.get(db, "ai.correspondence_language") or meta.get("language") or "en"
+    if target_type not in DRAFT_TARGETS:
+        raise AppError("invalid_target", "Drafts are written for an RFQ recipient, a purchase order, a quote or an inquiry",
+                       status=422)
+    _kind, build = DRAFT_TARGETS[target_type]
+    _record, meta, case_id = build(db, target_id)
+    lang = language or meta.get("language") or settings.get(db, "ai.correspondence_language") or "en"
+    instruction = (instruction or "").strip()[:INSTRUCTION_MAX] or None
     return tasks.start(db, "draft_message", target_type=target_type, target_id=target_id, case_id=case_id,
-                       payload={"language": lang}, source=source, actor=actor)
+                       payload={"language": lang, "instruction": instruction}, source=source, actor=actor)
 
 
 def build_drafting(db: Session, draft, payload: dict, job_id) -> None:
-    record, _meta, case_id = (_rfq_record if draft.target_type == "rfq_recipient" else _po_record)(db, draft.target_id)
+    kind, build = DRAFT_TARGETS[draft.target_type]
+    record, _meta, case_id = build(db, draft.target_id)
     lang = payload.get("language") or "en"
+    instruction = payload.get("instruction")
     outcome = service.run(db, "drafting", prompt_task="drafting", text=record, schema=DRAFT_SCHEMA,
-                          prompt_values={"kind": "RFQ message" if draft.target_type == "rfq_recipient" else "PO cover message",
-                                         "language": {"en": "English", "fa": "Persian"}.get(lang, lang)},
+                          prompt_values={"kind": kind, "language": {"en": "English", "fa": "Persian"}.get(lang, lang),
+                                         "instruction": instruction or "none"},
                           examples=drafts.examples(db, "draft_message"), case_id=case_id, entity_type=draft.target_type,
-                          entity_id=draft.target_id, input_desc={"record": draft.target_type}, job_id=job_id,
-                          max_tokens=3000)
+                          entity_id=draft.target_id, job_id=job_id, max_tokens=3000,
+                          # the owner's instruction is kept with the call in the AI log
+                          input_desc={"record": draft.target_type, "language": lang, "instruction": instruction})
     data = outcome.data or {}
     fields = [{"path": "subject", "label": "موضوع / Subject", "value": data.get("subject"), "confidence": "medium"},
               {"path": "body", "label": "متن / Body", "value": data.get("body"), "confidence": "medium"},
               {"path": "back_translation_fa", "label": "ترجمهٔ برگشتی / Back-translation",
                "value": data.get("back_translation_fa"), "confidence": "low"}]
-    drafts.fill(db, draft, [f for f in fields if f["value"]], payload={"language": lang}, call_id=outcome.call.id)
+    drafts.fill(db, draft, [f for f in fields if f["value"]], payload={"language": lang, "instruction": instruction},
+                call_id=outcome.call.id)
 
 
-def commit_rfq_message(db: Session, draft, values: dict, source: str, actor: str | None) -> dict:
-    """The RFQ recipient's draft message is replaced (the owner then sends it himself)."""
+def commit_rfq_message(db: Session, draft, values: dict, source: str, actor: str | None, options: dict | None = None) -> dict:
+    """The chosen draft fills the RFQ recipient's subject (keeping its «[CODE]») and message — replacing it, or appended
+    under it when the owner asked for that (v0.10.1, 0.4.1). The owner then sends it himself."""
     from app.modules.sourcing import rfq as rfq_mod
 
-    changes = {}
-    if values.get("subject"):
-        changes["subject"] = values["subject"]
-    if values.get("body"):
-        changes["message_text"] = values["body"]
-    rfq_mod.update_recipient(db, uuid.UUID(draft.target_id), changes, source, actor)
-    return {"recipient_id": draft.target_id, "updated": sorted(changes)}
+    from app.modules.sourcing.common import jsonable
+
+    mode = (options or {}).get("mode") or "replace"
+    recipient = rfq_mod.apply_draft(db, uuid.UUID(draft.target_id), values.get("subject"), values.get("body"), mode,
+                                    source, actor)
+    return {"recipient_id": draft.target_id, "mode": mode, "recipient": jsonable(rfq_mod.recipient_out(db, recipient))}
 
 
-def commit_po_message(db: Session, draft, values: dict, source: str, actor: str | None) -> dict:
-    """The PO cover message is copied or opened in the mail client by the owner: nothing is stored or sent."""
+def commit_po_message(db: Session, draft, values: dict, source: str, actor: str | None, options: dict | None = None) -> dict:
+    """The PO / quotation cover message or the inquiry reply is copied or opened in the mail client by the owner:
+    nothing is stored or sent."""
     from urllib.parse import quote
 
     subject, body = values.get("subject") or "", values.get("body") or ""
@@ -571,4 +615,6 @@ def register() -> None:
     drafts.register_committer("party", commit_party)
     drafts.register_committer("rfq_recipient", commit_rfq_message)
     drafts.register_committer("purchase_order", commit_po_message)
+    drafts.register_committer("quote", commit_po_message)
+    drafts.register_committer("inquiry_reply", commit_po_message)   # not "inquiry": that one commits extracted items
 

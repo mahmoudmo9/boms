@@ -3905,6 +3905,46 @@
       },
       "recommend": "For an 8 GB graphics card (RTX 4060) the recommended model is qwen3.5:4b.",
       "cloudWarning": "Models whose name ends in :cloud or -cloud run on ollama.com's servers; do not choose them for private work."
+    },
+    "compose": {
+      "title": "Draft with AI",
+      "hint": "Proposes a text; you choose and edit it, and send it yourself.",
+      "instruction": "Instruction to the AI",
+      "instructionHint": "Optional. Without one, the usual text is drafted.",
+      "instructionPlaceholder": "e.g. more formal and short, also ask lead time and MOQ",
+      "presetGroups": {
+        "tone": "Tone",
+        "length": "Length",
+        "purpose": "Purpose"
+      },
+      "presets": {
+        "tone": {
+          "formal": "formal",
+          "friendly": "friendly"
+        },
+        "length": {
+          "short": "short",
+          "full": "full"
+        },
+        "purpose": {
+          "priceLead": "ask price and lead time",
+          "followUp": "follow-up",
+          "clarify": "clarify what is unclear"
+        }
+      },
+      "generate": "Draft",
+      "regenerate": "Draft again",
+      "neverSent": "A draft only; BOMS sends nothing.",
+      "draftN": "Draft {{n}}",
+      "chosen": "Chosen",
+      "choose": "Use this text",
+      "backTranslation": "Persian back-translation",
+      "replaceTitle": "What about the current text?",
+      "replaceText": "This recipient has edited text. Should the draft replace it or be added at the end?",
+      "replace": "Replace",
+      "append": "Add at the end",
+      "chosenReady": "The chosen text is ready:",
+      "partyLanguage": "The party's language"
     }
   },
   "codes": {

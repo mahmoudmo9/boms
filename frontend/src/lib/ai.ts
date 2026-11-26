@@ -29,7 +29,20 @@ export type Draft = {
   checks: { item: number; kind: string; stated: string; computed: string }[];
   fields: DraftField[];
   result: Record<string, unknown> | null;
+  /** v0.10.1 (0.4.1): a message draft keeps its language and the owner's instruction */
+  payload?: { language?: string; instruction?: string | null } & Record<string, unknown>;
+  created_at?: string;
 };
+
+/** v0.10.1 (0.4.1): the preset chips of «دستور به هوش», by group; a chip adds its text to the instruction. */
+export const INSTRUCTION_PRESETS = { tone: ["formal", "friendly"], length: ["short", "full"], purpose: ["priceLead", "followUp", "clarify"] } as const;
+
+/** Adds a preset's text to the instruction, or takes it out again when it is already there. */
+export function togglePreset(instruction: string, phrase: string): string {
+  const parts = instruction.split(/[،,]\s*/).map((x) => x.trim()).filter(Boolean);
+  const next = parts.includes(phrase) ? parts.filter((x) => x !== phrase) : [...parts, phrase];
+  return next.join("، ");
+}
 
 export type Provider = { id: string; kind: string; label: string; enabled: boolean; base_url: string | null; models: string[]; secret_name: string | null;
   has_key: boolean; status: "unknown" | "ok" | "error"; status_detail: string | null; last_checked_at: string | null; last_latency_ms: number | null;

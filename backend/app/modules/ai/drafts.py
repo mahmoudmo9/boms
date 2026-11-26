@@ -22,17 +22,22 @@ OPEN = ("pending", "ready")
 COMMITTERS: dict[str, Callable] = {}       # target_type -> fn(db, draft, values: dict, source, actor) -> dict
 
 
+KEEP_EARLIER = {"draft_message"}
+
+
 def register_committer(target_type: str, fn: Callable) -> None:
     COMMITTERS[target_type] = fn
 
 
 def create(db: Session, *, task: str, target_type: str, target_id: str | None = None, case_id=None,
            sources: list | None = None, source: str = "api", actor: str | None = None) -> Draft:
-    """A pending draft (the job fills it); earlier open drafts of the same target are superseded."""
+    """A pending draft (the job fills it); earlier open drafts of the same target are superseded — except message drafts
+    (v0.10.1, 0.4.1): «ساخت دوباره» keeps the earlier drafts selectable."""
     target_id = str(target_id) if target_id else None
-    for old in db.scalars(select(Draft).where(Draft.target_type == target_type, Draft.target_id == target_id,
-                                              Draft.task == task, Draft.status.in_(OPEN))):
-        old.status = "superseded"
+    if task not in KEEP_EARLIER:
+        for old in db.scalars(select(Draft).where(Draft.target_type == target_type, Draft.target_id == target_id,
+                                                  Draft.task == task, Draft.status.in_(OPEN))):
+            old.status = "superseded"
     row = Draft(task=task, target_type=target_type, target_id=str(target_id) if target_id else None, case_id=case_id,
                 sources=sources or [], status="pending")
     db.add(row)
@@ -130,7 +135,21 @@ def reject(db: Session, draft_id, source: str, actor: str | None) -> Draft:
     return draft
 
 
-def commit(db: Session, draft_id, source: str, actor: str | None) -> dict:
+def choose(db: Session, draft_id, mode: str, source: str, actor: str | None) -> dict:
+    """v0.10.1 (0.4.1): «انتخاب این متن» on a message draft — its subject and body are accepted as proposed and
+    committed in one step (replace or append); the back-translation is only for reading."""
+    draft = get(db, draft_id)
+    _open(draft)
+    if draft.task != "draft_message":
+        raise AppError("not_a_message", "Only a message draft is chosen whole", status=422)
+    for f in fields_of(db, draft.id):
+        if f.path in ("subject", "body") and f.decision is None:
+            f.decision, f.final = "accepted", f.proposed
+    db.flush()
+    return commit(db, draft_id, source, actor, {"mode": mode})
+
+
+def commit(db: Session, draft_id, source: str, actor: str | None, options: dict | None = None) -> dict:
     """«ثبت»: the accepted and edited values go to the target through its module's services."""
     from app.core.time import utcnow
 
@@ -144,7 +163,7 @@ def commit(db: Session, draft_id, source: str, actor: str | None) -> dict:
     if committer is None:
         raise AppError("no_committer", "BOMS cannot write this kind of draft yet", {"target_type": draft.target_type},
                        status=409)
-    result = committer(db, draft, chosen, SOURCE, actor)
+    result = committer(db, draft, chosen, SOURCE, actor, **({"options": options} if options else {}))
     for f in fields:
         if f.decision == "edited":
             db.add(Correction(task=draft.task, draft_id=draft.id, field=_generic(f.path), proposed=f.proposed,
