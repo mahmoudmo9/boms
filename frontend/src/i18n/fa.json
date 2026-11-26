@@ -4540,7 +4540,9 @@
         "payment_out": "پرداخت {{ref}} · {{amount}}",
         "shipment": "محموله {{ref}}",
         "claim": "ادعای {{claim}} · {{amount}}",
-        "followup_done": "{{ref}}"
+        "followup_done": "{{ref}}",
+        "mail_in": "پیام رسید: {{ref}}",
+        "mail_out": "پیام فرستاده شد: {{ref}}"
       }
     },
     "kpi": {

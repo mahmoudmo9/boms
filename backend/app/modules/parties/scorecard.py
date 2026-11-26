@@ -100,6 +100,17 @@ TIMELINE_SQL = """
       WHERE c.counterparty_id = :p
     UNION ALL SELECT 'followup_done', f.done_at, f.action, NULL, NULL, NULL::uuid FROM core.followup f
       WHERE f.party_id = :p AND f.status = 'done'
+        -- v0.10.1 (0.4.6): not the chases BOMS closed itself when the reply came (the reply is on the line already)
+        AND coalesce(f.done_note, '') NOT LIKE 'offer recorded%' AND coalesce(f.done_note, '') NOT LIKE 'reply recorded%'
+        AND coalesce(f.done_note, '') <> 'chased again'
+    -- v0.10.1 (0.4.6): correspondence — replies, chases and logged messages (not the ones BOMS made for an RFQ, an
+    -- offer, a quote or a PO: those are on the line as that record)
+    UNION ALL SELECT CASE WHEN i.direction = 'in' THEN 'mail_in' ELSE 'mail_out' END, i.occurred_at, i.subject, NULL, NULL, i.case_id
+      FROM core.interaction i WHERE i.party_id = :p
+        AND i.id NOT IN (SELECT interaction_id FROM ops.rfq_recipient WHERE interaction_id IS NOT NULL
+                         UNION SELECT interaction_id FROM ops.supplier_offer WHERE interaction_id IS NOT NULL
+                         UNION SELECT interaction_id FROM ops.quote WHERE interaction_id IS NOT NULL
+                         UNION SELECT interaction_id FROM ops.purchase_order WHERE interaction_id IS NOT NULL)
 """
 
 

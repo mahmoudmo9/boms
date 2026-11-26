@@ -4540,7 +4540,9 @@
         "payment_out": "Paid {{ref}} · {{amount}}",
         "shipment": "Shipment {{ref}}",
         "claim": "{{claim}} claim · {{amount}}",
-        "followup_done": "{{ref}}"
+        "followup_done": "{{ref}}",
+        "mail_in": "Message received: {{ref}}",
+        "mail_out": "Message sent: {{ref}}"
       }
     },
     "kpi": {

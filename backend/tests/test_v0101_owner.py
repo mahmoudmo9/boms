@@ -557,3 +557,12 @@ def test_a_malformed_compound_file_is_not_a_500(client, tmp_path):
     assert _is_msi(bad) is False
     r = client.post("/api/documents", files={"file": (f"broken{tag()}.msg", bad.read_bytes() + tag().encode(), "application/vnd.ms-outlook")})
     assert r.status_code == 201, r.text
+
+
+def test_party_timeline_has_the_correspondence_not_the_closed_chase(client):
+    _case, _items, sup, _person, _address, _rfq, rec = _sent_rfq(client)
+    client.post(f"/api/rfqs/recipients/{rec['id']}/reply", json={"kind": "replied", "body": "We are checking", "subject": "Re: prices"})
+    kinds = [(t["kind"], t["ref"]) for t in client.get(f"/api/parties/{sup['id']}/scorecard").json()["story"]["timeline"]]
+    assert ("mail_in", "Re: prices") in kinds
+    assert not any(k == "followup_done" for k, _ in kinds)                     # the chase BOMS closed is not repeated
+    assert not any(k == "mail_out" for k, _ in kinds)                          # the RFQ itself is on the line as «rfq_sent»

@@ -41,6 +41,18 @@ def at(days: int, hour: int = 10, minute: int = 0) -> str:
     return local.astimezone(timezone.utc).isoformat()
 
 
+def demo_eml(sender: str, subject: str, body: str) -> bytes:
+    """A fictional supplier e-mail with a small PDF datasheet attached (made here, never sent)."""
+    from email.message import EmailMessage
+
+    msg = EmailMessage()
+    msg["From"], msg["To"], msg["Subject"] = f"Li Wen <{sender}>", "purchase@kimia-demo.example.invalid", subject
+    msg.set_content(body)
+    msg.add_attachment(b"%PDF-1.4\n% ATEX datasheet (demo)\n%%EOF\n", maintype="application", subtype="pdf",
+                       filename="ATEX-datasheet-demo.pdf")
+    return msg.as_bytes()
+
+
 class Api:
     """The app's HTTP API in process, signed in as the app user (no network, no browser)."""
 
@@ -61,7 +73,10 @@ class Api:
 
         app.dependency_overrides[current_user] = demo_user
         self.app = app
-        self.client = TestClient(app, base_url="http://127.0.0.1:8765")
+        from app.core.config import get_config
+
+        # the app checks the Host header against its own port (BOMS_HTTP_PORT), so the client says the same port
+        self.client = TestClient(app, base_url=f"http://127.0.0.1:{get_config().http_port}")
         self.client.cookies.set("boms_csrf", CSRF)
 
     def close(self) -> None:
@@ -86,6 +101,15 @@ class Api:
 
     def put(self, path, body):
         return self("PUT", path, body)
+
+    def upload(self, filename: str, data: bytes, mime: str) -> dict:
+        """A file into the document store (an e-mail saved as .eml, a datasheet)."""
+        r = self.client.post("/api/documents", files={"file": (filename, data, mime)}, headers={"X-CSRF-Token": CSRF})
+        if r.status_code == 409:
+            return {"id": r.json()["error"]["details"]["id"]}
+        if r.status_code != 201:
+            raise DemoError(f"upload {filename} -> {r.status_code}: {r.text[:400]}")
+        return r.json()
 
 
 class Demo:
@@ -128,13 +152,14 @@ class Demo:
         p("water", ["buyer"], "آب‌وفاضلاب البرز نمونه", "Alborz Water Demo", "IR", national_id="14000000103",
           economic_code="411000000103")
         p("gulf", ["buyer"], "پیمانکاری خلیج نمونه", "Gulf Demo Contracting LLC", "AE")
-        p("ningbo", ["supplier"], "شیرآلات نینگبو نمونه", "Ningbo Demo Valves Co.", "CN")
-        p("hamburg", ["supplier"], "پمپ هامبورگ نمونه", "Hamburg Demo Pumps GmbH", "DE")
+        # v0.10.1 (0.4.2): a factory and a distributor; both have the history for every KPI tile
+        p("ningbo", ["manufacturer"], "شیرآلات نینگبو نمونه", "Ningbo Demo Valves Co.", "CN", supplier_type="manufacturer")
+        p("hamburg", ["supplier"], "پمپ هامبورگ نمونه", "Hamburg Demo Pumps GmbH", "DE", supplier_type="distributor")
         p("istanbul", ["supplier"], "لوله استانبول نمونه", "Istanbul Demo Pipes A.S.", "TR")
         p("shanghai", ["supplier"], "الکتروموتور شانگهای نمونه", "Shanghai Demo Motors Ltd.", "CN")
-        p("caspian", ["other"], "کشتیرانی خزر نمونه", "Caspian Demo Lines", "IR",
+        p("caspian", ["carrier"], "کشتیرانی خزر نمونه", "Caspian Demo Lines", "IR",
           tracking_url_template="https://tracking.example.invalid/track?bl={number}")
-        p("skyline", ["other"], "هوایی اسکای‌لاین نمونه", "Skyline Demo Air Cargo", "AE")
+        p("skyline", ["carrier"], "هوایی اسکای‌لاین نمونه", "Skyline Demo Air Cargo", "AE")
         p("forwarder", ["forwarder"], "ترابری پارس نمونه", "Pars Demo Logistics", "IR")
         p("inspector", ["other"], "بازرسی کیفیت آریا نمونه", "Arya Demo Inspection", "IR")
         self.contact(self.p["petro"], "مهندس رحیمی", "Eng. Rahimi")
@@ -168,7 +193,9 @@ class Demo:
             self.api.post(f"/api/rfqs/recipients/{rec['id']}/mark-sent", {})
         return rfq
 
-    def offer(self, case, supplier, rows, currency, valid=30, **extra):
+    def offer(self, case, supplier, rows, currency, valid=30, rfq=None, **extra):
+        if rfq is not None:     # v0.10.1 (0.4.6): the priced reply answers its RFQ recipient (and closes its chase)
+            extra["rfq_recipient_id"] = next(r["id"] for r in rfq["recipients"] if r["party_id"] == self.p[supplier]["id"])
         body = {"case_id": case["id"], "party_id": self.p[supplier]["id"], "channel": "email", "currency": currency,
                 "valid_until": day(valid), "items": rows, "no_followup_reason": "مقایسهٔ پیشنهادها", "incoterm": "CFR",
                 "lead_time_days": 35, **extra}
@@ -399,10 +426,29 @@ class Demo:
         case, items = self.case("rfq", "الکتروموتور ضدانفجار — پیمانکاری خلیج", "gulf", [
             {"name": "الکتروموتور ضدانفجار ۵۵ کیلووات", "quantity": "8", "unit_code": "pc"},
             {"name": "تابلو راه‌انداز نرم", "quantity": "8", "unit_code": "pc"}])
-        self.rfq(case, items, ["shanghai", "hamburg", "ningbo"])
+        rfq = self.rfq(case, items, ["shanghai", "hamburg", "ningbo"])
         self.offer(case, "shanghai", [{"line_item_id": items[0]["id"], "unit_price": "4100"},
-                                      {"line_item_id": items[1]["id"], "unit_price": "1300"}], "USD")
-        self.offer(case, "hamburg", [{"line_item_id": items[0]["id"], "unit_price": "4650"}], "EUR")
+                                      {"line_item_id": items[1]["id"], "unit_price": "1300"}], "USD", rfq=rfq)
+        self.offer(case, "hamburg", [{"line_item_id": items[0]["id"], "unit_price": "4650"}], "EUR", rfq=rfq)
+        self.correspondence(rfq)
+
+    def correspondence(self, rfq) -> None:
+        """v0.10.1 (0.4.6): the factory replies without a price (saved from its mail client as .eml, with a datasheet):
+        it asks a question; then one chase. Two priced replies came in above."""
+        ningbo = next(r for r in rfq["recipients"] if r["party_id"] == self.p["ningbo"]["id"])
+        address = "li.wen@ningbo-valves.example.invalid"
+        self.api.post("/api/contacts", {"party_id": self.p["ningbo"]["id"], "name_en": "Ms. Li Wen (sales)",
+                                        "methods": [{"type": "email", "value": address}]})
+        doc = self.api.upload("Re-RFQ-motor.eml", demo_eml(address, f"Re: [{rfq['code']}] Request for Quotation",
+                                                           "Dear Sir,\nBefore we quote: is the motor for zone 1 or zone 2?\n"
+                                                           "Our ATEX datasheet is attached.\nBest regards,\nLi Wen"),
+                              "message/rfc822")
+        self.api.post(f"/api/rfqs/recipients/{ningbo['id']}/reply", {
+            "kind": "question", "body": "Before we quote: is the motor for zone 1 or zone 2? Our ATEX datasheet is attached.",
+            "subject": f"Re: [{rfq['code']}] Request for Quotation", "raw_document_id": doc["id"], "next_due_on": day(2)})
+        self.api.post(f"/api/rfqs/recipients/{ningbo['id']}/chase", {
+            "subject": f"[{rfq['code']}] Zone 1 — please quote", "body": "Dear Ms. Li Wen,\nThe motors are for zone 1. Please send your price.",
+            "next_due_on": day(3)})
 
     def inquiry(self) -> None:
         """Deal 7: a fresh inquiry, items only."""
