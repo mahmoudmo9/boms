@@ -190,6 +190,11 @@ DEFINITIONS: dict[str, tuple[Any, Callable[[Any], Any]]] = {
     "backup.archive_path": (None, _optional_path),
     "upload.max_mb": (100, _int_range(1, 2048)),
     "parties.stale_lead_days": (14, _int_range(1, 365)),
+    # v0.10.1 (0.4.3): roles and stages that move by themselves; each rule can be switched off
+    "parties.dormant_days": (180, _int_range(1, 3650)),
+    **{f"parties.rules.{rule}": (True, _bool) for rule in ("roles", "buyer_contacted", "buyer_in_conversation", "buyer_inquiry",
+                                                        "buyer_quoted", "buyer_won", "supplier_contacted", "supplier_responded",
+                                                        "supplier_in_use", "supplier_qualified", "dormant")},
     "company.name": ("", _short_text),
     "company.signature": ({"fa": "", "en": ""}, _signature),
     "costing.fx_max_age_days": (3, _int_range(0, 365)),

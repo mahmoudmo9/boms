@@ -314,7 +314,8 @@ def mark_sent(db: Session, po_id: uuid.UUID, data: dict, source: str, actor: str
         "party_id": po.supplier_party_id, "contact_id": po.contact_id, "channel": CHANNELS[data.get("channel") or "email"],
         "direction": "out", "occurred_at": sent_at, "subject": f"Purchase order {po.number}",
         "body": f"{po.number}: {po.total} {po.currency}",
-        "followup": {"action": f"پیگیری تأیید سفارش {po.number}", "due_on": due}}, source, actor)
+        "followup": {"action": f"پیگیری تأیید سفارش {po.number}", "due_on": due},
+        "case_id": po.case_id, "ref_type": "purchase_order", "ref_id": po.id}, source, actor)
     followups.adopt(db, case_id=po.case_id, purpose="po_confirm", ref_id=po.id, followup_id=followup.id)
     po.status, po.sent_at, po.interaction_id = "sent", sent_at, interaction.id
     po.prepayment_override_reason = override
@@ -327,6 +328,9 @@ def mark_sent(db: Session, po_id: uuid.UUID, data: dict, source: str, actor: str
 
         set_in_progress(db, get_sales_order(db, po.sales_order_id), "purchase_order_sent", source, actor)
     _process_hint(db, po, "po_sent", source, actor)
+    parties.happened(db, "purchase_order", po.supplier_party_id, cause={"entity": "purchase_order", "id": str(po.id),
+                                                                        "code": po.number, "case_id": str(po.case_id)},
+                     source=source, actor=actor)                          # v0.10.1 (0.4.3): issued -> supplier in use
     return po
 
 

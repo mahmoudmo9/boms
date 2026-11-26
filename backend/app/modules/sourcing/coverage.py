@@ -224,4 +224,8 @@ def select_offer(db: Session, item_id: uuid.UUID, offer_item_id: uuid.UUID | Non
     events.record(db, "line_item", item.id, "select_offer" if offer_item_id else "unselect_offer", jsonable({
         "old_offer_item_id": old, "new_offer_item_id": offer_item_id, "reason": reason,
         "old_status": old_status, "new_status": item.status}), source, actor=actor)
+    if offer_item_id is not None:                                         # v0.10.1 (0.4.3): supplier -> in use
+        parties.happened(db, "offer_selected", offer.party_id, cause={"entity": "offer", "id": str(offer.id),
+                                                                       "case_id": str(item.case_id) if item.case_id else None},
+                         source=source, actor=actor)
     return item

@@ -1,4 +1,6 @@
 """v0.10.1 section 0.4: the owner's findings from using v0.10.0 on Windows."""
+import uuid
+
 from sqlalchemy import text
 
 from tests.test_parties import make_party, tag
@@ -176,6 +178,371 @@ def test_migration_0024_keeps_roles_on_downgrade_and_back():
         with engine.connect() as conn:
             assert conn.execute(text("SELECT count(*) FROM core.funnel_stage WHERE role IN ('manufacturer', 'carrier')")).scalar() == 9
             assert conn.execute(text("SELECT count(*) FROM core.party WHERE name_en = 'Factory'")).scalar() == 1
+        engine.dispose()
+    finally:
+        dbadmin.drop_database(superuser_conninfo(), name)
+
+
+# ---- 0.4.3 automatic roles and stages ---------------------------------------------------------------------------------
+
+def _roles(client, party_id):
+    return {r["role"]: (r["stage"], r["stage_set_by"]) for r in client.get(f"/api/parties/{party_id}").json()["roles"]}
+
+
+def _auto(client, party_id):
+    return client.get(f"/api/parties/{party_id}/automatic-changes").json()["changes"]
+
+
+def _rules_on(client, **flags):
+    client.patch("/api/settings", json={f"parties.rules.{k}": v for k, v in flags.items()})
+
+
+def test_an_inquiry_adds_the_buyer_role_and_moves_its_stage_with_a_cause(client):
+    from tests.test_sourcing_inquiries import inquiry
+
+    _rules_on(client, roles=True, buyer_inquiry=True)
+    p = make_party(client, name_en=f"New buyer {tag()}")                       # no role yet
+    inq = inquiry(client, party_id=p["id"])
+    assert _roles(client, p["id"])["buyer"] == ("inquiry_received", "auto")
+    changes = _auto(client, p["id"])
+    assert [c["action"] for c in changes] == ["stage_auto", "role_auto"]
+    assert changes[0]["cause"] == {"entity": "inquiry", "id": inq["id"], "code": inq["code"], "kind": "inquiry"}
+    assert changes[0]["old_stage"] == "new_lead" and changes[0]["revertible"] is True
+
+
+def test_stages_move_forward_only_and_never_out_of_terminal_or_manual(client):
+    from tests.test_sourcing_inquiries import inquiry
+
+    _rules_on(client, roles=True, buyer_inquiry=True, buyer_contacted=True, buyer_in_conversation=True)
+    p = make_party(client, name_en=f"Forward {tag()}", roles=["buyer"])
+    inquiry(client, party_id=p["id"])                                           # -> inquiry_received
+    client.post("/api/interactions", json={"party_id": p["id"], "channel": "email", "direction": "out", "body": "Hello", "no_followup_reason": "test"})
+    assert _roles(client, p["id"])["buyer"][0] == "inquiry_received"           # not back to «contacted»
+    manual = make_party(client, name_en=f"Manual {tag()}", roles=["buyer"])
+    client.post(f"/api/parties/{manual['id']}/roles/buyer/stage", json={"stage": "contacted"})
+    inquiry(client, party_id=manual["id"])
+    assert _roles(client, manual["id"])["buyer"] == ("contacted", "manual")    # the owner's stage stays
+    lost = make_party(client, name_en=f"Lost {tag()}", roles=["supplier"])
+    client.post(f"/api/parties/{lost['id']}/roles/supplier/stage", json={"stage": "blacklisted", "reason": "fraud"})
+    from app.modules.parties.models import PartyRole  # noqa: F401  (the row is terminal and manual)
+    from tests.test_sourcing_rfq import make_case, offer_body
+    case, items = make_case(client, [{"name": "Pump", "quantity": "1"}])
+    client.post("/api/offers", json=offer_body(case, lost, [{"line_item_id": items[0]["id"], "unit_price": "10"}]))
+    assert _roles(client, lost["id"])["supplier"][0] == "blacklisted"
+
+
+def test_supplier_side_rules_and_the_switch_per_rule(client):
+    from tests.test_sourcing_rfq import make_case, new_rfq, offer_body
+
+    _rules_on(client, roles=True, supplier_contacted=True, supplier_responded=False)
+    m = make_party(client, name_en=f"Factory {tag()}", roles=["manufacturer"], supplier_type="manufacturer")
+    case, items = make_case(client, [{"name": "Valve", "quantity": "2"}])
+    rfq = new_rfq(client, case, items, [{"party_id": m["id"]}])
+    client.post(f"/api/rfqs/recipients/{rfq['recipients'][0]['id']}/mark-sent", json={"no_followup_reason": "test"})
+    roles = _roles(client, m["id"])
+    assert roles == {"manufacturer": ("contacted", "auto")}                     # no extra «supplier» role on a factory
+    client.post("/api/offers", json=offer_body(case, m, [{"line_item_id": items[0]["id"], "unit_price": "10"}]))
+    assert _roles(client, m["id"])["manufacturer"][0] == "contacted"           # the rule is switched off
+    _rules_on(client, supplier_responded=True)
+    client.post("/api/offers", json=offer_body(case, m, [{"line_item_id": items[0]["id"], "unit_price": "9"}]))
+    assert _roles(client, m["id"])["manufacturer"][0] == "responded"
+    fresh = make_party(client, name_en=f"Unknown {tag()}")                      # used as a supplier: gets the role
+    client.post("/api/offers", json=offer_body(case, fresh, [{"line_item_id": items[0]["id"], "unit_price": "8"}]))
+    assert _roles(client, fresh["id"])["supplier"] == ("responded", "auto")
+
+
+def test_revert_restores_the_stage_once_and_counts_as_the_owners(client):
+    from tests.test_sourcing_inquiries import inquiry
+
+    _rules_on(client, roles=True, buyer_inquiry=True)
+    p = make_party(client, name_en=f"Revert {tag()}", roles=["buyer"])
+    inquiry(client, party_id=p["id"])
+    stage_event = _auto(client, p["id"])[0]
+    r = client.post(f"/api/parties/{p['id']}/automatic-changes/{stage_event['event_id']}/revert")
+    assert r.status_code == 200, r.text
+    assert _roles(client, p["id"])["buyer"] == ("new_lead", "manual")
+    assert client.post(f"/api/parties/{p['id']}/automatic-changes/{stage_event['event_id']}/revert").status_code == 409
+    inquiry(client, party_id=p["id"])                                           # the rule does not redo it
+    assert _roles(client, p["id"])["buyer"][0] == "new_lead"
+    q = make_party(client, name_en=f"Role revert {tag()}")
+    inquiry(client, party_id=q["id"])
+    role_event = next(c for c in _auto(client, q["id"]) if c["action"] == "role_auto")
+    stage = next(c for c in _auto(client, q["id"]) if c["action"] == "stage_auto")
+    client.post(f"/api/parties/{q['id']}/automatic-changes/{stage['event_id']}/revert")
+    assert client.post(f"/api/parties/{q['id']}/automatic-changes/{role_event['event_id']}/revert").status_code == 200
+    assert "buyer" not in _roles(client, q["id"])
+
+
+def test_dormant_job_and_the_next_activity_moves_it_back(client, db):
+    from datetime import timedelta
+
+    from app.modules.parties import clock, rules
+    from tests.test_sourcing_inquiries import inquiry
+
+    _rules_on(client, roles=True, buyer_inquiry=True, dormant=True, buyer_contacted=True)
+    client.patch("/api/settings", json={"parties.dormant_days": 30})
+    p = make_party(client, name_en=f"Sleepy {tag()}", roles=["buyer"])
+    inquiry(client, party_id=p["id"])
+    changes = rules.make_dormant(db, now=clock.now() + timedelta(days=31), party_ids={uuid.UUID(p["id"])})
+    db.commit()
+    assert any(c.party_id == uuid.UUID(p["id"]) for c in changes)
+    assert _roles(client, p["id"])["buyer"] == ("dormant", "auto")
+    client.post("/api/interactions", json={"party_id": p["id"], "channel": "email", "direction": "out", "body": "Back", "no_followup_reason": "test"})
+    assert _roles(client, p["id"])["buyer"][0] == "inquiry_received"           # back where it was (not «contacted»)
+    client.patch("/api/settings", json={"parties.dormant_days": 180})
+
+
+def test_recompute_preview_changes_nothing_until_confirmed(client, db):
+    from tests.test_sourcing_inquiries import inquiry
+
+    _rules_on(client, roles=False, buyer_inquiry=False)                       # history made with the rules off
+    p = make_party(client, name_en=f"History {tag()}")
+    inquiry(client, party_id=p["id"])
+    assert _roles(client, p["id"]) == {}
+    _rules_on(client, roles=True, buyer_inquiry=True)
+    preview = client.get("/api/parties/rules/recompute").json()
+    mine = [x for x in preview["proposed"] if x["party_id"] == p["id"]]
+    assert mine == [{"party_id": p["id"], "party_name_fa": None, "party_name_en": p["name_en"], "role": "buyer", "from": None,
+                     "to": "inquiry_received", "added": True, "cause": mine[0]["cause"]}]
+    assert mine[0]["cause"]["kind"] == "inquiry"
+    assert _roles(client, p["id"]) == {}                                        # the preview changed nothing
+    out = client.post("/api/parties/rules/recompute").json()
+    assert out["confirmed"] is True and out["applied"] >= 1
+    assert _roles(client, p["id"])["buyer"] == ("inquiry_received", "auto")
+    assert {c["action"] for c in _auto(client, p["id"])} == {"role_auto", "stage_auto"}
+
+
+def test_carrier_and_forwarder_of_a_shipment_get_their_role(client):
+    lines = make_party(client, name_en=f"Lines {tag()}")
+    fwd = make_party(client, name_en=f"Fwd {tag()}")
+    _rules_on(client, roles=True)
+    case = client.post("/api/cases", json={"title": f"Ship {tag()}"}).json()
+    r = client.post("/api/shipments", json={"case_id": case["id"], "mode": "sea", "carrier_party_id": lines["id"],
+                                            "forwarder_party_id": fwd["id"]})
+    assert r.status_code == 201, r.text
+    assert _roles(client, lines["id"]) == {"carrier": ("active", "initial")}
+    assert _roles(client, fwd["id"]) == {"forwarder": ("active", "initial")}
+
+
+def test_lost_is_suggested_when_every_quote_was_rejected(client):
+    from tests.test_quotes import sent_quote
+
+    case, items, party, _sheet, quote = sent_quote(client)
+    assert client.get(f"/api/parties/{party['id']}/automatic-changes").json()["suggest_lost"] is None
+    reason = client.get("/api/quotes/outcome-reasons").json()[0]["code"]
+    r = client.put(f"/api/quotes/{quote['id']}/outcomes", json={"items": [{"quote_item_id": i["id"], "outcome": "rejected", "outcome_reason": reason}
+                                                                          for i in quote["items"]]})
+    assert r.status_code == 200, r.text
+    assert client.get(f"/api/parties/{party['id']}/automatic-changes").json()["suggest_lost"] == {"quotes": 1}
+
+
+# ---- 0.4.6 case correspondence, .eml intake, reply and chase ----------------------------------------------------------
+
+def _eml(subject="[X] Re: RFQ", sender="Wang Lei <wang@valves.example>", body="We will quote next week.", html=None,
+         attachments=(), charset="utf-8"):
+    from email.message import EmailMessage
+    from email.utils import format_datetime
+    from datetime import datetime, timezone
+
+    msg = EmailMessage()
+    msg["From"], msg["To"], msg["Cc"] = sender, "owner@trading.example", "boss@valves.example"
+    msg["Subject"] = subject
+    msg["Date"] = format_datetime(datetime(2026, 11, 20, 9, 30, tzinfo=timezone.utc))
+    if html and body is None:
+        msg.set_content(html, subtype="html", charset=charset)
+    else:
+        msg.set_content(body, charset=charset)
+        if html:
+            msg.add_alternative(html, subtype="html")
+    for name, data, mime in attachments:
+        maintype, subtype = mime.split("/")
+        msg.add_attachment(data, maintype=maintype, subtype=subtype, filename=name)
+    return msg.as_bytes()
+
+
+def _upload(client, data, name="reply.eml"):
+    r = client.post("/api/documents", files={"file": (name, data + f"\n{tag()}".encode() if name.endswith(".eml") else data, "message/rfc822")})
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+def test_eml_parse_plain_html_attachments_and_encoded_headers():
+    from app.modules.parties import eml
+
+    p = eml.parse(_eml(subject="[RFQ-1405-0012] پاسخ استعلام شیر", attachments=[("offer.pdf", b"%PDF-1.4 x", "application/pdf")]))
+    assert p["subject"] == "[RFQ-1405-0012] پاسخ استعلام شیر" and p["codes"] == ["RFQ-1405-0012"]
+    assert p["from_address"] == "wang@valves.example" and p["from_name"] == "Wang Lei"
+    assert p["to"] == ["owner@trading.example"] and p["cc"] == ["boss@valves.example"]
+    assert p["body"] == "We will quote next week." and p["body_kind"] == "plain"
+    assert [(a["filename"], a["size"]) for a in p["attachments"]] == [("offer.pdf", 10)]
+    assert p["date"].isoformat() == "2026-11-20T09:30:00+00:00"
+    only_html = eml.parse(_eml(body=None, html="<html><head><style>x{}</style></head><body><p>Dear Sir,</p><p>Price: <b>1&nbsp;200</b> USD</p></body></html>"))
+    assert only_html["body_kind"] == "html" and only_html["body"] == "Dear Sir,\n\nPrice: 1 200 USD"
+    both = eml.parse(_eml(body="plain wins", html="<p>html</p>"))
+    assert both["body"] == "plain wins"                                              # plain text preferred
+    # windows-1256 has the Persian پ گ but not «ی» or Persian digits: the Arabic yeh, Latin digits
+    arabic = eml.parse(_eml(subject="پاسخ قيمت گرد", body="قيمت 1200 دلار", charset="windows-1256"))
+    assert arabic["subject"] == "پاسخ قيمت گرد" and arabic["body"] == "قيمت 1200 دلار"   # another charset
+
+
+def test_msg_and_non_mail_are_refused():
+    import pytest
+
+    from app.core.errors import AppError
+    from app.modules.parties import eml
+
+    with pytest.raises(AppError) as e:
+        eml.parse(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\0" * 100, "reply.msg")
+    assert e.value.code == "msg_not_supported" and "Download message" in e.value.details["gmail"]
+    with pytest.raises(AppError) as e:
+        eml.parse(b"just text", "note.eml")
+    assert e.value.code == "not_an_email"
+
+
+def _sent_rfq(client):
+    from tests.test_sourcing_rfq import make_case, new_rfq, supplier
+
+    case, items = make_case(client, [{"name": "Valve", "quantity": "2"}])
+    sup = supplier(client)
+    address = f"w{tag()}@valves.example"
+    person = client.post("/api/contacts", json={"party_id": sup["id"], "name_en": "Wang Lei", "methods": [{"type": "email", "value": address}]}).json()
+    rfq = new_rfq(client, case, items, [{"party_id": sup["id"], "channel": "email", "contact_id": person["id"]}])
+    rec = rfq["recipients"][0]
+    client.post(f"/api/rfqs/recipients/{rec['id']}/mark-sent", json={"followup": {"action": "Chase RFQ response", "due_on": "2099-01-05"}})
+    return case, items, sup, person, address, rfq, rec
+
+
+def _open_chases(client, party_id):
+    return [f for f in client.get("/api/followups", params={"party_id": party_id, "status": "open"}).json()["items"]]
+
+
+def test_eml_preview_matches_code_and_sender_and_records_on_the_case(client):
+    case, _items, sup, person, address, rfq, rec = _sent_rfq(client)
+    doc = _upload(client, _eml(subject=f"Re: [{rfq['code']}] Request for Quotation", sender=f"Wang Lei <{address}>",
+                               attachments=[("price.pdf", b"%PDF-1.4 " + tag().encode(), "application/pdf")]))
+    pre = client.post("/api/interactions/eml/preview", json={"document_id": doc}).json()
+    m = pre["match"]
+    assert (m["case_id"], m["ref_type"], m["ref_id"], m["party_id"], m["contact_id"], m["known_sender"]) == (
+        case["id"], "rfq_recipient", rec["id"], sup["id"], person["id"], True)
+    assert [a["filename"] for a in pre["attachments"]] == ["price.pdf"]
+    r = client.post("/api/interactions/eml", json={"document_id": doc, "party_id": sup["id"], "contact_id": person["id"],
+                                                   "case_id": m["case_id"], "ref_type": m["ref_type"], "ref_id": m["ref_id"],
+                                                   "no_followup_reason": "offer follows"})
+    assert r.status_code == 201, r.text
+    thread = client.get(f"/api/interactions/case/{case['id']}").json()
+    mine = next(i for i in thread["items"] if i["id"] == r.json()["interaction"]["id"])
+    assert mine["direction"] == "in" and mine["ref_code"] == rfq["code"] and mine["raw_document_id"] == doc
+    assert {f["role"] for f in mine["files"]} == {"source", "attachment"}            # the .eml and its attachment
+    assert any(i["direction"] == "out" and i["ref_type"] == "rfq_recipient" for i in thread["items"])   # the RFQ itself
+    assert [p["id"] for p in thread["parties"]] == [sup["id"]]
+
+
+def test_unknown_sender_is_added_to_the_party_contacts(client):
+    case, _items, sup, _person, _address, rfq, _rec = _sent_rfq(client)
+    stranger = f"sales{tag()}@valves.example"
+    doc = _upload(client, _eml(subject=f"[{rfq['code']}] question", sender=f"Li Na <{stranger}>"))
+    pre = client.post("/api/interactions/eml/preview", json={"document_id": doc}).json()
+    assert pre["match"]["known_sender"] is False and pre["match"]["case_id"] == case["id"]
+    r = client.post("/api/interactions/eml", json={"document_id": doc, "party_id": sup["id"], "add_contact": True,
+                                                   "case_id": case["id"], "no_followup_reason": "noted"})
+    assert r.status_code == 201, r.text
+    contacts = client.get(f"/api/parties/{sup['id']}").json()["contacts"]
+    added = next(c for c in contacts if c["id"] == r.json()["contact_id"])
+    assert added["name_en"] == "Li Na" and added["methods"][0]["value"] == stranger
+    assert client.post("/api/interactions/eml/preview", json={"document_id": doc}).json()["match"]["known_sender"] is True
+
+
+def test_msg_upload_is_refused_with_the_steps(client):
+    doc = _upload(client, b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + tag().encode() + b"\0" * 600, "reply.msg")
+    r = client.post("/api/interactions/eml/preview", json={"document_id": doc})
+    assert r.status_code == 415 and r.json()["error"]["code"] == "msg_not_supported"
+
+
+def test_reply_without_price_closes_the_chase_and_sets_the_status(client):
+    case, _items, sup, _person, _address, _rfq, rec = _sent_rfq(client)
+    assert len(_open_chases(client, sup["id"])) == 1
+    r = client.post(f"/api/rfqs/recipients/{rec['id']}/reply", json={"kind": "question", "body": "Which material?", "next_due_on": "2099-02-01"})
+    assert r.status_code == 200, r.text
+    assert r.json()["recipient"]["status"] == "question" and len(r.json()["closed_followups"]) == 1
+    open_now = _open_chases(client, sup["id"])
+    assert [f["due_on"] for f in open_now] == ["2099-02-01"]                         # a question: a new due date
+    r = client.post(f"/api/rfqs/recipients/{rec['id']}/reply", json={"kind": "declined", "body": "No stock."})
+    assert r.json()["recipient"]["status"] == "declined" and _open_chases(client, sup["id"]) == []   # a decline: none
+    thread = client.get(f"/api/interactions/case/{case['id']}").json()["items"]
+    assert [i["excerpt"] for i in thread if i["direction"] == "in"] == ["No stock.", "Which material?"]
+
+
+def test_an_offer_closes_the_open_chase(client):
+    from tests.test_sourcing_rfq import offer_body
+
+    case, items, sup, _person, _address, _rfq, rec = _sent_rfq(client)
+    client.post("/api/offers", json=offer_body(case, sup, [{"line_item_id": items[0]["id"], "unit_price": "10"}], rfq_recipient_id=rec["id"]))
+    assert _open_chases(client, sup["id"]) == []
+
+
+def test_chase_records_the_interaction_reschedules_and_counts(client):
+    case, _items, sup, _person, _address, _rfq, rec = _sent_rfq(client)
+    r = client.post(f"/api/rfqs/recipients/{rec['id']}/chase", json={"subject": "Reminder", "body": "Any news?", "next_due_on": "2099-01-20"})
+    assert r.status_code == 200, r.text
+    assert r.json()["recipient"]["chase_count"] == 1 and r.json()["recipient"]["last_chased_at"]
+    assert [f["due_on"] for f in _open_chases(client, sup["id"])] == ["2099-01-20"]  # rescheduled, not added
+    client.post(f"/api/rfqs/recipients/{rec['id']}/chase", json={"body": "Again", "next_due_on": "2099-01-27"})
+    assert _recipient(client, _rfq["id"])["chase_count"] == 2
+    outs = [i for i in client.get(f"/api/interactions/case/{case['id']}").json()["items"] if i["direction"] == "out"]
+    assert [i["excerpt"] for i in outs][:2] == ["Again", "Any news?"]
+
+
+def test_quote_chase_is_recorded_on_the_case(client):
+    from tests.test_quotes import sent_quote
+
+    case, _items, party, _sheet, quote = sent_quote(client)
+    r = client.post(f"/api/quotes/{quote['id']}/chase", json={"body": "Did you review our proforma?", "next_due_on": "2099-03-01"})
+    assert r.status_code == 200, r.text
+    items = client.get(f"/api/interactions/case/{case['id']}").json()["items"]
+    assert items[0]["ref_type"] == "quote" and items[0]["ref_code"] == quote["number"] and items[0]["direction"] == "out"
+
+
+def test_ai_chase_draft_knows_what_was_sent(client, db, ai):  # noqa: F811
+    _case, _items, _sup, _person, address, rfq, rec = _sent_rfq(client)
+    draft_id = _draft(client, db, ai, rec["id"], {"subject": "Reminder", "body": "Kindly reply.", "back_translation_fa": "لطفاً پاسخ دهید"},
+                      target_type="rfq_chase", instruction="کوتاه")
+    prompt = ai.bodies[-1]["messages"][1]["content"]
+    assert "Sent on" in prompt and "Chases sent before: 0" in prompt and "Owner's instruction: کوتاه" in prompt
+    out = client.post(f"/api/ai/drafts/{draft_id}/choose", json={}).json()["result"]
+    assert out["subject"] == f"[{rfq['code']}] Reminder" and out["mailto"].startswith(f"mailto:{address}?")
+
+
+def test_migration_0026_backfills_the_case_of_interactions():
+    from alembic import command
+    from sqlalchemy import create_engine
+
+    from app.cli import alembic_config
+    from app.core import dbadmin
+    from app.core.config import get_config
+    from tests.conftest import create_empty_database, superuser_conninfo
+
+    name = "boms_test_mig_0026"
+    create_empty_database(name)
+    url = get_config().db_url(name)
+    cfg = alembic_config(url)
+    try:
+        command.upgrade(cfg, "0025")
+        engine = create_engine(url)
+        with engine.begin() as conn:
+            q = lambda sql, **p: conn.execute(text(sql), p).scalar()   # noqa: E731
+            party = q("INSERT INTO core.party (name_en) VALUES ('S') RETURNING id")
+            case = q("INSERT INTO ops.case (title) VALUES ('C') RETURNING id")
+            i1 = q("INSERT INTO core.interaction (party_id, channel, direction, occurred_at, no_followup_reason) VALUES (:p, 'email', 'out', now(), 'x') RETURNING id", p=party)
+            i2 = q("INSERT INTO core.interaction (party_id, channel, direction, occurred_at, no_followup_reason) VALUES (:p, 'email', 'in', now(), 'x') RETURNING id", p=party)
+            rfq = q("INSERT INTO ops.rfq (case_id, title) VALUES (:c, 'R') RETURNING id", c=case)
+            rec = q("INSERT INTO ops.rfq_recipient (rfq_id, party_id, channel, language, status, sent_at, interaction_id) "
+                    "VALUES (:r, :p, 'email', 'en', 'sent', now(), :i) RETURNING id", r=rfq, p=party, i=i1)
+        command.upgrade(cfg, "head")
+        with engine.connect() as conn:
+            rows = {r.id: (r.case_id, r.ref_type, r.ref_id) for r in conn.execute(text("SELECT id, case_id, ref_type, ref_id FROM core.interaction"))}
+        assert rows[i1] == (case, "rfq_recipient", rec) and rows[i2] == (None, None, None)
+        command.downgrade(cfg, "0025")
+        command.upgrade(cfg, "head")
         engine.dispose()
     finally:
         dbadmin.drop_database(superuser_conninfo(), name)

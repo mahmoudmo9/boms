@@ -28,6 +28,37 @@ def get_interaction(db: Session, interaction_id: uuid.UUID) -> Interaction:
     return row
 
 
+# v0.10.1 (0.4.6): the case of each record an interaction can concern (read-only lookups)
+REF_CASE_SQL = {
+    "rfq_recipient": "SELECT r.case_id FROM ops.rfq_recipient rr JOIN ops.rfq r ON r.id = rr.rfq_id WHERE rr.id = :id",
+    "quote": "SELECT case_id FROM ops.quote WHERE id = :id",
+    "purchase_order": "SELECT case_id FROM ops.purchase_order WHERE id = :id",
+    "shipment": "SELECT case_id FROM ops.shipment WHERE id = :id",
+    "offer": "SELECT case_id FROM ops.supplier_offer WHERE id = :id",
+}
+
+
+def link_of(db: Session, case_id, ref_type: str | None, ref_id) -> tuple:
+    """(case, ref type, ref id) of a new interaction: the record must exist, and it gives the case when none is given;
+    a record of another case is refused."""
+    from sqlalchemy import text
+
+    if bool(ref_type) != bool(ref_id):
+        raise AppError("ref_incomplete", "A linked record needs both its type and its id", status=422)
+    if ref_type:
+        if ref_type not in REF_CASE_SQL:
+            raise AppError("invalid_ref", "Unknown record type", {"ref_type": ref_type}, status=422)
+        found = db.execute(text(REF_CASE_SQL[ref_type]), {"id": ref_id}).first()
+        if found is None:
+            raise AppError("ref_not_found", "The linked record does not exist", {"ref_type": ref_type}, status=422)
+        if case_id and found[0] and str(found[0]) != str(case_id):
+            raise AppError("ref_other_case", "The linked record belongs to another case", status=422)
+        case_id = case_id or found[0]
+    if case_id and db.execute(text("SELECT 1 FROM ops.case WHERE id = :c"), {"c": case_id}).first() is None:
+        raise AppError("case_not_found", "Case not found", status=422)
+    return case_id, ref_type, ref_id
+
+
 def create_interaction(db: Session, data: dict, source: str, actor: str | None = None) -> tuple[Interaction, Followup | None]:
     followup = data.get("followup")
     reason = (data.get("no_followup_reason") or "").strip() or None
@@ -48,14 +79,17 @@ def create_interaction(db: Session, data: dict, source: str, actor: str | None =
     except ValueError:
         raise AppError("naive_datetime", "occurred_at needs a timezone", status=422) from None
 
+    case_id, ref_type, ref_id = link_of(db, data.get("case_id"), data.get("ref_type"), data.get("ref_id"))
     row = Interaction(party_id=party.id, contact_id=data.get("contact_id"), channel=data["channel"],
                       direction=data["direction"], occurred_at=occurred_at, subject=data.get("subject"),
-                      body=data.get("body"), no_followup_reason=reason)
+                      body=data.get("body"), no_followup_reason=reason, case_id=case_id, ref_type=ref_type, ref_id=ref_id,
+                      raw_document_id=data.get("raw_document_id"))
     db.add(row)
     db.flush()
     events.record(db, "interaction", row.id, "create", service.jsonable({
         "party_id": party.id, "channel": row.channel, "direction": row.direction, "occurred_at": occurred_at,
-        "subject": row.subject, "no_followup_reason": reason}), source, actor=actor)
+        "subject": row.subject, "no_followup_reason": reason, "case_id": case_id, "ref_type": ref_type, "ref_id": ref_id}),
+        source, actor=actor)
     events.record(db, "party", party.id, "interaction_add", service.jsonable({"interaction_id": row.id}), source,
                   actor=actor)
 
@@ -67,6 +101,13 @@ def create_interaction(db: Session, data: dict, source: str, actor: str | None =
         service.change_stage(db, party.id, move["role"], move["stage"], move.get("reason"), source, actor)
     for document_id in dict.fromkeys(data.get("document_ids") or []):
         service.link_document(db, "interaction", row.id, document_id, source, actor)
+    if row.raw_document_id:              # v0.10.1 (0.4.6): the .eml and its attachments, linked to the interaction
+        from app.modules.parties import eml
+
+        eml.store_attachments(db, row.raw_document_id, "interaction", row.id, source, actor)
+    if row.direction in ("in", "out") and not data.get("move_stage"):   # v0.10.1 (0.4.3); an explicit move wins
+        service.happened(db, f"interaction_{row.direction}", party.id, cause={"entity": "interaction", "id": str(row.id)},
+                         source=source, actor=actor)
     return row, created_followup
 
 
@@ -274,3 +315,42 @@ def list_followups(db: Session, *, status: str | None = "open", party_id: uuid.U
     rows = db.scalars(query.order_by(Followup.due_on, Followup.created_at).offset((page - 1) * page_size)
                       .limit(page_size))
     return list(rows), total
+
+
+# ---- v0.10.1 (0.4.6): the case thread «مکاتبات» ------------------------------------------------------------------
+
+CASE_THREAD_SQL = """
+    SELECT i.id, i.party_id, i.contact_id, i.channel, i.direction, i.occurred_at, i.subject, left(i.body, 400) AS excerpt,
+           i.ref_type, i.ref_id, i.raw_document_id, p.name_fa AS party_name_fa, p.name_en AS party_name_en,
+           c.name_fa AS contact_name_fa, c.name_en AS contact_name_en,
+           CASE i.ref_type
+             WHEN 'rfq_recipient' THEN (SELECT r.code FROM ops.rfq_recipient rr JOIN ops.rfq r ON r.id = rr.rfq_id WHERE rr.id = i.ref_id)
+             WHEN 'quote' THEN (SELECT number FROM ops.quote WHERE id = i.ref_id)
+             WHEN 'purchase_order' THEN (SELECT number FROM ops.purchase_order WHERE id = i.ref_id)
+             WHEN 'shipment' THEN (SELECT code FROM ops.shipment WHERE id = i.ref_id)
+           END AS ref_code
+    FROM core.interaction i JOIN core.party p ON p.id = i.party_id LEFT JOIN core.contact c ON c.id = i.contact_id
+    WHERE i.case_id = :case {party}
+    ORDER BY i.occurred_at DESC, i.created_at DESC
+"""
+
+
+def case_thread(db: Session, case_id: uuid.UUID, party_id: uuid.UUID | None = None) -> dict:
+    """Every incoming and outgoing interaction of the case, newest first, with the record it concerns and its files;
+    the parties of the thread for the filter."""
+    from sqlalchemy import text
+
+    rows = db.execute(text(CASE_THREAD_SQL.format(party="AND i.party_id = :party" if party_id else "")),
+                      {"case": case_id, **({"party": party_id} if party_id else {})}).all()
+    files = {}
+    if rows:
+        for f in db.execute(text("""SELECT l.entity_id, d.id, d.title, d.original_filename, d.mime_type, d.size_bytes, l.role
+                                    FROM core.document_link l JOIN core.document d ON d.id = l.document_id
+                                    WHERE l.entity_type = 'interaction' AND l.entity_id = ANY(:ids)"""),
+                            {"ids": [str(r.id) for r in rows]}):
+            files.setdefault(f.entity_id, []).append({"id": f.id, "title": f.title, "filename": f.original_filename,
+                                                     "mime_type": f.mime_type, "size": f.size_bytes, "role": f.role})
+    parties = db.execute(text("""SELECT DISTINCT p.id, p.name_fa, p.name_en FROM core.interaction i JOIN core.party p ON p.id = i.party_id
+                                 WHERE i.case_id = :case ORDER BY p.name_en NULLS LAST, p.name_fa"""), {"case": case_id}).all()
+    return service.jsonable({"items": [{**dict(r._mapping), "files": files.get(str(r.id), [])} for r in rows],
+                             "parties": [dict(p._mapping) for p in parties]})

@@ -41,9 +41,10 @@ const empty: Scorecard = {
 };
 const party = { id: "p1", roles: [{ role: "supplier", stage: "qualified", stage_changed_at: "" }], contacts: [], documents: [] } as unknown as PartyDetail;
 
-function render(sc: Scorecard, node: React.ReactNode) {
+function render(sc: Scorecard, node: React.ReactNode, auto?: unknown) {
   const client = new QueryClient();
   client.setQueryData(["party-scorecard", "p1"], sc);
+  if (auto) client.setQueryData(["party-auto", "p1"], auto);
   return renderToStaticMarkup(<QueryClientProvider client={client}><MemoryRouter>{node}</MemoryRouter></QueryClientProvider>);
 }
 
@@ -76,6 +77,17 @@ describe("party story", () => {
     const buyer = { ...party, roles: [{ role: "buyer", stage: "lead", stage_changed_at: "" }] } as unknown as PartyDetail;
     const none = { ...empty, response_time: { value: null, n: 0, enough: false } };   // a buyer with no supplier data: no tiles
     expect(render(none, <PartyKpis party={buyer} ratings={{ average: null, count: 0 }} />)).toBe("");
+  });
+
+  it("puts automatic stage changes on the timeline with their cause and Revert (0.4.3)", async () => {
+    await i18n.changeLanguage("en");
+    const auto = { suggest_lost: null, changes: [{ event_id: 7, at: "2026-11-02T00:00:00Z", action: "stage_auto", role: "supplier", old_stage: "responded",
+      new_stage: "in_use", rule: "supplier_in_use", cause: { kind: "purchase_order", code: "PO-1405-0007" }, revertible: true, reverted: false }] };
+    const html = render(full, <PartyTimeline partyId="p1" />, auto);
+    expect(html).toContain("Supplier: Responded → In use");
+    expect(html).toContain("automatic: purchase order PO-1405-0007 issued");
+    expect(html).toContain('data-testid="auto-revert"');
+    expect(html.indexOf("PO-1405-0007 issued")).toBeLessThan(html.indexOf("RFQ RFQ-1405-0001 sent"));   // by date
   });
 
   it("makes initials from the name", () => {

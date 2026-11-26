@@ -522,14 +522,12 @@ def mark_sent(db: Session, quote_id: uuid.UUID, data: dict, source: str, actor: 
         "party_id": quote.buyer_party_id, "contact_id": quote.contact_id,
         "channel": INTERACTION_CHANNELS[data.get("channel") or "email"], "direction": "out", "occurred_at": sent_at,
         "subject": f"Proforma {quote.number}", "body": _summary_text(db, quote), "followup": followup,
-        "no_followup_reason": reason}, source, actor)
+        "no_followup_reason": reason, "case_id": quote.case_id, "ref_type": "quote", "ref_id": quote.id}, source, actor)
     moved = None
-    if data.get("move_to_quoted", True):
-        roles = {r.role: r for r in parties.roles_of(db, quote.buyer_party_id)}
-        if "buyer" in roles and roles["buyer"].stage not in ("quoted", "won", "lost"):
-            parties.change_stage(db, quote.buyer_party_id, "buyer", "quoted", f"quote {quote.number} sent", source,
-                                 actor)
-            moved = "quoted"
+    if data.get("move_to_quoted", True):                                  # v0.10.1 (0.4.3): through the stage rules
+        changes = parties.happened(db, "quote_sent", quote.buyer_party_id, cause={"entity": "quote", "id": str(quote.id),
+                                                                                  "code": quote.number}, source=source, actor=actor)
+        moved = "quoted" if any(c.kind == "stage" and c.new_stage == "quoted" for c in changes) else None
     quote.status, quote.sent_at, quote.interaction_id = "sent", sent_at, interaction.id
     flush(db, "invalid_quote")
     events.record(db, "quote", quote.id, "sent", jsonable({
@@ -622,6 +620,9 @@ def set_outcomes(db: Session, quote_id: uuid.UUID, rows: list[dict], source: str
                                                              "new_status": quote.status,
                                                              "cancelled_followups": cancelled}), source, actor=actor)
     sourcing_items.recompute_items(db, [r.line_item_id for r in by_id.values()], source, actor)
+    if quote.status in ("accepted", "partially_accepted") and quote.buyer_party_id:   # v0.10.1 (0.4.3): buyer -> won
+        parties.happened(db, "quote_accepted", quote.buyer_party_id, cause={"entity": "quote", "id": str(quote.id), "code": quote.number},
+                         source=source, actor=actor)
     return quote
 
 
@@ -804,3 +805,29 @@ def cleanup_case(db: Session, case_id: uuid.UUID, note: str, source: str, actor:
     flush(db, "in_use")
     return jsonable({"quotes": snapshots, "cancelled_followups": cancelled,
                      "counts": {"quotes": len(quotes), "quote_outputs": links}})
+
+
+def record_chase(db: Session, quote_id: uuid.UUID, data: dict, source: str, actor: str | None = None) -> dict:
+    """v0.10.1 (0.4.6) «ارسال شد» after «پیگیری» on a sent quote: the chase is an outgoing interaction on the case; the
+    open follow-up of the quote is done and the next one is due on the chosen date. BOMS sends nothing."""
+    from app.modules.parties.models import Followup, Interaction
+
+    quote = get_quote(db, quote_id)
+    if quote.status != "sent":
+        raise Conflict("quote_not_sent", f"The quote is {quote.status}", {"status": quote.status})
+    if not data.get("next_due_on"):
+        raise AppError("due_required", "A chase needs the date of the next follow-up", status=422)
+    linked = select(Interaction.id).where(Interaction.ref_type == "quote", Interaction.ref_id == quote.id)
+    before = [f.id for f in db.scalars(select(Followup).where(Followup.status == "open", (Followup.interaction_id == quote.interaction_id)
+                                                              | Followup.interaction_id.in_(linked)))]
+    interaction, created = party_interactions.create_interaction(db, {
+        "party_id": quote.buyer_party_id, "contact_id": quote.contact_id, "channel": "email", "direction": "out",
+        "subject": data.get("subject") or f"Proforma {quote.number}", "body": data.get("body") or "Chase",
+        "followup": {"action": data.get("next_action") or f"پیگیری پیش‌فاکتور {quote.number}", "due_on": data["next_due_on"]},
+        "case_id": quote.case_id, "ref_type": "quote", "ref_id": quote.id}, source, actor)
+    for fid in before:
+        party_interactions.complete_followup(db, fid, "chased again", None, source, actor)
+    events.record(db, "quote", quote.id, "chase", jsonable({"interaction_id": interaction.id,
+                                                           "followup_id": created.id if created else None}), source, actor=actor)
+    return {"interaction_id": interaction.id, "followup_id": created.id if created else None}
+

@@ -180,7 +180,15 @@ def create_shipment(db: Session, data: dict, source: str, actor: str | None = No
         _set_containers(db, shipment, data["container_units"])
     events.record(db, "shipment", shipment.id, "create", jsonable({**row_snapshot(shipment), "items": data.get("items") or []}),
                   source, actor=actor)
+    _shipment_roles(db, shipment, source, actor)
     return shipment
+
+
+def _shipment_roles(db: Session, shipment: Shipment, source: str, actor: str | None) -> None:
+    """v0.10.1 (0.4.3): the carrier and the forwarder of a shipment get their role."""
+    cause = {"entity": "shipment", "id": str(shipment.id), "code": shipment.code, "case_id": str(shipment.case_id)}
+    parties.happened(db, "shipment_carrier", shipment.carrier_party_id, cause=cause, source=source, actor=actor)
+    parties.happened(db, "shipment_forwarder", shipment.forwarder_party_id, cause=cause, source=source, actor=actor)
 
 
 def update_shipment(db: Session, shipment_id: uuid.UUID, changes: dict, source: str, actor: str | None = None) -> Shipment:
@@ -220,6 +228,8 @@ def update_shipment(db: Session, shipment_id: uuid.UUID, changes: dict, source: 
         changed["container_units"] = [u["number"] for u in units]
     if changed:
         events.record(db, "shipment", shipment.id, "update", jsonable({"changes": changed}), source, actor=actor)
+    if {"carrier_party_id", "forwarder_party_id"} & set(changed):
+        _shipment_roles(db, shipment, source, actor)
     return shipment
 
 
@@ -468,7 +478,20 @@ def create_inspection(db: Session, data: dict, source: str, actor: str | None = 
     db.add(row)
     flush(db, "invalid_inspection")
     events.record(db, "inspection", row.id, "create", jsonable(row_snapshot(row)), source, actor=actor)
+    _inspection_passed(db, row, source, actor)
     return row
+
+
+def _inspection_passed(db: Session, row: Inspection, source: str, actor: str | None) -> None:
+    """v0.10.1 (0.4.3): a passed inspection qualifies the supplier of its purchase order."""
+    if row.result != "pass" or not row.purchase_order_id:
+        return
+    from app.modules.execution.common import get_purchase_order
+
+    po = get_purchase_order(db, row.purchase_order_id)
+    parties.happened(db, "inspection_passed", po.supplier_party_id, cause={"entity": "inspection", "id": str(row.id),
+                                                                           "code": po.number, "case_id": str(row.case_id)},
+                     source=source, actor=actor)
 
 
 def update_inspection(db: Session, inspection_id: uuid.UUID, changes: dict, source: str, actor: str | None = None) -> Inspection:
@@ -484,6 +507,8 @@ def update_inspection(db: Session, inspection_id: uuid.UUID, changes: dict, sour
     if changed:
         events.record(db, "inspection", row.id, "result" if "result" in changed else "update",
                       jsonable({"changes": changed, "old_result": old_result}), source, actor=actor)
+    if "result" in changed:
+        _inspection_passed(db, row, source, actor)
     return row
 
 

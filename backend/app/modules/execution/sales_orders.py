@@ -109,6 +109,9 @@ def _new(db: Session, case_id, data: dict, calendar: str, source: str, actor: st
         "currency": order.currency, "total": order.total, "items": len(rows)}), source, actor=actor)
     events.record(db, "case", case.id, "sales_order_add", jsonable({"sales_order_id": order.id, "number": order.number}),
                   source, actor=actor)
+    parties.happened(db, "sales_order", order.customer_party_id, cause={"entity": "sales_order", "id": str(order.id),
+                                                                        "code": order.number, "case_id": str(case.id)},
+                     source=source, actor=actor)                          # v0.10.1 (0.4.3): buyer -> won
     return order
 
 

@@ -65,6 +65,8 @@ class PartyRole(Timestamps, Base):
     role: Mapped[str] = mapped_column(Text)
     stage: Mapped[str] = mapped_column(Text)
     stage_changed_at: Mapped[datetime] = mapped_column(TZ, server_default=FetchedValue())
+    stage_set_by: Mapped[str] = mapped_column(Text, default="initial")   # v0.10.1 (0.4.3): initial / auto / manual
+    dormant_from: Mapped[str | None] = mapped_column(Text)              # the stage before the dormant job
 
 
 class Contact(Timestamps, Base):
@@ -108,6 +110,11 @@ class Interaction(Timestamps, Base):
     body: Mapped[str | None] = mapped_column(Text)
     body_norm: Mapped[str | None] = mapped_column(Text, Computed("x", persisted=True), deferred=True)
     no_followup_reason: Mapped[str | None] = mapped_column(Text)
+    # v0.10.1 (0.4.6): the case and the record it concerns; the stored .eml an incoming e-mail was read from
+    case_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
+    ref_type: Mapped[str | None] = mapped_column(Text)
+    ref_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
+    raw_document_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
 
 
 class Followup(Timestamps, Base):

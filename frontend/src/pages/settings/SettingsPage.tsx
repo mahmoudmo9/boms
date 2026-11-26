@@ -6,6 +6,7 @@ import { Bdi, Button, Card, Checkbox, ErrorNote, Field, Input, Loading, PageHead
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import type { SettingsResponse } from "../../lib/types";
+import { PartyRulesSettings } from "./PartyRulesSettings";
 
 function Row({ label, hint, children, htmlFor }: { label: ReactNode; hint?: ReactNode; children: ReactNode; htmlFor?: string }) {
   return (
@@ -244,6 +245,7 @@ export function SettingsPage() {
       <PasswordSettings />
       <CompanySettings />
       <SystemSettings />
+      <PartyRulesSettings />
     </div>
   );
 }

@@ -12,6 +12,7 @@ from app.core.web import request_source
 from app.modules.costing import service as costing
 from app.modules.parties import service as parties
 from app.modules.quotes import output, service
+from app.modules.sourcing.schemas import ChaseIn   # v0.10.1 (0.4.6)
 from app.modules.quotes.schemas import (
     ApproveIn,
     CaseResultIn,
@@ -145,6 +146,14 @@ def approve(quote_id: uuid.UUID, request: Request, user: CurrentUser, db: Db, bo
                     confirm_below_cost=bool(body and body.confirm_below_cost), reason=body.reason if body else None)
     db.commit()
     return quote_detail(db, quote_id)
+
+
+@router.post("/{quote_id}/chase")
+def chase_quote(quote_id: uuid.UUID, body: ChaseIn, request: Request, user: CurrentUser, db: Db):
+    """v0.10.1 (0.4.6): the chase the owner sent from his mail client, recorded on the case; the follow-up rescheduled."""
+    out = service.record_chase(db, quote_id, body.model_dump(), request_source(request), user.username)
+    db.commit()
+    return jsonable(out)
 
 
 @router.post("/{quote_id}/mark-sent")

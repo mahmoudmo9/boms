@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { PartyFinance } from "./PartyFinance";
-import { PartyAvatar, PartyContactsCard, PartyDeals, PartyDocumentsCard, PartyKpis, PartySince, PartyTimeline } from "./PartyStory";
+import { autoCause, PartyAvatar, PartyContactsCard, PartyDeals, PartyDocumentsCard, PartyKpis, PartySince, PartyTimeline, useAutomaticChanges } from "./PartyStory";
 import { PhoneInput, usePhoneRegions } from "../../components/PhoneInput";
 import { api, ApiError, type Page } from "../../lib/api";
 import { defaultPhoneRegion, isPhoneType } from "../../lib/phone";
@@ -737,6 +737,45 @@ function PartyScores({ party }: { party: PartyDetail }) {
   );
 }
 
+/** v0.10.1 (0.4.3): a role chip with its stage; an automatic stage says so, with its cause on hover. */
+function RoleChip({ role, partyId }: { role: PartyDetail["roles"][number]; partyId: string }) {
+  const { t } = useTranslation();
+  const auto = useAutomaticChanges(partyId).data?.changes.find((c) => c.action === "stage_auto" && c.role === role.role && !c.reverted);
+  const isAuto = role.stage_set_by === "auto";
+  return (
+    <span title={isAuto && auto ? autoCause(t, auto) : undefined} data-testid="role-chip" data-auto={isAuto || undefined}>
+      <Badge tone="accent">{t(`parties.roles.${role.role}`)} · {stageLabel(t, role.role, role.stage)}
+        {isAuto && <span className="ms-1 rounded-xs border border-accent-line px-1 text-2xs">{t("party.rules.auto")}</span>}</Badge>
+    </span>
+  );
+}
+
+/** «از دست رفته» stays the owner's call with a reason; BOMS suggests it when every quote was rejected or expired. */
+function LostSuggestion({ partyId }: { partyId: string }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const suggest = useAutomaticChanges(partyId).data?.suggest_lost;
+  const [asking, setAsking] = useState(false);
+  const [reason, setReason] = useState("");
+  const mark = useMutation({
+    mutationFn: () => api(`/api/parties/${partyId}/roles/buyer/stage`, { method: "POST", body: { stage: "lost", reason } }),
+    onSuccess: () => { setAsking(false); for (const key of [["party", partyId], ["party-auto", partyId]]) void qc.invalidateQueries({ queryKey: key }); },
+  });
+  if (!suggest) return null;
+  return (
+    <InlineAlert tone="warning" title={t("party.rules.suggestLost")}>
+      {asking ? (
+        <span className="mt-2 flex flex-wrap items-center gap-2">
+          <Input className="w-72" dir="auto" aria-label={t("party.rules.lostReason")} placeholder={t("party.rules.lostReason")} value={reason} onChange={(e) => setReason(e.target.value)} />
+          <Button variant="primary" disabled={!reason.trim()} busy={mark.isPending} onClick={() => mark.mutate()}>{t("common.save")}</Button>
+          <Button variant="ghost" onClick={() => setAsking(false)}>{t("common.cancel")}</Button>
+        </span>
+      ) : <Button className="mt-2" onClick={() => setAsking(true)} data-testid="mark-lost">{t("party.rules.markLost")}</Button>}
+      <ErrorNote error={mark.error} />
+    </InlineAlert>
+  );
+}
+
 export function PartyDetailPage() {
   const { id = "" } = useParams();
   const { t } = useTranslation();
@@ -756,7 +795,7 @@ export function PartyDetailPage() {
       <PageHeader title={<span className="inline-flex items-center gap-4"><PartyAvatar name={p.name_en || p.name_fa} /><PartyName fa={p.name_fa} en={p.name_en} dnc={p.do_not_contact} /></span>} code={p.code}
         breadcrumb={[{ label: t("nav.parties"), to: "/parties" }, { label: p.code ?? (f.lang === "fa" ? p.name_fa || p.name_en : p.name_en || p.name_fa) ?? "" }]}
         status={<>{p.status === "archived" && <Status tone="neutral">{t("parties.archived")}</Status>}
-          {p.roles.map((r) => <Badge key={r.role} tone="accent">{t(`parties.roles.${r.role}`)} · {stageLabel(t, r.role, r.stage)}</Badge>)}
+          {p.roles.map((r) => <RoleChip key={r.role} role={r} partyId={p.id} />)}
           <SupplierTypeChip type={p.supplier_type} /></>}
         subtitle={<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {subtitle && <Bdi>{subtitle}</Bdi>}
@@ -769,6 +808,7 @@ export function PartyDetailPage() {
           <Button variant="primary" icon="plus" onClick={() => quickLog.open(p.id)}>{t("quicklog.button")}</Button>
         </>}>
         {p.do_not_contact && <InlineAlert tone="danger" title={t("parties.dncWarning")}>{p.do_not_contact_reason}</InlineAlert>}
+        <LostSuggestion partyId={p.id} />
         <PartyScores party={p} />
       </PageHeader>
       <Tabs label={t("nav.parties")} active={tab} onSelect={(key) => setParams({ tab: key }, { replace: true })} panelId="party-tab"

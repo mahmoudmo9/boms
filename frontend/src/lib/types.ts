@@ -194,6 +194,8 @@ export interface PartyRole {
   role: PartyRoleName;
   stage: string;
   stage_changed_at: string;
+  /** v0.10.1 (0.4.3): initial / auto («خودکار») / manual */
+  stage_set_by?: "initial" | "auto" | "manual";
 }
 
 export interface NextFollowup {
@@ -374,6 +376,7 @@ export interface FunnelCard {
   name_en: string | null;
   do_not_contact: boolean;
   stage_changed_at: string;
+  stage_set_by?: "initial" | "auto" | "manual";   // v0.10.1 (0.4.3)
   last_interaction_at: string | null;
   next_followup: NextFollowup | null;
 }

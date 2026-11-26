@@ -11,6 +11,8 @@ from app.core.schemas import ApiModel, InputModel
 Role = Literal["buyer", "supplier", "forwarder", "customs_broker", "agent", "other", "manufacturer", "carrier"]
 # v0.10.1 (0.4.2): the supplier side of a party — a factory, a trading company, a distributor or an agent
 SupplierType = Literal["manufacturer", "trading", "distributor", "agent"]
+# v0.10.1 (0.4.6): the records an interaction can concern
+RefType = Literal["rfq_recipient", "quote", "purchase_order", "shipment", "offer"]
 Kind = Literal["company", "person"]
 MethodType = Literal["whatsapp", "phone", "email", "telegram", "other"]
 Channel = Literal["whatsapp", "call", "email", "tender_portal", "in_person", "other"]
@@ -126,6 +128,7 @@ class RoleOut(ApiModel):
     role: str
     stage: str
     stage_changed_at: datetime
+    stage_set_by: str = "initial"     # v0.10.1 (0.4.3): initial / auto («خودکار») / manual
 
 
 class DuplicateOut(ApiModel):
@@ -230,6 +233,29 @@ class InteractionCreate(InputModel):
     no_followup_reason: ShortText | None = None
     move_stage: StageMove | None = None
     document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+    # v0.10.1 (0.4.6): the case and the record it concerns (pre-filled by «ثبت مکاتبه» on that record)
+    case_id: uuid.UUID | None = None
+    ref_type: RefType | None = None
+    ref_id: uuid.UUID | None = None
+    raw_document_id: uuid.UUID | None = None   # the stored .eml it was read from (attachments stored and linked)
+
+
+class EmlPreviewIn(InputModel):
+    document_id: uuid.UUID
+
+
+class EmlRecordIn(InputModel):
+    """v0.10.1 (0.4.6): a stored .eml recorded as an interaction, after the owner confirmed the match."""
+    document_id: uuid.UUID
+    party_id: uuid.UUID
+    contact_id: uuid.UUID | None = None
+    add_contact: bool = False                 # «افزودن به مخاطبان این طرف» for an unknown sender
+    direction: Direction = "in"
+    case_id: uuid.UUID | None = None
+    ref_type: RefType | None = None
+    ref_id: uuid.UUID | None = None
+    followup: FollowupSpec | None = None
+    no_followup_reason: ShortText | None = None
 
 
 class InteractionPatch(InputModel):
@@ -252,6 +278,10 @@ class InteractionOut(ApiModel):
     subject: str | None
     body: str | None
     no_followup_reason: str | None
+    case_id: uuid.UUID | None = None
+    ref_type: str | None = None
+    ref_id: uuid.UUID | None = None
+    raw_document_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
 

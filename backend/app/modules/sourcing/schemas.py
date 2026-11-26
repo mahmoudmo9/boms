@@ -340,6 +340,27 @@ class RecipientPatch(InputModel):
     rerender: bool = False
 
 
+class ReplyIn(InputModel):
+    """v0.10.1 (0.4.6) «پاسخ بدون قیمت»: what the supplier answered (text, or read from a stored .eml)."""
+    kind: Literal["replied", "declined", "question"]
+    body: RawText | None = None
+    subject: Text500 | None = None
+    contact_id: uuid.UUID | None = None
+    occurred_at: datetime | None = None
+    raw_document_id: uuid.UUID | None = None
+    document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+    next_due_on: date | None = None           # a question: when to follow up
+    next_action: Text500 | None = None
+
+
+class ChaseIn(InputModel):
+    """v0.10.1 (0.4.6) «ارسال شد» after «پیگیری»: the chase the owner sent, and when to follow up next."""
+    subject: Text500 | None = None
+    body: RawText | None = None
+    next_due_on: date
+    next_action: Text500 | None = None
+
+
 class MarkSentIn(InputModel):
     sent_at: datetime | None = None
     subject: Text500 | None = None

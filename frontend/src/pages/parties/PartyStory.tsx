@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Badge, Bdi, Card, EmptyState, KpiTile, ProgressRing } from "../../design/components";
+import { Badge, Bdi, Button, Card, EmptyState, ErrorNote, KpiTile, ProgressRing } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { PartyDetail } from "../../lib/types";
@@ -101,17 +102,60 @@ export function PartyKpis({ party, ratings }: { party: PartyDetail; ratings: { a
   );
 }
 
-const TONE: Record<string, string> = { claim: "bg-danger", payment_in: "bg-success", payment_out: "bg-accent" };
+const TONE: Record<string, string> = { claim: "bg-danger", payment_in: "bg-success", payment_out: "bg-accent", auto: "bg-info" };
+
+/** v0.10.1 (0.4.3): one automatic role or stage change, with its cause and whether «برگرداندن» is still possible. */
+export interface AutoChange { event_id: number; at: string; action: "stage_auto" | "role_auto"; role: string; old_stage?: string; new_stage?: string;
+  stage?: string; rule: string; cause: { kind: string; code?: string | null; days?: number } & Record<string, unknown>; revertible: boolean; reverted: boolean }
+
+export function useAutomaticChanges(partyId: string) {
+  return useQuery({ queryKey: ["party-auto", partyId],
+    queryFn: () => api<{ changes: AutoChange[]; suggest_lost: { quotes: number } | null }>(`/api/parties/${partyId}/automatic-changes`) });
+}
+
+/** «خودکار: سفارش خرید PO-1405-0007 صادر شد» */
+export function autoCause(t: TFunction, c: AutoChange): string {
+  return `${t("party.rules.auto")}: ${t(`party.rules.cause.${c.cause.kind}`, { code: c.cause.code ?? "", days: c.cause.days ?? "" })}`;
+}
+
+export function autoText(t: TFunction, c: AutoChange): string {
+  const role = t(`parties.roles.${c.role}`);
+  return c.action === "role_auto" ? t("party.rules.roleAdded", { role })
+    : t("party.rules.stageMoved", { role, from: t(`funnel.stages.${c.role}.${c.old_stage}`), to: t(`funnel.stages.${c.role}.${c.new_stage}`) });
+}
 
 export function PartyTimeline({ partyId }: { partyId: string }) {
   const { t } = useTranslation();
   const f = useFormat();
+  const qc = useQueryClient();
   const s = useScorecard(partyId).data?.story;
+  const auto = useAutomaticChanges(partyId).data?.changes ?? [];
+  const revert = useMutation({
+    mutationFn: (id: number) => api(`/api/parties/${partyId}/automatic-changes/${id}/revert`, { method: "POST" }),
+    onSuccess: () => { for (const key of [["party-auto", partyId], ["party", partyId], ["party-scorecard", partyId]]) void qc.invalidateQueries({ queryKey: key }); },
+  });
+  // the story's past events and the automatic stage changes (0.4.3) on one line, newest first
+  type Entry = { at: string; story?: NonNullable<typeof s>["timeline"][number]; auto?: AutoChange };
+  const entries: Entry[] = [...(s?.timeline ?? []).map((e) => ({ at: e.at, story: e })), ...auto.map((a) => ({ at: a.at, auto: a }))]
+    .sort((a, b) => b.at.localeCompare(a.at)).slice(0, 16);
   return (
     <Card title={t("party.story.timeline")} testId="party-timeline">
-      {!s || s.timeline.length === 0 ? <EmptyState>{t("party.story.noTimeline")}</EmptyState> : (
+      {entries.length === 0 ? <EmptyState>{t("party.story.noTimeline")}</EmptyState> : (
         <ol className="relative flex flex-col gap-5 ps-5 before:absolute before:inset-y-1.5 before:start-1 before:w-px before:bg-line">
-          {s.timeline.map((e, i) => {
+          {entries.map((entry, i) => entry.auto ? (
+            <li key={`auto-${entry.auto.event_id}`} className="relative flex flex-col gap-0.5" data-testid="timeline-auto">
+              <span aria-hidden="true" className={`absolute -start-5 top-1.5 size-2.5 rounded-full ${TONE.auto}`} />
+              <span className="text-xs text-muted tabular-nums">{f.date(entry.auto.at)}</span>
+              <span className="text-sm"><Bdi>{autoText(t, entry.auto)}</Bdi></span>
+              <span className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                <Bdi>{autoCause(t, entry.auto)}</Bdi>
+                {entry.auto.revertible && <Button size="sm" variant="ghost" busy={revert.isPending && revert.variables === entry.auto.event_id}
+                  onClick={() => revert.mutate(entry.auto!.event_id)} data-testid="auto-revert">{t("party.rules.revert")}</Button>}
+                {entry.auto.reverted && <Badge>{t("party.rules.reverted")}</Badge>}
+              </span>
+            </li>
+          ) : (() => {
+            const e = entry.story!;
             const text = t(`party.story.kind.${e.kind}`, {
               ref: e.ref ?? "", amount: e.amount !== null && e.currency ? f.compactMoney(e.amount, e.currency).text : "",
               claim: e.kind === "claim" && e.ref ? t(`execution.claims.kinds.${e.ref}`, { defaultValue: e.ref }) : "" }).replace(/ · $/, "");
@@ -124,9 +168,10 @@ export function PartyTimeline({ partyId }: { partyId: string }) {
                 </span>
               </li>
             );
-          })}
+          })())}
         </ol>
       )}
+      <ErrorNote error={revert.error} />
     </Card>
   );
 }

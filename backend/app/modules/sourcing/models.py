@@ -197,6 +197,8 @@ class RfqRecipient(Timestamps, Base):
     subject: Mapped[str | None] = mapped_column(Text)
     message_text: Mapped[str | None] = mapped_column(Text)
     interaction_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
+    chase_count: Mapped[int] = mapped_column(Integer, default=0)          # v0.10.1 (0.4.6)
+    last_chased_at: Mapped[datetime | None] = mapped_column(TZ)
 
 
 class SupplierOffer(Timestamps, Base):

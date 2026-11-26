@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { ErrorNote, Loading, PageHeader, Segmented, Select, useToast } from "../../design/components";
+import { Badge, ErrorNote, Loading, PageHeader, Segmented, Select, useToast } from "../../design/components";
 import { api } from "../../lib/api";
 import { useFormat } from "../../lib/prefs";
 import type { FunnelBoard, FunnelCard } from "../../lib/types";
@@ -24,7 +24,8 @@ function Card({ card, role, stages }: { card: FunnelCard; role: FunnelRole; stag
   });
   return (
     <li className="rounded-xl border border-line bg-surface p-2.5 text-sm shadow-sm">
-      <PartyName fa={card.name_fa} en={card.name_en} dnc={card.do_not_contact} id={card.party_id} className="max-w-full" />
+      <span className="flex items-center gap-1.5"><PartyName fa={card.name_fa} en={card.name_en} dnc={card.do_not_contact} id={card.party_id} className="min-w-0 max-w-full" />
+        {card.stage_set_by === "auto" && <Badge tone="info" className="ms-auto">{t("party.rules.auto")}</Badge>}</span>
       <dl className="mt-1.5 flex flex-col gap-0.5 text-xs text-muted">
         <div className="flex gap-1"><dt>{t("funnel.lastInteraction")}:</dt><dd className="tabular-nums">{card.last_interaction_at ? f.date(card.last_interaction_at) : "—"}</dd></div>
         <div className="flex gap-1">

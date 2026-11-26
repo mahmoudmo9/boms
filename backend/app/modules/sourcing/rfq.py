@@ -248,6 +248,8 @@ def _add_recipient(db: Session, rfq: Rfq, data: dict, source: str, actor: str | 
     events.record(db, "rfq", rfq.id, "recipient_add", jsonable({
         "recipient_id": recipient.id, "party_id": party.id, "channel": recipient.channel,
         "language": recipient.language}), source, actor=actor)
+    parties.happened(db, "rfq_recipient", recipient.party_id, cause={"entity": "rfq", "id": str(rfq.id), "code": rfq.code},
+                     source=source, actor=actor)                          # v0.10.1 (0.4.3): the supplier role
     return recipient
 
 
@@ -410,7 +412,7 @@ def mark_sent(db: Session, recipient_id: uuid.UUID, data: dict, source: str, act
     interaction, created_followup = party_interactions.create_interaction(db, {
         "party_id": recipient.party_id, "contact_id": recipient.contact_id, "channel": channel, "direction": "out",
         "occurred_at": sent_at, "subject": subject, "body": recipient.message_text, "followup": followup,
-        "no_followup_reason": reason}, source, actor)
+        "no_followup_reason": reason, "case_id": rfq.case_id, "ref_type": "rfq_recipient", "ref_id": recipient.id}, source, actor)
     recipient.status, recipient.sent_at, recipient.interaction_id = "sent", sent_at, interaction.id
     flush(db, "invalid_recipient")
     events.record(db, "rfq", rfq.id, "sent", jsonable({
@@ -419,6 +421,8 @@ def mark_sent(db: Session, recipient_id: uuid.UUID, data: dict, source: str, act
         "no_followup_reason": reason, "sent_at": sent_at}), source, actor=actor)
     _recompute(db, rfq.id, source, actor)
     refresh_status(db, rfq, source, actor)
+    parties.happened(db, "rfq_sent", recipient.party_id, cause={"entity": "rfq", "id": str(rfq.id), "code": rfq.code},
+                     source=source, actor=actor)                          # v0.10.1 (0.4.3): supplier -> contacted
     return recipient
 
 
@@ -570,3 +574,92 @@ def recipient_out(db: Session, recipient: RfqRecipient) -> dict:
             "contact_name_en": contact.name_en if contact else None,
             "party_country": party.country_iso2, "mailto": mailto(db, recipient), "email": email_of(db, recipient),
             "text_edited": text_edited(db, recipient)}
+
+
+# ---- v0.10.1 (0.4.6): replies and chases on an RFQ recipient ---------------------------------------------------------
+
+WAITING = ("sent", "no_response", "question")
+REPLY_KINDS = ("replied", "declined", "question")
+
+
+def chase_followups(db: Session, recipient: RfqRecipient) -> list:
+    """The open follow-ups that chase this recipient: on the «sent» interaction or on any interaction linked to it."""
+    from app.modules.parties.models import Followup, Interaction
+
+    linked = select(Interaction.id).where(Interaction.ref_type == "rfq_recipient", Interaction.ref_id == recipient.id)
+    ids = [recipient.interaction_id] if recipient.interaction_id else []
+    return list(db.scalars(select(Followup).where(Followup.status == "open",
+                                                  (Followup.interaction_id.in_(ids)) | (Followup.interaction_id.in_(linked)))))
+
+
+def close_chase(db: Session, recipient: RfqRecipient, note: str, source: str, actor: str | None = None,
+                keep: set | None = None) -> list[uuid.UUID]:
+    """The reply arrived: the open «پیگیری پاسخ RFQ» follow-ups of this recipient are done, with a note."""
+    closed = []
+    for f in chase_followups(db, recipient):
+        if keep and f.id in keep:
+            continue
+        party_interactions.complete_followup(db, f.id, note, None, source, actor)
+        closed.append(f.id)
+    return closed
+
+
+def record_reply(db: Session, recipient_id: uuid.UUID, data: dict, source: str, actor: str | None = None) -> dict:
+    """«پاسخ بدون قیمت»: an incoming interaction on the case (text pasted or read from an .eml), the recipient's status
+    (replied / declined / question asked), the open chase closed with a note, and the next follow-up proposed: none
+    for a reply or a decline, a new due date for a question."""
+    recipient = get_recipient(db, recipient_id)
+    rfq = get_rfq(db, recipient.rfq_id)
+    kind = data["kind"]
+    if kind not in REPLY_KINDS:
+        raise AppError("invalid_reply", "A reply is replied, declined or question", status=422)
+    if recipient.status not in WAITING:
+        raise Conflict("recipient_not_waiting", f"The recipient is {recipient.status}", {"status": recipient.status})
+    followup = None
+    if kind == "question":
+        if not data.get("next_due_on"):
+            raise AppError("due_required", "A question needs the date to follow up", status=422)
+        followup = {"action": data.get("next_action") or DEFAULT_CHASE_ACTION.get(recipient.language, DEFAULT_CHASE_ACTION["en"]),
+                    "due_on": data["next_due_on"]}
+    body = (data.get("body") or "").strip() or {"replied": "Reply without a price", "declined": "Declined",
+                                                "question": "Question"}[kind]
+    interaction, created = party_interactions.create_interaction(db, {
+        "party_id": recipient.party_id, "contact_id": data.get("contact_id") or recipient.contact_id,
+        "channel": data.get("channel") or ("email" if recipient.channel == "email" else "other"), "direction": "in",
+        "occurred_at": data.get("occurred_at"), "subject": data.get("subject") or recipient.subject, "body": body,
+        "followup": followup, "no_followup_reason": None if followup else f"reply recorded: {kind}",
+        "case_id": rfq.case_id, "ref_type": "rfq_recipient", "ref_id": recipient.id,
+        "raw_document_id": data.get("raw_document_id"), "document_ids": data.get("document_ids") or []}, source, actor)
+    closed = close_chase(db, recipient, f"reply recorded: {kind}", source, actor, keep={created.id} if created else None)
+    set_recipient_status(db, recipient, kind, source, actor, f"reply {interaction.id}")
+    refresh_status(db, rfq, source, actor)
+    return {"recipient": recipient, "interaction_id": interaction.id, "closed_followups": closed,
+            "followup_id": created.id if created else None}
+
+
+def record_chase(db: Session, recipient_id: uuid.UUID, data: dict, source: str, actor: str | None = None) -> dict:
+    """«ارسال شد» after «پیگیری»: the chase the owner sent from his mail client is an outgoing interaction on the case;
+    the open chase follow-up is done and the next one is due on the date he chose; the recipient counts its chases."""
+    recipient = get_recipient(db, recipient_id)
+    rfq = get_rfq(db, recipient.rfq_id)
+    if recipient.status not in WAITING:
+        raise Conflict("recipient_not_waiting", f"The recipient is {recipient.status}", {"status": recipient.status})
+    if not data.get("next_due_on"):
+        raise AppError("due_required", "A chase needs the date of the next follow-up", status=422)
+    before = {f.id for f in chase_followups(db, recipient)}
+    interaction, created = party_interactions.create_interaction(db, {
+        "party_id": recipient.party_id, "contact_id": recipient.contact_id,
+        "channel": "email" if recipient.channel == "email" else "whatsapp" if recipient.channel == "whatsapp" else "other",
+        "direction": "out", "subject": data.get("subject"), "body": data.get("body") or "Chase",
+        "followup": {"action": data.get("next_action") or DEFAULT_CHASE_ACTION.get(recipient.language, DEFAULT_CHASE_ACTION["en"]),
+                     "due_on": data["next_due_on"]},
+        "case_id": rfq.case_id, "ref_type": "rfq_recipient", "ref_id": recipient.id}, source, actor)
+    for fid in before:                                # rescheduled: the earlier chase is done, the new one is due
+        party_interactions.complete_followup(db, fid, "chased again", None, source, actor)
+    recipient.chase_count = (recipient.chase_count or 0) + 1
+    recipient.last_chased_at = interaction.occurred_at
+    flush(db, "invalid_recipient")
+    events.record(db, "rfq", rfq.id, "recipient_chase", jsonable({
+        "recipient_id": recipient.id, "party_id": recipient.party_id, "interaction_id": interaction.id,
+        "followup_id": created.id if created else None, "chase_count": recipient.chase_count}), source, actor=actor)
+    return {"recipient": recipient, "interaction_id": interaction.id, "followup_id": created.id if created else None}

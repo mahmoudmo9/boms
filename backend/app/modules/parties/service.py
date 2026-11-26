@@ -242,6 +242,8 @@ def change_stage(db: Session, party_id: uuid.UUID, role: str, stage: str, reason
     old = row.stage
     row.stage = stage
     row.stage_changed_at = clock.now()
+    row.stage_set_by = "manual"         # v0.10.1 (0.4.3): the owner's choice; no rule moves it afterwards
+    row.dormant_from = None
     db.flush()
     events.record(db, "party", party_id, "stage_change",
                   {"role": role, "old_stage": old, "new_stage": stage, "reason": reason}, source, actor=actor)
@@ -658,3 +660,11 @@ def unlink_document(db: Session, entity_type: str, entity_id: uuid.UUID, link_id
     if link is None or link.entity_type != entity_type or link.entity_id != str(entity_id):
         raise NotFound("not_found", "Link not found")
     documents.unlink(db, link.document_id, link_id, source=source, actor=actor)
+
+
+def happened(db: Session, kind: str, party_id, *, cause: dict, source: str, actor: str | None = None) -> list:
+    """v0.10.1 (0.4.3): the public entry point of the role and stage rules — another module reports what happened to a
+    party (see ``parties.rules.KINDS``); the rules add the role and move the stage forward."""
+    from app.modules.parties import rules
+
+    return rules.happened(db, kind, party_id, cause=cause, source=source, actor=actor)

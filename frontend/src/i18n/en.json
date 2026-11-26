@@ -467,7 +467,12 @@
       "unlock_failed": "Unlock of {{subject}} failed",
       "unselect_offer": "Offer selection cleared on {{subject}}",
       "update": "{{subject}} edited",
-      "withdraw": "{{subject}} withdrawn"
+      "withdraw": "{{subject}} withdrawn",
+      "role_auto": "Automatic: a role was added to {{subject}}",
+      "stage_auto": "Automatic: the stage of {{subject}} moved on",
+      "auto_revert": "An automatic change of {{subject}} was reverted",
+      "recipient_chase": "A chase of {{subject}} was sent",
+      "chase": "A chase of {{subject}} was sent"
     },
     "generic": "Event recorded for {{subject}}",
     "generic_entity": "Record"
@@ -579,7 +584,34 @@
     "company": "Company",
     "companyName": "Company name",
     "signature": "Signature ({{language}})",
-    "signatureHint": "Used for {signature} in RFQ messages."
+    "signatureHint": "Used for {signature} in RFQ messages.",
+    "partyRules": {
+      "title": "Automatic stages",
+      "hint": "Roles are added when a party is used in them and stages only move forward; a stage you set yourself or a final one never changes. Every change shows in the party's timeline with «Revert».",
+      "rules": {
+        "roles": "Add the role on use (buyer, supplier, carrier, forwarder)",
+        "buyer_contacted": "Buyer: first message sent → contacted",
+        "buyer_in_conversation": "Buyer: first reply → in conversation",
+        "buyer_inquiry": "Buyer: inquiry → inquiry received",
+        "buyer_quoted": "Buyer: quote sent → quoted",
+        "buyer_won": "Buyer: quote accepted or sales order → won",
+        "supplier_contacted": "Supplier: RFQ sent → contacted",
+        "supplier_responded": "Supplier: offer received → responded",
+        "supplier_in_use": "Supplier: chosen in the comparison or PO issued → in use",
+        "supplier_qualified": "Supplier: inspection passed → qualified",
+        "dormant": "Dormant after days without activity (reversible)"
+      },
+      "dormantDays": "Days without activity before dormant",
+      "recompute": "Recompute stages",
+      "recomputeHint": "What the rules would change on the existing data is shown before anything changes.",
+      "preview_one": "{{count}} proposed change",
+      "preview_other": "{{count}} proposed changes",
+      "noChanges": "The rules change nothing on the existing data.",
+      "confirm": "Make these changes",
+      "applied_one": "{{count}} change made",
+      "applied_other": "{{count}} changes made",
+      "newRole": "new role"
+    }
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -4516,6 +4548,35 @@
       "cheapest": "Cheapest",
       "priceNote": "Cheapest on {{x}} of {{y}} compared items",
       "outOf5": "out of 5"
+    },
+    "rules": {
+      "auto": "automatic",
+      "cause": {
+        "inquiry": "inquiry {{code}} received",
+        "interaction_out": "a message was sent",
+        "interaction_in": "a reply came in",
+        "quote_sent": "quote {{code}} sent",
+        "quote_accepted": "quote {{code}} accepted",
+        "sales_order": "sales order {{code}} recorded",
+        "rfq_recipient": "a recipient of RFQ {{code}}",
+        "rfq_sent": "RFQ {{code}} sent",
+        "offer": "an offer came in",
+        "offer_selected": "its offer was chosen in the comparison",
+        "purchase_order": "purchase order {{code}} issued",
+        "inspection_passed": "inspection of {{code}} passed",
+        "shipment_carrier": "carrier of shipment {{code}}",
+        "shipment_forwarder": "forwarder of shipment {{code}}",
+        "inactivity": "{{days}} days without activity",
+        "activity": "new activity"
+      },
+      "roleAdded": "role {{role}} added",
+      "stageMoved": "{{role}}: {{from}} → {{to}}",
+      "revert": "Revert",
+      "reverted": "Reverted",
+      "title": "Automatic changes",
+      "suggestLost": "Every quote to this buyer was rejected or expired. Mark it «Lost»?",
+      "markLost": "Mark lost with a reason",
+      "lostReason": "Why it was lost"
     }
   },
   "files": {

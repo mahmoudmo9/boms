@@ -534,11 +534,36 @@ def _inquiry_record(db: Session, inquiry_id) -> tuple[str, dict, Any]:
     return record, {"language": lang}, None
 
 
+def _rfq_chase_record(db: Session, recipient_id) -> tuple[str, dict, Any]:
+    """v0.10.1 (0.4.6): what was sent to this supplier and when, and the chases so far."""
+    from app.modules.sourcing import rfq as rfq_mod
+
+    recipient = rfq_mod.get_recipient(db, recipient_id)
+    base, meta, case_id = _rfq_record(db, recipient_id)
+    sent = recipient.sent_at.date().isoformat() if recipient.sent_at else "not yet"
+    record = (f"{base}\nSent on {sent} with the subject «{recipient.subject or ''}».\n"
+              f"Chases sent before: {recipient.chase_count or 0}"
+              + (f", the last on {recipient.last_chased_at.date().isoformat()}" if recipient.last_chased_at else "")
+              + "\nNo reply with prices has come yet.")
+    return record, {**meta, "subject": recipient.subject}, case_id
+
+
+def _quote_chase_record(db: Session, quote_id) -> tuple[str, dict, Any]:
+    from app.modules.quotes import service as quotes
+
+    q = quotes.get_quote(db, quote_id)
+    base, meta, case_id = _quote_record(db, quote_id)
+    sent = q.sent_at.date().isoformat() if q.sent_at else "not yet"
+    return f"{base}\nSent on {sent}; no decision from the buyer yet.", meta, case_id
+
+
 # v0.10.1 (0.4.1): every drafting action — kind for the prompt and the record it is written from
 DRAFT_TARGETS: dict[str, tuple[str, Any]] = {
     "rfq_recipient": ("RFQ message", _rfq_record),
     "purchase_order": ("PO cover message", _po_record),
     "quote": ("quotation cover message", _quote_record),
+    "rfq_chase": ("polite chase of an RFQ that has no priced reply yet (refer to what was sent and when)", _rfq_chase_record),
+    "quote_chase": ("polite follow-up of a quotation that has no decision yet", _quote_chase_record),
     "inquiry_reply": ("reply to the buyer's inquiry (acknowledge it, say when the quotation follows, ask what is unclear)", _inquiry_record),
 }
 INSTRUCTION_MAX = 1000
@@ -593,6 +618,22 @@ def commit_rfq_message(db: Session, draft, values: dict, source: str, actor: str
     return {"recipient_id": draft.target_id, "mode": mode, "recipient": jsonable(rfq_mod.recipient_out(db, recipient))}
 
 
+def commit_chase_message(db: Session, draft, values: dict, source: str, actor: str | None, options: dict | None = None) -> dict:
+    """v0.10.1 (0.4.6): a chase draft for an RFQ recipient: subject (keeping «[CODE]») and body, and the mailto to the
+    recipient's address. Nothing is stored or sent until the owner presses «ارسال شد»."""
+    from urllib.parse import quote
+
+    from app.modules.documents import naming
+    from app.modules.sourcing import rfq as rfq_mod
+
+    recipient = rfq_mod.get_recipient(db, uuid.UUID(draft.target_id))
+    code = rfq_mod.get_rfq(db, recipient.rfq_id).code
+    subject = naming.subject(code, rfq_mod._strip_code(values.get("subject") or recipient.subject or ""))
+    body = values.get("body") or ""
+    to = rfq_mod.email_of(db, recipient) or ""
+    return {"subject": subject, "body": body, "mailto": f"mailto:{to}?subject={quote(subject)}&body={quote(body)}"}
+
+
 def commit_po_message(db: Session, draft, values: dict, source: str, actor: str | None, options: dict | None = None) -> dict:
     """The PO / quotation cover message or the inquiry reply is copied or opened in the mail client by the owner:
     nothing is stored or sent."""
@@ -617,4 +658,6 @@ def register() -> None:
     drafts.register_committer("purchase_order", commit_po_message)
     drafts.register_committer("quote", commit_po_message)
     drafts.register_committer("inquiry_reply", commit_po_message)   # not "inquiry": that one commits extracted items
+    drafts.register_committer("rfq_chase", commit_chase_message)
+    drafts.register_committer("quote_chase", commit_po_message)
 

@@ -152,7 +152,8 @@ def _tick(at: datetime, hourly: bool = False) -> list[str]:
     # the hourly sourcing expiry (v0.3.0) is checked in its own test
     return names if hourly else [n for n in names if n not in ("sourcing_expiry_hourly", "quotes_expiry_hourly",
                                                                   "execution_claims_hourly",
-                                                                  "ai_log_retention_nightly")]   # v0.9.0, same slot as the backup
+                                                                  "ai_log_retention_nightly",   # v0.9.0, same slot as the backup
+                                                                  "parties_dormant_nightly")]   # v0.10.1 (0.4.3), same slot
 
 
 def test_due_time_calculation():
@@ -179,7 +180,7 @@ def test_scheduler_runs_each_due_slot_once_and_catches_up(fresh_scheduler):
     with new_session() as db:
         queued = db.execute(select(Job.type).where(Job.status == "queued", Job.type.not_in(("sourcing.expire", "quotes.expire",
                                                                                       "execution.claim_followups", "ai.purge_log")))).scalars().all()
-    assert Counter(queued) == {"backup.run": 4, "backup.restore_test": 2}
+    assert Counter(queued) == {"backup.run": 4, "backup.restore_test": 2, "parties.dormant": 4}   # v0.10.1: same nightly slot
 
 
 def test_sourcing_expiry_runs_once_per_hour(fresh_scheduler):

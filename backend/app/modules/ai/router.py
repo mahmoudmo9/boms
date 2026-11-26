@@ -413,7 +413,7 @@ class PartyParseIn(InputModel):
 
 
 class DraftMessageIn(InputModel):
-    target_type: Literal["rfq_recipient", "purchase_order", "quote", "inquiry_reply"]
+    target_type: Literal["rfq_recipient", "purchase_order", "quote", "inquiry_reply", "rfq_chase", "quote_chase"]
     target_id: uuid.UUID
     language: Literal["en", "fa"] | None = None
     # v0.10.1 (0.4.1): «دستور به هوش» — free text (the preset chips fill it); none: the usual automatic draft

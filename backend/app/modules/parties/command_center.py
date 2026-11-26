@@ -137,6 +137,7 @@ def funnel_board(db: Session, role: str) -> dict:
         columns.setdefault(role_row.stage, []).append({
             "party_id": party.id, "name_fa": party.name_fa, "name_en": party.name_en,
             "do_not_contact": party.do_not_contact, "stage_changed_at": role_row.stage_changed_at,
+            "stage_set_by": role_row.stage_set_by,          # v0.10.1 (0.4.3): «خودکار» on the card
             **activity[party.id]})
     return {"role": role, "stages": [{"code": s.code, "label_fa": s.label_fa, "label_en": s.label_en,
                                       "is_terminal": s.is_terminal, "cards": columns.get(s.code, [])}

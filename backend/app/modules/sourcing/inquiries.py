@@ -80,6 +80,8 @@ def create_inquiry(db: Session, data: dict, source: str, actor: str | None = Non
         "source_interaction_id": row.source_interaction_id, "items": len(items)}), source, actor=actor)
     if row.party_id:
         events.record(db, "party", row.party_id, "inquiry_add", jsonable({"inquiry_id": row.id}), source, actor=actor)
+        parties.happened(db, "inquiry", row.party_id, cause={"entity": "inquiry", "id": str(row.id), "code": row.code},
+                         source=source, actor=actor)                      # v0.10.1 (0.4.3)
     if items:
         items_service.add_items(db, row.id, None, items, source, actor)
     for document_id in dict.fromkeys(document_ids):

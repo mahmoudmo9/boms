@@ -47,7 +47,7 @@ from app.modules.sourcing.schemas import (
     LineItemBulk,
     LineItemFields,
     LineItemOut,
-    MarkSentIn,
+    MarkSentIn, ReplyIn, ChaseIn,
     NoCoverageIn,
     NoteIn,
     OfferCreate,
@@ -566,6 +566,22 @@ def mark_sent(recipient_id: uuid.UUID, body: MarkSentIn, request: Request, user:
     row = rfq.mark_sent(db, recipient_id, data, request_source(request), user.username)
     db.commit()
     return rfq.recipient_out(db, row)
+
+
+@rfqs_router.post("/recipients/{recipient_id}/reply")
+def reply_recipient(recipient_id: uuid.UUID, body: ReplyIn, request: Request, user: CurrentUser, db: Db):
+    """v0.10.1 (0.4.6) «پاسخ بدون قیمت»: records the reply on the case, sets the status, closes the chase."""
+    out = rfq.record_reply(db, recipient_id, body.model_dump(), request_source(request), user.username)
+    db.commit()
+    return {**jsonable({k: v for k, v in out.items() if k != "recipient"}), "recipient": rfq.recipient_out(db, out["recipient"])}
+
+
+@rfqs_router.post("/recipients/{recipient_id}/chase")
+def chase_recipient(recipient_id: uuid.UUID, body: ChaseIn, request: Request, user: CurrentUser, db: Db):
+    """v0.10.1 (0.4.6) «ارسال شد» after «پیگیری»: the chase is on the case and the follow-up is rescheduled."""
+    out = rfq.record_chase(db, recipient_id, body.model_dump(), request_source(request), user.username)
+    db.commit()
+    return {**jsonable({k: v for k, v in out.items() if k != "recipient"}), "recipient": rfq.recipient_out(db, out["recipient"])}
 
 
 @rfqs_router.post("/recipients/{recipient_id}/decline")

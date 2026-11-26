@@ -112,7 +112,9 @@ def record_offer(db: Session, data: dict, source: str, actor: str | None = None)
     interaction, _ = party_interactions.create_interaction(db, {
         "party_id": party.id, "contact_id": data.get("contact_id"), "channel": CHANNEL_TO_INTERACTION[data["channel"]],
         "direction": "in", "occurred_at": received_at, "subject": subject, "body": body,
-        "followup": data.get("followup"), "no_followup_reason": data.get("no_followup_reason")}, source, actor)
+        "followup": data.get("followup"), "no_followup_reason": data.get("no_followup_reason"),
+        # v0.10.1 (0.4.6): on the case; linked to the RFQ recipient it answers (else to the offer, below)
+        "case_id": case.id, **({"ref_type": "rfq_recipient", "ref_id": recipient.id} if recipient else {})}, source, actor)
 
     offer = SupplierOffer(case_id=case.id, party_id=party.id, rfq_recipient_id=recipient.id if recipient else None,
                           received_at=received_at, interaction_id=interaction.id, raw_text=data.get("raw_text"),
@@ -131,9 +133,13 @@ def record_offer(db: Session, data: dict, source: str, actor: str | None = None)
     events.record(db, "case", case.id, "offer_add", jsonable({"offer_id": offer.id, "party_id": party.id}), source,
                   actor=actor)
 
-    if recipient is not None and recipient.status in ("sent", "no_response"):
+    if recipient is None:
+        interaction.ref_type, interaction.ref_id = "offer", offer.id
+    if recipient is not None and recipient.status in ("sent", "no_response", "question"):
         rfq_service.set_recipient_status(db, recipient, "replied", source, actor, f"offer {offer.id}")
         rfq_service.refresh_status(db, rfq_service.get_rfq(db, recipient.rfq_id), source, actor)
+    if recipient is not None:      # v0.10.1 (0.4.6): the open «پیگیری پاسخ RFQ» closes (v0.10.0 left it open)
+        rfq_service.close_chase(db, recipient, f"offer recorded {offer.id}", source, actor)
     if previous is not None:
         previous.status, previous.superseded_by_id = "superseded", offer.id
         flush(db, "invalid_offer")
@@ -145,6 +151,8 @@ def record_offer(db: Session, data: dict, source: str, actor: str | None = None)
     items_service.recompute_items(db, affected, source, actor)
     for document_id in dict.fromkeys(data.get("document_ids") or []):
         parties.link_document(db, "offer", offer.id, document_id, source, actor)
+    parties.happened(db, "offer", offer.party_id, cause={"entity": "offer", "id": str(offer.id), "case_id": str(offer.case_id)},
+                     source=source, actor=actor)                          # v0.10.1 (0.4.3): supplier -> responded
     return offer
 
 

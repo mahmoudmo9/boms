@@ -66,6 +66,8 @@ SCHEDULES = [
     Schedule("execution_claims_hourly", "execution.claim_followups", {}, hourly_due),
     # ai: the privacy log keeps ai.log_retention_days (v0.9.0)
     Schedule("ai_log_retention_nightly", "ai.purge_log", {}, nightly_due),
+    # parties: roles idle for parties.dormant_days -> dormant, reversible (v0.10.1, 0.4.3)
+    Schedule("parties_dormant_nightly", "parties.dormant", {}, nightly_due),
 ]
 
 

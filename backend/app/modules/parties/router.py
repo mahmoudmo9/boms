@@ -12,6 +12,7 @@ from app.core.schemas import Page, page_params
 from app.core.web import request_source
 from app.modules.parties import command_center, interactions, normalize, service
 from app.modules.parties.schemas import (
+    EmlPreviewIn, EmlRecordIn,
     ArchiveIn,
     Channel,
     ContactCreate,
@@ -41,6 +42,7 @@ from app.modules.parties.schemas import (
 )
 from app.modules.system.auth import CurrentUser
 from app.modules.system.models import Country
+from app.modules.sourcing.common import jsonable   # noqa: E402  (v0.10.1)
 
 Db = Annotated[Session, Depends(get_db)]
 parties_router = APIRouter(prefix="/api/parties", tags=["parties"])
@@ -206,6 +208,45 @@ def change_stage(party_id: uuid.UUID, role: Role, body: StageChange, request: Re
     return RoleOut.model_validate(row)
 
 
+# ---- v0.10.1 (0.4.3): automatic roles and stages -------------------------------------------------------------------
+
+@parties_router.get("/rules/recompute")
+def recompute_preview(_: CurrentUser, db: Db):
+    """«بازمحاسبهٔ مراحل» preview: what the rules would change on the existing data. Nothing changes."""
+    from app.modules.parties import rules
+
+    out = rules.recompute(db, confirm=False)
+    db.rollback()
+    return jsonable(out)
+
+
+@parties_router.post("/rules/recompute")
+def recompute_apply(request: Request, user: CurrentUser, db: Db):
+    """The owner confirmed the preview: the changes are made, each one an event with «برگرداندن»."""
+    from app.modules.parties import rules
+
+    out = rules.recompute(db, confirm=True, source=request_source(request), actor=user.username)
+    db.commit()
+    return jsonable(out)
+
+
+@parties_router.get("/{party_id}/automatic-changes")
+def automatic_changes(party_id: uuid.UUID, _: CurrentUser, db: Db):
+    from app.modules.parties import rules
+
+    service.get_party(db, party_id)
+    return jsonable({"changes": rules.automatic_changes(db, party_id), "suggest_lost": rules.suggest_lost(db, party_id)})
+
+
+@parties_router.post("/{party_id}/automatic-changes/{event_id}/revert")
+def revert_automatic_change(party_id: uuid.UUID, event_id: int, request: Request, user: CurrentUser, db: Db):
+    from app.modules.parties import rules
+
+    out = rules.revert(db, party_id, event_id, request_source(request), user.username)
+    db.commit()
+    return out
+
+
 @parties_router.get("/{party_id}/documents")
 def party_documents(party_id: uuid.UUID, _: CurrentUser, db: Db):
     service.get_party(db, party_id)
@@ -358,6 +399,45 @@ def create_interaction(body: InteractionCreate, request: Request, user: CurrentU
     row, _ = interactions.create_interaction(db, body.model_dump(), request_source(request), user.username)
     db.commit()
     return _interaction_detail(db, row.id)
+
+
+@interactions_router.get("/case/{case_id}")
+def case_correspondence(case_id: uuid.UUID, _: CurrentUser, db: Db, party_id: uuid.UUID | None = None):
+    """v0.10.1 (0.4.6) the case's «مکاتبات»: every interaction of the case, newest first, filterable by party."""
+    return interactions.case_thread(db, case_id, party_id)
+
+
+@interactions_router.post("/eml/preview")
+def eml_preview(body: EmlPreviewIn, _: CurrentUser, db: Db):
+    """v0.10.1 (0.4.6): what a stored .eml says and what it matches («[CODE]», the sender's contact). Nothing recorded."""
+    from app.modules.parties import eml
+
+    return jsonable(eml.preview(db, body.document_id))
+
+
+@interactions_router.post("/eml", status_code=201)
+def eml_record(body: EmlRecordIn, request: Request, user: CurrentUser, db: Db):
+    """v0.10.1 (0.4.6): the confirmed .eml as an interaction on the case, with the raw file and its attachments."""
+    from app.modules.documents import service as documents
+    from app.modules.parties import eml
+
+    doc = documents.get(db, body.document_id)
+    parsed = eml.parse(documents.file_path(doc).read_bytes(), doc.original_filename)
+    src = request_source(request)
+    contact_id = body.contact_id
+    if body.add_contact and not contact_id and parsed["from_address"]:
+        contact, _shared = service.create_contact(db, {"party_id": body.party_id, "name_en": parsed["from_name"] or parsed["from_address"],
+                                                       "methods": [{"type": "email", "value": parsed["from_address"]}]}, src, user.username,
+                                                  confirm_shared=True)
+        contact_id = contact.id
+    row, followup = interactions.create_interaction(db, {
+        "party_id": body.party_id, "contact_id": contact_id, "channel": "email", "direction": body.direction,
+        "occurred_at": parsed["date"], "subject": parsed["subject"], "body": parsed["body"] or parsed["subject"],
+        "followup": body.followup.model_dump() if body.followup else None, "no_followup_reason": body.no_followup_reason,
+        "case_id": body.case_id, "ref_type": body.ref_type, "ref_id": body.ref_id, "raw_document_id": doc.id}, src, user.username)
+    db.commit()
+    return {"interaction": InteractionOut.model_validate(row), "contact_id": contact_id,
+            "followup_id": followup.id if followup else None}
 
 
 @interactions_router.get("/{interaction_id}")
